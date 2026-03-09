@@ -1,19 +1,37 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.EntityFrameworkCore;
 
-namespace BE.Models
+namespace BE.Models;
+
+[Index(nameof(CategoryId), Name = "IX_Products_CategoryId")]
+public partial class Product
 {
-    public class Product
-    {
-        [Key]
-        public int Id { get; set; }
+    [Key]
+    public int Id { get; set; }
 
-        [StringLength(100)]
-        public string Name { get; set; } = null!;
+    [Required]
+    [StringLength(150)]
+    public string Name { get; set; } = string.Empty;
 
-        [Column(TypeName = "decimal(18,2)")]
-        public decimal Price { get; set; }
+    [StringLength(1000)]
+    public string? Description { get; set; }
 
-        public int Stock { get; set; }
-    }
+    [Column(TypeName = "decimal(18,2)")]
+    public decimal Price { get; set; }
+
+    public int Stock { get; set; }
+
+    public int CategoryId { get; set; }
+
+    public DateTime CreatedAt { get; set; } = DateTime.Now;
+
+    public int? Discount { get; set; }
+
+    [StringLength(500)]
+    public string? ImageUrl { get; set; }
+
+    [ForeignKey(nameof(CategoryId))]
+    [InverseProperty(nameof(BE.Models.Category.Products))]
+    public virtual Category Category { get; set; } = null!;
 }
