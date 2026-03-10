@@ -10,6 +10,19 @@ export const api = axios.create({
     "Content-Type": "application/json",
   },
 });
+// ================= Interceptor =================
+api.interceptors.request.use(
+  (config) => {
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("token");
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
 // ================= Types =================
 export interface Category {
@@ -61,6 +74,33 @@ export interface UpdateProductPayload {
 export interface UploadImageResponse {
   imageUrls: string[];
 }
+export interface RegisterPayload {
+  username: string;
+  password: string;
+  fullName: string;
+  phone: string;
+  email: string;
+}
+
+export interface LoginPayload {
+  username: string;
+  password: string;
+}
+
+export interface AuthUser {
+  id?: number;
+  username: string;
+  fullName?: string;
+  role?: string;
+  email?: string;
+  phone?: string;
+  isActive?: boolean;
+}
+
+export interface LoginResponse {
+  token: string;
+  user: AuthUser;
+}
 
 // ================= Categories API =================
 export const categoriesAPI = {
@@ -103,6 +143,29 @@ export const productsAPI = {
       params: { keyword },
     }),
 };
+// ================= Auth API =================
+export const authAPI = {
+  register: (data: RegisterPayload) =>
+    api.post("/users/register", data),
+
+  login: async (data: LoginPayload) => {
+    const res = await api.post<LoginResponse>("/auth/login", data);
+
+    if (typeof window !== "undefined") {
+      if (res.data.token) {
+        localStorage.setItem("token", res.data.token);
+      }
+
+      if (res.data.user) {
+        localStorage.setItem("user", JSON.stringify(res.data.user));
+      }
+
+      window.dispatchEvent(new Event("userUpdated"));
+    }
+
+    return res;
+  },
+};
 
 // ================= Upload API =================
 export const uploadImage = (formData: FormData) => {
@@ -112,6 +175,15 @@ export const uploadImage = (formData: FormData) => {
     },
   });
 };
+// ================= Users API =================
+export const fetchUsers = () =>
+  api.get('/users', { headers: { 'Content-Type': 'application/json' } })
+
+export const createUser = (data: any) => api.post('/users', data)
+
+export const updateUser = (id: number, data: any) => api.put(`/users/${id}`, data)
+
+
 
 // ================= Helper Exports =================
 export const fetchCategories = categoriesAPI.getAll;
@@ -127,6 +199,9 @@ export const searchProducts = productsAPI.search;
 export const createProduct = productsAPI.create;
 export const updateProduct = productsAPI.update;
 export const deleteProduct = productsAPI.delete;
+
+export const registerUser = authAPI.register;
+export const loginUser = authAPI.login;
 
 export default api;
 // ================= Chatbot API (demo) =================

@@ -1,4 +1,26 @@
+'use client';
+
+import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+
 export default function AdminPage() {
+  const [isAdmin, setIsAdmin] = useState(false);
+  const router = useRouter();
+
+  useEffect(() => {
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    // Kiểm tra nếu người dùng có vai trò là 'admin'
+    if (user?.role !== 'admin') {
+      // Nếu không phải admin, chuyển hướng về trang chủ
+      router.push('/');
+    } else {
+      setIsAdmin(true);
+    }
+  }, [router]);
+
+  // Nếu không có quyền admin, trả về null (không hiển thị gì)
+  if (!isAdmin) return null;
+
   return (
     <div className="space-y-6">
       <div>

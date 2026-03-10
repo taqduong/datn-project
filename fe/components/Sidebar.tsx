@@ -57,8 +57,8 @@ export default function Sidebar() {
       },
       {
         href: "/admin/users",
-        label: "Khách hàng",
-        description: "Quản lý khách hàng",
+        label: "Người dùng",
+        description: "Quản lý người dùng",
         icon: Users,
       },
       {
