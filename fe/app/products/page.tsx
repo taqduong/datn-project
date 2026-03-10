@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   fetchProducts,
   fetchCategories,
+  searchProducts,
   type Product,
   type Category,
 } from "@/services/api";

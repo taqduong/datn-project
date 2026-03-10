@@ -129,3 +129,9 @@ export const updateProduct = productsAPI.update;
 export const deleteProduct = productsAPI.delete;
 
 export default api;
+// ================= Chatbot API (demo) =================
+export const fetchChatbotAnswer = async (message: string): Promise<string> => {
+  await new Promise((resolve) => setTimeout(resolve, 800));
+
+  return `Bạn vừa hỏi: "${message}". Đây là câu trả lời demo từ chatbot.`;
+};

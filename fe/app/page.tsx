@@ -80,11 +80,11 @@ export default function HomePage() {
   };
 
   return (
-    <div className="bg-slate-100 text-slate-900">
+    <div className="bg-slate-100 text-slate-800">
       {/* Hero */}
-      <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8 lg:py-14">
-        <div className="relative overflow-hidden rounded-[2rem] border border-slate-200 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 px-6 py-12 text-white shadow-2xl sm:px-10 lg:px-14 lg:py-16">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(59,130,246,0.35),transparent_25%),radial-gradient(circle_at_bottom_left,rgba(168,85,247,0.28),transparent_25%)]" />
+      <section className="mx-auto max-w-7xl px-6 py-12 sm:px-8 lg:px-10 lg:py-16 bg-gray-100 text-gray-800">
+        <div className="relative overflow-hidden rounded-4xl border border-blue-200 bg-[#1a95e1] px-6 py-12 text-white shadow-2xl sm:px-10 lg:px-14 lg:py-16">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(59,130,246,0.6),transparent_25%),radial-gradient(circle_at_bottom_left,rgba(37,99,235,0.4),transparent_25%)]" />
 
           <div className="relative z-10 grid items-center gap-10 lg:grid-cols-[1.05fr_0.95fr]">
             <div>
@@ -173,7 +173,7 @@ export default function HomePage() {
       </section>
 
       {/* Benefits */}
-      <section className="mx-auto max-w-7xl px-4 py-2 sm:px-6 lg:px-8">
+      <section className="mx-auto max-w-6xl px-4 py-2 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
           {benefits.map((item) => (
             <div
@@ -191,7 +191,7 @@ export default function HomePage() {
       </section>
 
       {/* Categories */}
-      <section className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
+      <section className="mx-auto max-w-6xl px-4 py-14 sm:px-6 lg:px-8">
         <div className="mb-8 flex items-end justify-between gap-4">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.25em] text-blue-600">
@@ -253,7 +253,7 @@ export default function HomePage() {
       </section>
 
       {/* Featured products */}
-      <section className="mx-auto max-w-7xl px-4 py-2 sm:px-6 lg:px-8">
+      <section className="mx-auto max-w-6xl px-4 py-2 sm:px-6 lg:px-8">
         <div className="mb-8 flex items-end justify-between gap-4">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.25em] text-red-500">
@@ -372,8 +372,8 @@ export default function HomePage() {
       </section>
 
       {/* Promo banner */}
-      <section className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
-        <div className="overflow-hidden rounded-[2rem] border border-slate-200 bg-gradient-to-r from-blue-600 via-indigo-600 to-slate-900 px-8 py-10 text-white shadow-xl">
+      <section className="mx-auto max-w-6xl px-4 py-14 sm:px-6 lg:px-8">
+        <div className="overflow-hidden rounded-4xl border border-slate-200 bg-linear-to-r from-blue-600 via-indigo-600 to-slate-900 px-8 py-10 text-white shadow-xl">
           <div className="grid items-center gap-8 lg:grid-cols-[1fr_auto]">
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.25em] text-blue-100">
@@ -400,7 +400,7 @@ export default function HomePage() {
 
       {/* Newsletter */}
       <section className="mx-auto max-w-7xl px-4 pb-16 sm:px-6 lg:px-8">
-        <div className="rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm">
+        <div className="rounded-4xl border border-slate-200 bg-white p-8 shadow-sm">
           <div className="grid items-center gap-8 lg:grid-cols-[1fr_auto]">
             <div>
               <h2 className="text-3xl font-bold tracking-tight text-slate-900">
@@ -416,7 +416,7 @@ export default function HomePage() {
               <input
                 type="email"
                 placeholder="Nhập email của bạn"
-                className="min-w-[280px] rounded-2xl border border-slate-300 bg-white px-5 py-3.5 text-slate-900 placeholder-slate-400 outline-none transition focus:border-slate-400"
+                className="min-w-70 rounded-2xl border border-slate-300 bg-white px-5 py-3.5 text-slate-900 placeholder-slate-400 outline-none transition focus:border-slate-400"
               />
               <button className="rounded-2xl bg-slate-900 px-6 py-3.5 font-semibold text-white transition hover:bg-slate-800">
                 Đăng ký

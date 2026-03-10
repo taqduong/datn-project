@@ -202,7 +202,7 @@ export default function ProductPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white px-6 pt-6">
+    <div className="min-h-screen bg-linear-to-br from-gray-50 to-white px-6 pt-6">
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="mb-2 flex items-center gap-2 text-3xl font-bold text-gray-800">
@@ -371,7 +371,7 @@ export default function ProductPage() {
                     >
                       <td className="px-6 py-4">
                         <div className="flex items-center">
-                          <div className="h-12 w-12 flex-shrink-0 overflow-hidden rounded-lg bg-gray-100">
+                          <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-gray-100">
                             {product.imageUrl ? (
                               <img
                                 className="h-12 w-12 object-cover"

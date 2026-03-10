@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { fetchProductById, type Product } from "@/services/api";
 
+
 export default function ProductDetailPage() {
   const params = useParams();
   const router = useRouter();

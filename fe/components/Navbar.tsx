@@ -1,0 +1,218 @@
+"use client";
+
+import Link from "next/link";
+import { Search, ShoppingCart, User, Menu, Heart, X, LogOut, LayoutDashboard } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { searchProducts } from "@/services/api"; 
+type UserType = {
+  id?: number | string;
+  username?: string;
+  fullName?: string;
+  role?: string;
+};
+
+type CartItem = {
+  quantity?: number;
+};
+
+export default function Navbar() {
+  const router = useRouter();
+
+  const [mounted, setMounted] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [user, setUser] = useState<UserType | null>(null);
+  const [role, setRole] = useState<string | null>(null);
+  const [cartCount, setCartCount] = useState(0);
+  const [wishlistCount, setWishlistCount] = useState(0);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const loadData = () => {
+    try {
+      const storedUser = localStorage.getItem("user");
+      if (storedUser) {
+        const parsedUser: UserType = JSON.parse(storedUser);
+        setUser(parsedUser);
+        setRole(parsedUser.role || null);
+      } else {
+        setUser(null);
+        setRole(null);
+      }
+
+      const storedCart = localStorage.getItem("cart");
+      if (storedCart) {
+        const parsedCart: CartItem[] = JSON.parse(storedCart);
+        const totalQuantity = parsedCart.reduce(
+          (sum, item) => sum + (item.quantity || 1),
+          0
+        );
+        setCartCount(totalQuantity);
+      } else {
+        setCartCount(0);
+      }
+
+      const storedWishlist = localStorage.getItem("wishlist");
+      if (storedWishlist) {
+        const parsedWishlist = JSON.parse(storedWishlist);
+        setWishlistCount(Array.isArray(parsedWishlist) ? parsedWishlist.length : 0);
+      } else {
+        setWishlistCount(0);
+      }
+    } catch (error) {
+      console.error("Lỗi khi đọc localStorage:", error);
+      setUser(null);
+      setRole(null);
+      setCartCount(0);
+      setWishlistCount(0);
+    }
+  };
+
+  useEffect(() => {
+    if (!mounted) return;
+    loadData();
+    window.addEventListener("storage", loadData);
+    window.addEventListener("wishlistUpdated", loadData as EventListener);
+    window.addEventListener("cartUpdated", loadData as EventListener);
+    window.addEventListener("userUpdated", loadData as EventListener);
+
+    return () => {
+      window.removeEventListener("storage", loadData);
+      window.removeEventListener("wishlistUpdated", loadData as EventListener);
+      window.removeEventListener("cartUpdated", loadData as EventListener);
+      window.removeEventListener("userUpdated", loadData as EventListener);
+    };
+  }, [mounted]);
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    setUser(null);
+    setRole(null);
+    window.dispatchEvent(new Event("userUpdated"));
+    router.push("/login");
+  };
+
+  const handleSearch = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const keyword = searchQuery.trim();
+    if (!keyword) return;
+    
+    // Gọi API tìm kiếm sản phẩm
+    try {
+      const results = await searchProducts(keyword);
+      if (results.data.length > 0) {
+        router.push(`/products?keyword=${encodeURIComponent(keyword)}`);
+      } else {
+        alert("Không tìm thấy sản phẩm với từ khóa: " + keyword);
+      }
+    } catch (error) {
+      alert("Đã xảy ra lỗi khi tìm kiếm sản phẩm.");
+      console.error(error);
+    }
+  };
+
+  if (!mounted) return null;
+
+  const displayName = user?.fullName || user?.username || "Người dùng";
+
+  return (
+    <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/90 backdrop-blur-md">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="flex h-16 items-center gap-4">
+          <Link href="/" className="shrink-0 text-2xl font-extrabold tracking-tight text-blue-600">
+            HomeMart
+          </Link>
+
+          <nav className="hidden items-center gap-6 md:flex">
+            <Link href="/" className="text-sm font-medium text-slate-700 transition hover:text-blue-600">Trang chủ</Link>
+            <Link href="/products" className="text-sm font-medium text-slate-700 transition hover:text-blue-600">Sản phẩm</Link>
+            <Link href="/orders" className="text-sm font-medium text-slate-700 transition hover:text-blue-600">Đơn hàng</Link>
+            {role === "nhanvien" && (
+              <Link href="/admin" className="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1.5 text-sm font-semibold text-blue-600 transition hover:bg-blue-100">
+                <LayoutDashboard className="h-4 w-4" /> Quản trị
+              </Link>
+            )}
+          </nav>
+
+          {/* Thanh tìm kiếm */}
+          <div className="hidden flex-1 md:block">
+            <form onSubmit={handleSearch} className="mx-auto max-w-xl">
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Tìm kiếm sản phẩm..."
+                  className="w-full rounded-full border border-slate-200 bg-slate-50 py-2.5 pl-11 pr-12 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100"
+                />
+                <button
+                  type="submit"
+                  className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-blue-500 text-white transition hover:bg-blue-600"
+                  aria-label="Tìm kiếm"
+                >
+                  <Search className="h-4 w-4" />
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <div className="ml-auto flex items-center gap-2 sm:gap-3">
+            {/* Các nút yêu thích, giỏ hàng, tài khoản */}
+            <Link href="/wishlist" className="relative flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-700 transition hover:border-pink-200 hover:bg-pink-50 hover:text-pink-600" aria-label="Yêu thích">
+              <Heart className="h-5 w-5" />
+              {wishlistCount > 0 && (
+                <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-pink-500 px-1 text-[10px] font-bold text-white">{wishlistCount}</span>
+              )}
+            </Link>
+            <Link href="/carts" className="relative flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600" aria-label="Giỏ hàng">
+              <ShoppingCart className="h-5 w-5" />
+              {cartCount > 0 && (
+                <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">{cartCount}</span>
+              )}
+            </Link>
+
+            {/* Các nút tài khoản */}
+            <Link href="/profile/1" className="hidden h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600 md:flex" aria-label="Tài khoản">
+              <User className="h-5 w-5" />
+            </Link>
+
+            {/* Đăng xuất */}
+            {user ? (
+              <div className="hidden items-center gap-3 lg:flex">
+                <div className="text-right">
+                  <p className="text-xs text-slate-500">Xin chào</p>
+                  <p className="max-w-35 truncate text-sm font-semibold text-slate-800">{displayName}</p>
+                </div>
+                <button onClick={handleLogout} className="inline-flex items-center gap-2 rounded-full border border-red-200 px-4 py-2 text-sm font-medium text-red-500 transition hover:bg-red-50">
+                  <LogOut className="h-4 w-4" /> Đăng xuất
+                </button>
+              </div>
+            ) : (
+              <div className="hidden items-center gap-2 lg:flex">
+                <Link href="/login" className="rounded-full bg-blue-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-600">Đăng nhập</Link>
+                <Link href="/register" className="rounded-full border border-blue-200 px-4 py-2 text-sm font-semibold text-blue-600 transition hover:bg-blue-50">Đăng ký</Link>
+              </div>
+            )}
+
+            {/* Menu */}
+            <button className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-700 transition hover:bg-slate-50 md:hidden" onClick={() => setIsMenuOpen((prev) => !prev)} aria-label="Mở menu">
+              {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
+          </div>
+        </div>
+
+        {/* Mobile menu */}
+        {isMenuOpen && (
+          <div className="border-t border-slate-200 py-4 md:hidden">
+            {/* Menu content */}
+          </div>
+        )}
+      </div>
+    </header>
+  );
+}
