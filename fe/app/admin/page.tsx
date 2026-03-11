@@ -9,16 +9,16 @@ export default function AdminPage() {
 
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
-    // Kiểm tra nếu người dùng có vai trò là 'admin'
-    if (user?.role !== 'admin') {
-      // Nếu không phải admin, chuyển hướng về trang chủ
+    // Kiểm tra nếu người dùng có vai trò là 'nhanvien'
+    if (user?.role !== 'nhanvien') {
+      // Nếu không phải nhanvien, chuyển hướng về trang chủ
       router.push('/');
     } else {
       setIsAdmin(true);
     }
   }, [router]);
 
-  // Nếu không có quyền admin, trả về null (không hiển thị gì)
+  // Nếu không có quyền nhanvien, trả về null (không hiển thị gì)
   if (!isAdmin) return null;
 
   return (

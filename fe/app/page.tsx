@@ -12,17 +12,17 @@ import {
 const benefits = [
   {
     title: "Giao hàng nhanh",
-    desc: "Nhận hàng toàn quốc với thời gian giao linh hoạt và tối ưu.",
+    desc: "Nhận hàng toàn quốc với thời gian linh hoạt.",
     icon: "🚚",
   },
   {
     title: "Thanh toán an toàn",
-    desc: "Nhiều phương thức thanh toán bảo mật và tiện lợi.",
+    desc: "Nhiều phương thức thanh toán bảo mật.",
     icon: "🔒",
   },
   {
     title: "Đổi trả dễ dàng",
-    desc: "Hỗ trợ đổi trả minh bạch, nhanh chóng và rõ ràng.",
+    desc: "Hỗ trợ đổi trả minh bạch, nhanh chóng.",
     icon: "↩️",
   },
 ];
@@ -80,90 +80,90 @@ export default function HomePage() {
   };
 
   return (
-    <div className="bg-slate-100 text-slate-800">
-      {/* Hero */}
-      <section className="mx-auto max-w-7xl px-6 py-12 sm:px-8 lg:px-10 lg:py-16 bg-gray-100 text-gray-800">
-        <div className="relative overflow-hidden rounded-4xl border border-blue-200 bg-[#1a95e1] px-6 py-12 text-white shadow-2xl sm:px-10 lg:px-14 lg:py-16">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(59,130,246,0.6),transparent_25%),radial-gradient(circle_at_bottom_left,rgba(37,99,235,0.4),transparent_25%)]" />
+    <div className="bg-slate-50 text-slate-800 min-h-screen">
+      {/* Hero Section */}
+      <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="relative overflow-hidden rounded-3xl bg-slate-900 px-6 py-10 text-white shadow-xl sm:px-10 lg:py-14">
+          {/* Subtle background glow */}
+          <div className="absolute top-0 right-0 -translate-y-12 translate-x-1/3 h-96 w-96 rounded-full bg-blue-500/20 blur-[80px]" />
+          <div className="absolute bottom-0 left-0 translate-y-1/3 -translate-x-1/3 h-96 w-96 rounded-full bg-indigo-500/20 blur-[80px]" />
 
-          <div className="relative z-10 grid items-center gap-10 lg:grid-cols-[1.05fr_0.95fr]">
+          <div className="relative z-10 grid items-center gap-10 lg:grid-cols-[1.1fr_0.9fr]">
             <div>
-              <div className="mb-5 inline-flex rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-medium text-white/90 backdrop-blur">
-                ✨ Bộ sưu tập mới đã lên kệ
+              <div className="mb-4 inline-flex rounded-full border border-slate-700 bg-slate-800/50 px-3 py-1.5 text-xs font-medium text-slate-300 backdrop-blur-md">
+                ✨ Bộ sưu tập mới 2026
               </div>
 
-              <h1 className="max-w-3xl text-4xl font-bold leading-tight tracking-tight sm:text-5xl lg:text-6xl">
-                Mua sắm hiện đại, trải nghiệm mượt mà và sản phẩm chất lượng.
+              <h1 className="text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl lg:text-5xl">
+                Mua sắm hiện đại, <br className="hidden lg:block" /> trải nghiệm mượt mà.
               </h1>
 
-              <p className="mt-5 max-w-2xl text-base leading-7 text-slate-300 sm:text-lg">
-                Khám phá nhiều sản phẩm nổi bật, danh mục đa dạng và giao diện
-                thương mại điện tử trực quan, hiện đại.
+              <p className="mt-4 max-w-xl text-base leading-relaxed text-slate-400">
+                Khám phá hàng ngàn sản phẩm nổi bật với mức giá ưu đãi. Giao diện tối giản, thanh toán dễ dàng.
               </p>
 
-              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+              <div className="mt-8 flex flex-wrap gap-3">
                 <Link
                   href="/products"
-                  className="inline-flex items-center justify-center rounded-2xl bg-white px-6 py-3.5 font-semibold text-slate-900 transition hover:bg-slate-100"
+                  className="inline-flex items-center justify-center rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-slate-900 transition hover:bg-slate-100"
                 >
-                  Khám phá sản phẩm
+                  Khám phá ngay
                 </Link>
-
                 <Link
                   href="/sale"
-                  className="inline-flex items-center justify-center rounded-2xl border border-white/20 bg-white/10 px-6 py-3.5 font-semibold text-white transition hover:bg-white/15"
+                  className="inline-flex items-center justify-center rounded-xl border border-slate-600 bg-slate-800/50 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700"
                 >
-                  Xem ưu đãi hôm nay
+                  Xem ưu đãi
                 </Link>
               </div>
 
-              <div className="mt-10 grid max-w-xl grid-cols-3 gap-3">
-                <div className="rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur">
+              <div className="mt-10 flex gap-8 border-t border-slate-700/50 pt-6">
+                <div>
                   <p className="text-2xl font-bold">{products.length}+</p>
-                  <p className="mt-1 text-sm text-slate-300">Sản phẩm</p>
+                  <p className="text-xs text-slate-400">Sản phẩm</p>
                 </div>
-                <div className="rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur">
+                <div>
                   <p className="text-2xl font-bold">{categories.length}+</p>
-                  <p className="mt-1 text-sm text-slate-300">Danh mục</p>
+                  <p className="text-xs text-slate-400">Danh mục</p>
                 </div>
-                <div className="rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur">
+                <div>
                   <p className="text-2xl font-bold">24/7</p>
-                  <p className="mt-1 text-sm text-slate-300">Hỗ trợ</p>
+                  <p className="text-xs text-slate-400">Hỗ trợ</p>
                 </div>
               </div>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="overflow-hidden rounded-[1.75rem] border border-white/10 bg-white/10 p-3 shadow-xl backdrop-blur">
+            {/* Hero Images Grid */}
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="overflow-hidden rounded-2xl border border-slate-700/50 bg-slate-800/30 p-2 backdrop-blur-sm">
                 <img
                   src={
                     featuredProducts[0]?.imageUrl ||
-                    "https://images.unsplash.com/photo-1523381210434-271e8be1f52b?q=80&w=1400&auto=format&fit=crop"
+                    "https://images.unsplash.com/photo-1523381210434-271e8be1f52b?q=80&w=800&auto=format&fit=crop"
                   }
                   alt="Hero product"
-                  className="h-72 w-full rounded-[1.25rem] object-cover sm:h-80"
+                  className="h-56 w-full rounded-xl object-cover sm:h-64"
                 />
               </div>
-
-              <div className="grid gap-4">
-                <div className="overflow-hidden rounded-[1.75rem] border border-white/10 bg-white/10 p-3 shadow-xl backdrop-blur">
+              <div className="grid gap-3">
+                <div className="overflow-hidden rounded-2xl border border-slate-700/50 bg-slate-800/30 p-2 backdrop-blur-sm">
                   <img
                     src={
                       featuredProducts[1]?.imageUrl ||
-                      "https://images.unsplash.com/photo-1542291026-7eec264c27ff?q=80&w=1200&auto=format&fit=crop"
+                      "https://images.unsplash.com/photo-1542291026-7eec264c27ff?q=80&w=800&auto=format&fit=crop"
                     }
                     alt="Hero sub product 1"
-                    className="h-36 w-full rounded-[1.25rem] object-cover sm:h-40"
+                    className="h-24 w-full rounded-xl object-cover sm:h-[118px]"
                   />
                 </div>
-                <div className="overflow-hidden rounded-[1.75rem] border border-white/10 bg-white/10 p-3 shadow-xl backdrop-blur">
+                <div className="overflow-hidden rounded-2xl border border-slate-700/50 bg-slate-800/30 p-2 backdrop-blur-sm">
                   <img
                     src={
                       featuredProducts[2]?.imageUrl ||
-                      "https://images.unsplash.com/photo-1511499767150-a48a237f0083?q=80&w=1200&auto=format&fit=crop"
+                      "https://images.unsplash.com/photo-1511499767150-a48a237f0083?q=80&w=800&auto=format&fit=crop"
                     }
                     alt="Hero sub product 2"
-                    className="h-36 w-full rounded-[1.25rem] object-cover sm:h-40"
+                    className="h-24 w-full rounded-xl object-cover sm:h-[118px]"
                   />
                 </div>
               </div>
@@ -173,78 +173,70 @@ export default function HomePage() {
       </section>
 
       {/* Benefits */}
-      <section className="mx-auto max-w-6xl px-4 py-2 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
+      <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           {benefits.map((item) => (
             <div
               key={item.title}
-              className="rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-sm"
+              className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-xs transition hover:shadow-sm"
             >
-              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-2xl">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-xl">
                 {item.icon}
               </div>
-              <h3 className="text-xl font-bold text-slate-900">{item.title}</h3>
-              <p className="mt-2 leading-7 text-slate-600">{item.desc}</p>
+              <div>
+                <h3 className="text-base font-bold text-slate-900">{item.title}</h3>
+                <p className="mt-0.5 text-sm text-slate-500">{item.desc}</p>
+              </div>
             </div>
           ))}
         </div>
       </section>
 
       {/* Categories */}
-      <section className="mx-auto max-w-6xl px-4 py-14 sm:px-6 lg:px-8">
-        <div className="mb-8 flex items-end justify-between gap-4">
+      <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+        <div className="mb-6 flex items-end justify-between gap-4">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.25em] text-blue-600">
+            <h2 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
               Danh mục nổi bật
-            </p>
-            <h2 className="mt-2 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
-              Khám phá theo danh mục
             </h2>
           </div>
-
           <Link
             href="/products"
-            className="hidden rounded-2xl border border-slate-300 bg-white px-5 py-3 font-medium text-slate-800 transition hover:bg-slate-50 sm:inline-flex"
+            className="hidden text-sm font-semibold text-blue-600 hover:text-blue-700 sm:block"
           >
-            Xem tất cả
+            Xem tất cả &rarr;
           </Link>
         </div>
 
         {loading ? (
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div
-                key={i}
-                className="rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-sm"
-              >
-                <div className="mb-5 h-16 w-16 animate-pulse rounded-2xl bg-slate-200" />
-                <div className="h-7 w-2/3 animate-pulse rounded bg-slate-200" />
-                <div className="mt-3 h-5 w-full animate-pulse rounded bg-slate-200" />
+              <div key={i} className="rounded-2xl border border-slate-200 bg-white p-5">
+                <div className="mb-4 h-12 w-12 animate-pulse rounded-xl bg-slate-100" />
+                <div className="h-5 w-1/2 animate-pulse rounded bg-slate-100" />
+                <div className="mt-2 h-4 w-full animate-pulse rounded bg-slate-100" />
               </div>
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {featuredCategories.map((category, index) => {
               const icons = ["👕", "🎧", "🪑", "⌚", "💄", "📱"];
               return (
                 <Link
                   href="/products"
                   key={category.id}
-                  className="group rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl"
+                  className="group rounded-2xl border border-slate-200 bg-white p-5 shadow-xs transition duration-200 hover:-translate-y-1 hover:border-blue-200 hover:shadow-md"
                 >
-                  <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100 text-3xl transition group-hover:bg-blue-50">
+                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-slate-50 text-2xl transition group-hover:bg-blue-50">
                     {icons[index % icons.length]}
                   </div>
-                  <h3 className="text-2xl font-bold text-slate-900">
+                  <h3 className="text-lg font-bold text-slate-900">
                     {category.name}
                   </h3>
-                  <p className="mt-2 leading-7 text-slate-600">
+                  <p className="mt-1 line-clamp-2 text-sm text-slate-500">
                     {category.description || "Khám phá các sản phẩm nổi bật."}
                   </p>
-                  <div className="mt-5 text-sm font-semibold text-blue-600">
-                    Xem sản phẩm →
-                  </div>
                 </Link>
               );
             })}
@@ -253,52 +245,41 @@ export default function HomePage() {
       </section>
 
       {/* Featured products */}
-      <section className="mx-auto max-w-6xl px-4 py-2 sm:px-6 lg:px-8">
-        <div className="mb-8 flex items-end justify-between gap-4">
+      <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+        <div className="mb-6 flex items-end justify-between gap-4">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.25em] text-red-500">
-              Sản phẩm nổi bật
-            </p>
-            <h2 className="mt-2 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
-              Sản phẩm mới nhất từ cửa hàng
+            <h2 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+              Sản phẩm mới nhất
             </h2>
           </div>
-
           <Link
             href="/products"
-            className="hidden rounded-2xl border border-slate-300 bg-white px-5 py-3 font-medium text-slate-800 transition hover:bg-slate-50 sm:inline-flex"
+            className="hidden text-sm font-semibold text-blue-600 hover:text-blue-700 sm:block"
           >
-            Xem thêm sản phẩm
+            Xem thêm &rarr;
           </Link>
         </div>
 
         {loading ? (
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {Array.from({ length: 6 }).map((_, index) => (
-              <div
-                key={index}
-                className="overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-sm"
-              >
-                <div className="h-72 animate-pulse bg-slate-200" />
-                <div className="space-y-3 p-5">
-                  <div className="h-8 w-3/4 animate-pulse rounded bg-slate-200" />
-                  <div className="h-6 w-1/2 animate-pulse rounded bg-slate-200" />
+              <div key={index} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs">
+                <div className="h-56 animate-pulse bg-slate-100" />
+                <div className="space-y-2 p-5">
+                  <div className="h-6 w-3/4 animate-pulse rounded bg-slate-100" />
+                  <div className="h-5 w-1/2 animate-pulse rounded bg-slate-100" />
                 </div>
               </div>
             ))}
           </div>
         ) : featuredProducts.length === 0 ? (
-          <div className="rounded-[1.75rem] border border-slate-200 bg-white p-12 text-center shadow-sm">
-            <div className="mb-4 text-6xl">📦</div>
-            <h3 className="text-2xl font-bold text-slate-900">
-              Chưa có sản phẩm nào
-            </h3>
-            <p className="mt-3 text-slate-600">
-              Hãy thêm sản phẩm từ trang admin để hiển thị tại đây.
-            </p>
+          <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center shadow-xs">
+            <div className="mb-3 text-4xl">📦</div>
+            <h3 className="text-lg font-bold text-slate-900">Chưa có sản phẩm nào</h3>
+            <p className="mt-2 text-sm text-slate-500">Hãy thêm sản phẩm từ trang admin.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {featuredProducts.map((product) => {
               const hasDiscount = !!product.discount && product.discount > 0;
               const displayPrice = getDisplayPrice(product);
@@ -306,62 +287,62 @@ export default function HomePage() {
               return (
                 <div
                   key={product.id}
-                  className="group overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl"
+                  className="group flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs transition duration-200 hover:-translate-y-1 hover:shadow-md"
                 >
-                  <div className="relative overflow-hidden">
+                  <div className="relative overflow-hidden bg-slate-50">
                     {product.imageUrl ? (
                       <img
                         src={product.imageUrl}
                         alt={product.name}
-                        className="h-72 w-full object-cover transition duration-500 group-hover:scale-105"
+                        className="h-56 w-full object-cover transition duration-500 group-hover:scale-105"
                       />
                     ) : (
-                      <div className="flex h-72 w-full items-center justify-center bg-slate-100 text-6xl">
+                      <div className="flex h-56 w-full items-center justify-center text-4xl">
                         📦
                       </div>
                     )}
 
                     {hasDiscount && (
-                      <div className="absolute left-4 top-4 rounded-full bg-red-500 px-3 py-1 text-sm font-semibold text-white shadow">
+                      <div className="absolute left-3 top-3 rounded-lg bg-red-500 px-2.5 py-1 text-xs font-bold text-white shadow-sm">
                         -{product.discount}%
                       </div>
                     )}
                   </div>
 
-                  <div className="p-5">
+                  <div className="flex flex-1 flex-col p-5">
                     {product.categoryName && (
-                      <p className="mb-2 text-sm font-medium uppercase tracking-wide text-slate-400">
+                      <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-slate-400">
                         {product.categoryName}
                       </p>
                     )}
 
-                    <h3 className="line-clamp-2 text-2xl font-bold text-slate-900">
+                    <h3 className="line-clamp-2 text-base font-bold text-slate-900">
                       {product.name}
                     </h3>
 
-                    <div className="mt-4 flex items-end gap-3">
-                      <span className="text-3xl font-bold text-red-600">
-                        {formatVND(displayPrice)}
-                      </span>
-
-                      {hasDiscount && (
-                        <span className="pb-1 text-lg text-slate-400 line-through">
-                          {formatVND(product.price)}
+                    <div className="mt-auto pt-4">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg font-bold text-blue-600">
+                          {formatVND(displayPrice)}
                         </span>
-                      )}
-                    </div>
+                        {hasDiscount && (
+                          <span className="text-sm text-slate-400 line-through">
+                            {formatVND(product.price)}
+                          </span>
+                        )}
+                      </div>
 
-                    <div className="mt-5 flex gap-3">
-                      <Link
-                        href={`/products/${product.id}`}
-                        className="flex-1 rounded-2xl bg-slate-900 px-4 py-3 text-center font-semibold text-white transition hover:bg-slate-800"
-                      >
-                        Xem chi tiết
-                      </Link>
-
-                      <button className="rounded-2xl border border-slate-300 px-4 py-3 font-semibold text-slate-800 transition hover:bg-slate-50">
-                        ♡
-                      </button>
+                      <div className="mt-4 flex gap-2">
+                        <Link
+                          href={`/products/${product.id}`}
+                          className="flex-1 rounded-xl bg-slate-900 py-2.5 text-center text-sm font-semibold text-white transition hover:bg-slate-800"
+                        >
+                          Chi tiết
+                        </Link>
+                        <button className="flex items-center justify-center rounded-xl border border-slate-200 px-4 text-slate-600 transition hover:bg-slate-50 hover:text-red-500">
+                          ♡
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -371,54 +352,40 @@ export default function HomePage() {
         )}
       </section>
 
-      {/* Promo banner */}
-      <section className="mx-auto max-w-6xl px-4 py-14 sm:px-6 lg:px-8">
-        <div className="overflow-hidden rounded-4xl border border-slate-200 bg-linear-to-r from-blue-600 via-indigo-600 to-slate-900 px-8 py-10 text-white shadow-xl">
-          <div className="grid items-center gap-8 lg:grid-cols-[1fr_auto]">
-            <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.25em] text-blue-100">
-                Ưu đãi giới hạn
-              </p>
-              <h2 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
-                Mua sắm thông minh với giá tốt hơn mỗi ngày
-              </h2>
-              <p className="mt-3 max-w-2xl leading-7 text-blue-100">
-                Theo dõi các chương trình khuyến mãi và lựa chọn những sản phẩm
-                phù hợp nhất với nhu cầu của bạn.
-              </p>
-            </div>
-
+      {/* Promo banner & Newsletter */}
+      <section className="mx-auto max-w-7xl px-4 py-10 pb-16 sm:px-6 lg:px-8">
+        <div className="grid gap-6 lg:grid-cols-2">
+          {/* Promo */}
+          <div className="overflow-hidden rounded-3xl bg-gradient-to-br from-blue-600 to-indigo-700 p-8 text-white shadow-lg sm:p-10">
+            <p className="text-xs font-bold uppercase tracking-wider text-blue-200">
+              Ưu đãi giới hạn
+            </p>
+            <h2 className="mt-2 text-2xl font-bold sm:text-3xl">
+              Mua sắm thông minh <br /> tiết kiệm mỗi ngày
+            </h2>
             <Link
               href="/products"
-              className="inline-flex items-center justify-center rounded-2xl bg-white px-6 py-3.5 font-semibold text-slate-900 transition hover:bg-slate-100"
+              className="mt-6 inline-flex items-center justify-center rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-slate-900 transition hover:bg-slate-100"
             >
               Mua sắm ngay
             </Link>
           </div>
-        </div>
-      </section>
 
-      {/* Newsletter */}
-      <section className="mx-auto max-w-7xl px-4 pb-16 sm:px-6 lg:px-8">
-        <div className="rounded-4xl border border-slate-200 bg-white p-8 shadow-sm">
-          <div className="grid items-center gap-8 lg:grid-cols-[1fr_auto]">
-            <div>
-              <h2 className="text-3xl font-bold tracking-tight text-slate-900">
-                Đăng ký nhận ưu đãi mới nhất
-              </h2>
-              <p className="mt-3 max-w-2xl leading-7 text-slate-600">
-                Cập nhật chương trình giảm giá, sản phẩm mới và ưu đãi nổi bật
-                ngay qua email của bạn.
-              </p>
-            </div>
-
-            <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
+          {/* Newsletter */}
+          <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-xs sm:p-10">
+            <h2 className="text-2xl font-bold text-slate-900">
+              Nhận thông báo ưu đãi
+            </h2>
+            <p className="mt-2 text-sm text-slate-500">
+              Cập nhật chương trình giảm giá và sản phẩm mới qua email của bạn.
+            </p>
+            <div className="mt-6 flex flex-col gap-2 sm:flex-row">
               <input
                 type="email"
                 placeholder="Nhập email của bạn"
-                className="min-w-70 rounded-2xl border border-slate-300 bg-white px-5 py-3.5 text-slate-900 placeholder-slate-400 outline-none transition focus:border-slate-400"
+                className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-1 focus:ring-blue-500"
               />
-              <button className="rounded-2xl bg-slate-900 px-6 py-3.5 font-semibold text-white transition hover:bg-slate-800">
+              <button className="rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800">
                 Đăng ký
               </button>
             </div>

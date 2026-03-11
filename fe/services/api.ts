@@ -80,6 +80,8 @@ export interface RegisterPayload {
   fullName: string;
   phone: string;
   email: string;
+  gender?: string;
+  age?: number;
 }
 
 export interface LoginPayload {
@@ -95,6 +97,8 @@ export interface AuthUser {
   email?: string;
   phone?: string;
   isActive?: boolean;
+  gender?: string;
+  age?: number;
 }
 
 export interface LoginResponse {
@@ -179,10 +183,9 @@ export const uploadImage = (formData: FormData) => {
 export const fetchUsers = () =>
   api.get('/users', { headers: { 'Content-Type': 'application/json' } })
 
-export const createUser = (data: any) => api.post('/users', data)
+export const createUser = (data: RegisterPayload) => api.post('/users', data)
 
-export const updateUser = (id: number, data: any) => api.put(`/users/${id}`, data)
-
+export const updateUser = (id: number, data: RegisterPayload) => api.put(`/users/${id}`, data)
 
 
 // ================= Helper Exports =================

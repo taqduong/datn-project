@@ -29,11 +29,15 @@ namespace BE.Models
         [Unicode(false)]
         public string Phone { get; set; } = null!;
 
-        public DateTime? CreatedAt { get; set; } // Note: Updated the spelling of "CreatAt" to "CreatedAt"
+        public DateTime? CreatedAt { get; set; } 
 
         public bool IsActive { get; set; }
 
         public string Email { get; set; } = null!;
+        
+        public string? Gender { get; set; }
+
+        public int? Age { get; set; }
 
         // [InverseProperty("User")]
         // public virtual ICollection<Cart> Carts { get; set; } = new List<Cart>();
