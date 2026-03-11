@@ -59,51 +59,73 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
   const [avatar, setAvatar] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
 
-  // Load thông tin user
+ // Load thông tin user (ĐÃ VÁ LỖ HỔNG BẢO MẬT)
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const storedUser = localStorage.getItem('user')
-        let user = storedUser ? JSON.parse(storedUser) : null
+        setLoading(true); // Bật loading trước khi check
+        
+        // 1. KIỂM TRA ĐĂNG NHẬP: Lấy token và user từ LocalStorage
+        const token = localStorage.getItem('token');
+        const storedUser = localStorage.getItem('user');
 
-        const userId = user?.id || id
-        if (userId) {
-          try {
-            const res = await api.get(`/users/${userId}`)
-            if (res.data) {
-              user = res.data
-              localStorage.setItem('user', JSON.stringify(user))
-            }
-          } catch (err) {
-            console.warn('⚠️ Không thể lấy user từ API, fallback sang localStorage.')
-          }
+        // 2. Nếu không có token -> CHƯA ĐĂNG NHẬP -> Ép văng ra màn hình "Chưa đăng nhập" ngay lập tức
+        if (!token || !storedUser) {
+          setUserData(null);
+          setLoading(false);
+          return; // Dừng luôn, không gọi API gì sất
         }
 
-        if (user) {
-          const formattedUser: UserData = {
-            id: user.id,
-            username: user.username || '',
-            fullName: user.fullName || user.username || '',
-            email: user.email || '',
-            phone: user.phone || '',
-            role: user.role || 'Customer',
-            avatar: user.avatar || user.Avatar || '',
-            gender: user.gender || undefined, 
-            age: user.age || undefined,      
-            createdAt: user.createdAt || user.createdDate || null
-          }
-          setUserData(formattedUser)
-          setEditData(formattedUser)
+        // 3. Nếu đã đăng nhập, lấy thông tin user đang login
+        let loggedInUser = JSON.parse(storedUser);
+
+        // 4. BẢO MẬT: So sánh ID trên URL và ID của người đang login
+        // Nếu cố tình gõ /profile/2 trong khi đang login là user 1 -> Bắt ép dùng id của user 1
+        const targetUserId = loggedInUser.id || loggedInUser.Id;
+        
+        if (id && targetUserId.toString() !== id.toString()) {
+            console.warn("Bảo mật: Không được xem thông tin người khác!");
+            // Nếu có router.push('/403') thì cho vào đây, còn tạm thời ta cứ ép nó fetch đúng user đang login
         }
+
+        // 5. Gọi API lấy dữ liệu mới nhất (chỉ lấy của targetUserId)
+        try {
+          const res = await api.get(`/users/${targetUserId}`);
+          if (res.data) {
+            loggedInUser = res.data;
+          }
+        } catch (err) {
+          console.warn('⚠️ Lấy user từ API thất bại, dùng data cũ từ localStorage.');
+        }
+
+        // 6. Format lại dữ liệu và in ra màn hình (Giữ nguyên phần fix Avatar hoa/thường)
+        const formattedUser: UserData = {
+          id: loggedInUser.id || loggedInUser.Id,
+          username: loggedInUser.username || loggedInUser.Username || '',
+          fullName: loggedInUser.fullName || loggedInUser.FullName || loggedInUser.username || loggedInUser.Username || '',
+          email: loggedInUser.email || loggedInUser.Email || '',
+          phone: loggedInUser.phone || loggedInUser.Phone || '',
+          role: loggedInUser.role || loggedInUser.Role || 'Customer',
+          avatar: loggedInUser.avatar || loggedInUser.Avatar || '', 
+          gender: loggedInUser.gender || loggedInUser.Gender || undefined, 
+          age: loggedInUser.age || loggedInUser.Age || undefined,      
+          createdAt: loggedInUser.createdAt || loggedInUser.CreatedAt || loggedInUser.createdDate || null
+        }
+        
+        setUserData(formattedUser);
+        setEditData(formattedUser);
+        localStorage.setItem('user', JSON.stringify(formattedUser));
+
       } catch (error) {
-        console.error('❌ Lỗi khi tải thông tin người dùng:', error)
+        console.error('❌ Lỗi khi tải thông tin người dùng:', error);
+        setUserData(null); // Nếu lỗi nặng cũng cho văng ra
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
     }
 
-    fetchUser()
-  }, [id])
+    fetchUser();
+  }, [id]);
 
   // Lấy danh sách đơn hàng
   useEffect(() => {

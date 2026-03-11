@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Search, ShoppingCart, User, Menu, Heart, X, LogOut, LayoutDashboard } from "lucide-react";
+import { Search, ShoppingCart, User, Menu, Heart, X, LogOut, LayoutDashboard, Store } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { searchProducts } from "@/services/api"; 
@@ -123,8 +123,13 @@ export default function Navbar() {
     <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/90 backdrop-blur-md">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center gap-4">
-          <Link href="/" className="shrink-0 text-2xl font-extrabold tracking-tight text-blue-600">
-            HomeMart
+          <Link href="/" className="shrink-0 flex items-center gap-2 group">
+            <div className="flex items-center justify-center w-9 h-9 bg-linear-to-tr from-blue-600 to-indigo-500 rounded-xl shadow-md shadow-blue-500/20 group-hover:scale-105 transition-transform duration-300">
+              <Store className="text-white" size={20} strokeWidth={2} />
+            </div>
+            <span className="text-2xl font-extrabold tracking-tight text-transparent bg-clip-text bg-linear-to-r from-blue-700 to-blue-600">
+              HomeMart
+            </span>
           </Link>
 
           <nav className="hidden items-center gap-6 md:flex">
@@ -176,8 +181,12 @@ export default function Navbar() {
               )}
             </Link>
 
-            {/* Các nút tài khoản */}
-            <Link href="/profile/1" className="hidden h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600 md:flex" aria-label="Tài khoản">
+              {/* Các nút tài khoản */}
+            <Link 
+              href={user?.id ? `/profile/${user.id}` : "/login"} 
+              className="hidden h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600 md:flex" 
+              aria-label="Tài khoản"
+            >
               <User className="h-5 w-5" />
             </Link>
 

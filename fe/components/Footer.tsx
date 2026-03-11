@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Facebook, Instagram, Twitter, Mail, Phone, MapPin } from "lucide-react";
+import { Facebook, Instagram, Twitter, Mail, Phone, MapPin, Store } from "lucide-react";
 
 export default function Footer() {
   return (
@@ -7,24 +7,39 @@ export default function Footer() {
       <div className="container mx-auto px-4 py-12">
         <div className="grid md:grid-cols-4 gap-8">
 
-          {/* Về chúng tôi */}
-          <div>
-            <h3 className="font-bold text-xl mb-4 text-blue-400">HomeMart</h3>
-            <p className="text-gray-400 mb-4">
-              Cửa hàng thương mại điện tử bán đồ gia dụng hàng đầu Việt Nam, cung cấp sản phẩm chất lượng với giá tốt nhất.
-            </p>
-            <div className="flex gap-4">
-              <a href="#" className="hover:text-blue-500 transition">
-                <Facebook size={20} />
-              </a>
-              <a href="#" className="hover:text-pink-500 transition">
-                <Instagram size={20} />
-              </a>
-              <a href="#" className="hover:text-blue-400 transition">
-                <Twitter size={20} />
-              </a>
+        {/* Về chúng tôi & Logo */}
+          <div className="flex flex-col gap-5">
+            {/* Logo Group */}
+            <div className="flex items-center gap-3 group">
+              <div className="flex items-center justify-center w-10 h-10 bg-linear-to-tr from-blue-600 to-indigo-500 rounded-xl shadow-lg shadow-blue-500/10 transition-transform duration-300 group-hover:scale-110">
+                <Store className="text-white" size={22} strokeWidth={2} />
+              </div>
+              <span className="text-2xl font-black tracking-tighter text-transparent bg-clip-text bg-linear-to-r from-blue-400 to-indigo-400 group-hover:from-blue-300 group-hover:to-indigo-300 transition-colors duration-300">
+                   HomeMart
+              </span>
             </div>
-          </div>
+
+            <p className="text-gray-400 text-sm leading-relaxed">
+              Cửa hàng thương mại điện tử bán đồ gia dụng hàng đầu Việt Nam, cung cấp sản phẩm chất lượng với giá tốt nhất cho mọi gia đình.
+            </p>
+
+            {/* Social Icons - Làm nhỏ lại và tinh tế hơn */}
+            <div className="flex gap-4">
+              {[
+                { Icon: Facebook, color: "hover:text-blue-500", href: "#" },
+                { Icon: Instagram, color: "hover:text-pink-500", href: "#" },
+                { Icon: Twitter, color: "hover:text-sky-400", href: "#" },
+              ].map((social, index) => (
+                <a 
+                  key={index} 
+                  href={social.href} 
+                  className={`w-8 h-8 flex items-center justify-center rounded-full bg-gray-700/50 text-gray-400 ${social.color} hover:bg-white/10 transition-all duration-300`}
+                >
+                  <social.Icon size={18} />
+                </a>
+              ))}
+            </div>
+          </div>    
 
           {/* Liên kết nhanh */}
           <div>
@@ -86,7 +101,7 @@ export default function Footer() {
             <ul className="space-y-3 text-gray-400">
               <li className="flex items-start gap-2">
                 <MapPin size={18} className="mt-1 shrink-0" />
-                <span>123 Đường ABC, Quận 1, TP.HCM</span>
+                <span> Đường Cầu Diễn, quận Bắc Từ Liêm, Hà Nội</span>
               </li>
               <li className="flex items-center gap-2">
                 <Phone size={18} />
@@ -94,7 +109,7 @@ export default function Footer() {
               </li>
               <li className="flex items-center gap-2">
                 <Mail size={18} />
-                <span>support@estore.com</span>
+                <span>support@hmstore.com</span>
               </li>
             </ul>
           </div>
