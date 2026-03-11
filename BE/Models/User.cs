@@ -39,6 +39,8 @@ namespace BE.Models
 
         public int? Age { get; set; }
 
+        public string? Avatar { get; set; }  // Để Avatar có thể nhận giá trị null 
+
         // [InverseProperty("User")]
         // public virtual ICollection<Cart> Carts { get; set; } = new List<Cart>();
 

@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   fetchProducts,
   fetchCategories,
+  uploadAvatar,
   type Product,
   type Category,
 } from "@/services/api";
@@ -153,7 +154,7 @@ export default function HomePage() {
                       "https://images.unsplash.com/photo-1542291026-7eec264c27ff?q=80&w=800&auto=format&fit=crop"
                     }
                     alt="Hero sub product 1"
-                    className="h-24 w-full rounded-xl object-cover sm:h-[118px]"
+                    className="h-24 w-full rounded-xl object-cover sm:h-29.5"
                   />
                 </div>
                 <div className="overflow-hidden rounded-2xl border border-slate-700/50 bg-slate-800/30 p-2 backdrop-blur-sm">
@@ -163,7 +164,7 @@ export default function HomePage() {
                       "https://images.unsplash.com/photo-1511499767150-a48a237f0083?q=80&w=800&auto=format&fit=crop"
                     }
                     alt="Hero sub product 2"
-                    className="h-24 w-full rounded-xl object-cover sm:h-[118px]"
+                    className="h-24 w-full rounded-xl object-cover sm:h-29.5"
                   />
                 </div>
               </div>
@@ -356,7 +357,7 @@ export default function HomePage() {
       <section className="mx-auto max-w-7xl px-4 py-10 pb-16 sm:px-6 lg:px-8">
         <div className="grid gap-6 lg:grid-cols-2">
           {/* Promo */}
-          <div className="overflow-hidden rounded-3xl bg-gradient-to-br from-blue-600 to-indigo-700 p-8 text-white shadow-lg sm:p-10">
+          <div className="overflow-hidden rounded-3xl bg-linear-to-br from-blue-600 to-indigo-700 p-8 text-white shadow-lg sm:p-10">
             <p className="text-xs font-bold uppercase tracking-wider text-blue-200">
               Ưu đãi giới hạn
             </p>

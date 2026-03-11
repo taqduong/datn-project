@@ -127,6 +127,32 @@ namespace Controllers
 
             return Ok(new { message = "Xóa người dùng thành công." });
         }
+        // ================== Cập nhật Avatar ==================
+        [HttpPut("{id}/avatar")]
+        public async Task<IActionResult> UpdateAvatar(int id, [FromForm] IFormFile avatarFile)
+        {
+            var user = await _context.Users.FindAsync(id);
+            if (user == null)
+                return NotFound(new { message = "Không tìm thấy người dùng." });
+
+            if (avatarFile != null)
+            {
+                // Lưu ảnh vào thư mục hoặc upload image logic
+                var filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "avatars", avatarFile.FileName);
+                using (var stream = new FileStream(filePath, FileMode.Create))
+                {
+                    await avatarFile.CopyToAsync(stream);
+                }
+
+                // Cập nhật đường dẫn avatar trong cơ sở dữ liệu
+                user.Avatar = "/avatars/" + avatarFile.FileName;
+                await _context.SaveChangesAsync();
+
+                return Ok(new { message = "Cập nhật avatar thành công.", avatarUrl = user.Avatar });
+            }
+
+            return BadRequest(new { message = "Không có tệp hình ảnh để tải lên." });
+        }
     }
 
     // ================== DTOs ==================

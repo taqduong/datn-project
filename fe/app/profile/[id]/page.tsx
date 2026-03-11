@@ -9,6 +9,8 @@ import {
 import { useRouter } from 'next/navigation'
 import { api } from '@/services/api' 
 import { updateUser } from '@/services/api'
+import { uploadAvatar } from '@/services/api'
+
 
 // ================== Kiểu dữ liệu ==================
 interface OrderItem {
@@ -53,6 +55,9 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
 
   const [orders, setOrders] = useState<Order[]>([])
   const [loadingOrders, setLoadingOrders] = useState(false)
+  // Thêm state để lưu avatar
+  const [avatar, setAvatar] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
 
   // Load thông tin user
   useEffect(() => {
@@ -82,7 +87,7 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
             email: user.email || '',
             phone: user.phone || '',
             role: user.role || 'Customer',
-            avatar: user.avatar || '',
+            avatar: user.avatar || user.Avatar || '',
             gender: user.gender || undefined, 
             age: user.age || undefined,      
             createdAt: user.createdAt || user.createdDate || null
@@ -117,42 +122,94 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
     fetchOrders()
   }, [activeTab, userData])
 
-  // Lưu thay đổi
+// Lưu thay đổi
   const handleSave = async () => {
-    if (!editData || !userData?.id) return
+    if (!editData || !userData?.id) return;
 
     try {
       const payload = {
         username: userData.username,  
-        password: "",                
+        password: "", // Gửi chuỗi rỗng              
         fullName: editData.fullName,
         email: editData.email,
         phone: editData.phone,
         gender: editData.gender || undefined,  
         age: editData.age || undefined        
+      };
+
+      let newAvatarUrl = userData.avatar; // Tạm giữ link cũ
+
+      // SỬA LỖI CHÍNH Ở ĐÂY: Nếu có chọn ảnh mới thì gọi API upload
+      if (avatar) {
+        const formData = new FormData();
+        // ĐÚNG TÊN "avatarFile" MÀ BACKEND ĐANG CHỜ
+        formData.append("avatarFile", avatar); 
+
+        const avatarRes = await api.post(`/files/upload-avatar/${userData.id}`, formData, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        });
+
+        // Lấy link ảnh từ backend trả về cất vào biến
+        newAvatarUrl = avatarRes.data.avatarUrl; 
       }
 
-      const res = await updateUser(Number(userData.id), payload)
+      const res = await updateUser(Number(userData.id), payload as any);
 
       if (res.status === 200 || res.status === 204) {
         const updatedUser = { 
           ...userData, 
           ...payload, 
+          avatar: newAvatarUrl, // Nạp link ảnh mới (hoặc cũ) vào đây
           age: payload.age === undefined ? undefined : payload.age 
-        }
-        setUserData(updatedUser)
-        localStorage.setItem('user', JSON.stringify(updatedUser))
-        window.dispatchEvent(new Event('storage'))
-        setIsEditing(false)
-        alert('✅ Cập nhật thông tin thành công!')
+        };
+        setUserData(updatedUser);
+        localStorage.setItem("user", JSON.stringify(updatedUser)); // Cất vào LocalStorage
+        window.dispatchEvent(new Event("storage"));
+        setIsEditing(false);
+        setAvatar(null); // Dọn dẹp state
+        setAvatarPreview(null);
+        alert('✅ Cập nhật thông tin thành công!');
       } else {
-        alert('⚠️ Cập nhật thất bại, vui lòng thử lại!')
+        alert('⚠️ Cập nhật thất bại, vui lòng thử lại!');
       }
     } catch (error) {
-      console.error('❌ Lỗi khi cập nhật thông tin:', error)
-      alert('❌ Có lỗi xảy ra khi cập nhật thông tin người dùng.')
+      console.error('❌ Lỗi khi cập nhật thông tin:', error);
+      alert('❌ Có lỗi xảy ra khi cập nhật thông tin người dùng.');
     }
-  }
+  };
+// SỬA LẠI HÀM NÀY: Tự động lưu ảnh ngay khi vừa chọn xong!
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files ? e.target.files[0] : null;
+    if (!file || !userData?.id) return;
+
+    try {
+      // 1. Hiển thị ảnh xem trước ngay lập tức cho mượt mắt
+      setAvatarPreview(URL.createObjectURL(file)); 
+
+      // 2. GỌI API ĐẨY ẢNH LÊN LUÔN (Không cần chờ bấm nút Lưu)
+      const avatarRes = await uploadAvatar(Number(userData.id), file);
+      const newAvatarUrl = avatarRes.data.avatarUrl || avatarRes.data.AvatarUrl;
+
+      // 3. Cập nhật lại thông tin User ngay và luôn
+      const updatedUser = { ...userData, avatar: newAvatarUrl };
+      
+      setUserData(updatedUser);
+      localStorage.setItem("user", JSON.stringify(updatedUser));
+      window.dispatchEvent(new Event("storage")); // Cập nhật luôn avatar trên thanh Navbar góc phải
+
+      // Reset cái input file để lần sau chọn lại ảnh cũ vẫn được
+      e.target.value = '';
+
+      alert('✅ Đã cập nhật ảnh đại diện thành công!');
+
+    } catch (error) {
+      console.error('❌ Lỗi tải ảnh lên:', error);
+      alert('❌ Có lỗi xảy ra khi cập nhật ảnh đại diện.');
+      setAvatarPreview(null); // Nếu lỗi thì gỡ cái ảnh xem trước đi
+    }
+  };
 
   const handleCancel = () => {
     setEditData(userData)
@@ -218,19 +275,39 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
           
           {/* ================== SIDEBAR ================== */}
           <div className="lg:col-span-3 lg:col-start-1">
-            <div className="bg-white rounded-[2rem] shadow-sm border border-zinc-200 overflow-hidden sticky top-24">
+            <div className="bg-white rounded-4xl shadow-sm border border-zinc-200 overflow-hidden sticky top-24">
               
-              {/* User Avatar Section */}
-              <div className="p-8 text-center bg-gradient-to-b from-blue-50/50 to-white">
+            {/* User Avatar Section */}
+              <div className="p-8 text-center bg-linear-to-b from-blue-50/50 to-white">
                 <div className="relative w-28 h-28 mx-auto mb-5">
-                  <div className="w-full h-full rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-4xl font-bold shadow-md ring-4 ring-white">
-                    {userData.fullName.charAt(0).toUpperCase()}
-                  </div>
-                  {/* Edit avatar button icon placeholder */}
-                  <button className="absolute bottom-0 right-0 p-2 bg-white rounded-full text-zinc-600 shadow-sm border border-zinc-100 hover:text-blue-600 transition">
-                    <Edit2 size={14} />
-                  </button>
+                    <div className="w-full h-full rounded-full bg-blue-50 flex items-center justify-center text-blue-500 text-3xl font-bold shadow-md ring-4 ring-white overflow-hidden">
+                        <img 
+                          src={
+                            avatarPreview || 
+                            userData.avatar || 
+                            `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.fullName || 'User')}&background=0D8ABC&color=fff&size=150`
+                          } 
+                          alt="User Avatar" 
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.fullName || 'User')}&background=0D8ABC&color=fff&size=150`;
+                          }}
+                        />
+                    </div>
+
+                    <label className="absolute bottom-0 right-0 cursor-pointer">
+                        <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleAvatarChange}
+                            className="hidden" 
+                        />
+                        <div className="p-2.5 bg-white rounded-full text-zinc-600 shadow-md border border-zinc-200 hover:text-blue-600 hover:bg-blue-50 transition-all flex items-center justify-center">
+                            <Edit2 size={16} />
+                        </div>
+                    </label>
                 </div>
+                
                 <h2 className="text-xl font-bold text-zinc-900 mb-1">{userData.fullName}</h2>
                 <p className="text-sm text-zinc-500 mb-4">{userData.email}</p>
                 <span className="inline-flex px-3 py-1 bg-blue-50 text-blue-700 text-xs rounded-full font-semibold uppercase tracking-wide">
@@ -302,7 +379,7 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
             
             {/* TAB: THÔNG TIN CÁ NHÂN */}
             {activeTab === 'info' && (
-              <div className="bg-white rounded-[2rem] shadow-sm border border-zinc-200 overflow-hidden">
+              <div className="bg-white rounded-4xl shadow-sm border border-zinc-200 overflow-hidden">
                 
                 {/* Header */}
                 <div className="px-8 py-6 border-b border-zinc-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-zinc-50/50">
@@ -496,7 +573,7 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
 
             {/* TAB PLACEHOLDER: ORDER / SETTINGS */}
             {activeTab !== 'info' && (
-              <div className="bg-white rounded-[2rem] shadow-sm border border-zinc-200 p-12 text-center">
+              <div className="bg-white rounded-4xl shadow-sm border border-zinc-200 p-12 text-center">
                 <div className="w-20 h-20 bg-zinc-50 text-zinc-400 rounded-full flex items-center justify-center mx-auto mb-4">
                   {activeTab === 'orders' ? <ShoppingBag size={32} /> : <Settings size={32} />}
                 </div>

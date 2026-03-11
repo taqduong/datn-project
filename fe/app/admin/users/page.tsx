@@ -66,10 +66,10 @@ export default function UserPage() {
         <button
           className="flex items-center gap-2 bg-linear-to-r from-sky-500 to-teal-400 text-white px-5 py-3 rounded-xl shadow-lg hover:brightness-110 transition"
           onClick={() => setModalOpen(true)}
-          title="Thêm người dùng mới"
+          title="Thêm nhân viên mới"
         >
           <UserPlus className="w-6 h-6" />
-          Thêm người dùng
+          Thêm nhân viên
         </button>
       </div>
 
@@ -114,7 +114,7 @@ export default function UserPage() {
             className="bg-white rounded-3xl p-8 shadow-2xl max-w-lg w-full flex flex-col gap-6"
           >
             <h2 className="text-3xl font-bold text-sky-600 text-center select-none">
-              ➕ Thêm người dùng mới
+              ➕ Thêm nhân viên mới
             </h2>
 
             <input

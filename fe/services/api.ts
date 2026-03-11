@@ -187,6 +187,17 @@ export const createUser = (data: RegisterPayload) => api.post('/users', data)
 
 export const updateUser = (id: number, data: RegisterPayload) => api.put(`/users/${id}`, data)
 
+export const uploadAvatar = (userId: number, avatarFile: File) => {
+  const formData = new FormData();
+  formData.append("avatarFile", avatarFile);
+
+  return api.post(`/files/upload-avatar/${userId}`, formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+};
+
 
 // ================= Helper Exports =================
 export const fetchCategories = categoriesAPI.getAll;

@@ -9,6 +9,7 @@ import {
   type Product,
   type Category,
 } from "@/services/api";
+import { Filter, ChevronDown } from "lucide-react";
 
 type SortType = "newest" | "priceAsc" | "priceDesc" | "nameAsc";
 
@@ -118,29 +119,37 @@ export default function ProductsPage() {
 
   return (
     <div className="min-h-screen bg-slate-100">
-      <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-        {/* Hero */}
-        <section className="mb-10 rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
-          <h1 className="text-4xl font-bold tracking-tight text-slate-900">
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        
+        {/* Hero Section - Đã trả về nền trắng như cũ */}
+        <section className="mb-8 rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900">
             Sản phẩm
           </h1>
-          <p className="mt-3 text-lg text-slate-600">
+          <p className="mt-2 text-sm text-slate-600 max-w-2xl">
             Khám phá các sản phẩm mới nhất với nhiều ưu đãi hấp dẫn.
           </p>
         </section>
 
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[320px_1fr]">
-          {/* Sidebar */}
-          <aside className="h-fit rounded-3xl border border-slate-200 bg-white p-7 shadow-sm">
+        {/* Layout: Sidebar + Main Content */}
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[280px_1fr]">
+          
+          {/* ================== SIDEBAR ================== */}
+          <aside className="h-fit rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sticky top-24">
+            
+            {/* Filter: Category */}
             <div>
-              <h2 className="text-2xl font-bold text-slate-900">Danh mục</h2>
+              <div className="flex items-center gap-2 mb-4">
+                <Filter size={18} className="text-slate-400" />
+                <h2 className="text-lg font-bold text-slate-900">Danh mục</h2>
+              </div>
 
-              <div className="mt-6 space-y-3">
+              <div className="space-y-2">
                 <button
                   onClick={() => setSelectedCategory("all")}
-                  className={`w-full rounded-2xl px-5 py-4 text-left text-lg font-medium transition ${
+                  className={`w-full rounded-xl px-4 py-2.5 text-left text-sm font-semibold transition-all ${
                     selectedCategory === "all"
-                      ? "bg-blue-600 text-white"
+                      ? "bg-blue-600 text-white shadow-md"
                       : "bg-slate-100 text-slate-800 hover:bg-slate-200"
                   }`}
                 >
@@ -151,9 +160,9 @@ export default function ProductsPage() {
                   <button
                     key={category.id}
                     onClick={() => setSelectedCategory(category.id)}
-                    className={`w-full rounded-2xl px-5 py-4 text-left text-lg font-medium transition ${
+                    className={`w-full rounded-xl px-4 py-2.5 text-left text-sm font-semibold transition-all ${
                       selectedCategory === category.id
-                        ? "bg-blue-600 text-white"
+                        ? "bg-blue-600 text-white shadow-md"
                         : "bg-slate-100 text-slate-800 hover:bg-slate-200"
                     }`}
                   >
@@ -163,38 +172,39 @@ export default function ProductsPage() {
               </div>
             </div>
 
-            <div className="my-8 border-t border-slate-200" />
+            <div className="my-6 border-t border-slate-200" />
 
+            {/* Filter: Price Range */}
             <div>
-              <h2 className="text-2xl font-bold text-slate-900">Khoảng giá</h2>
+              <h2 className="text-lg font-bold text-slate-900 mb-4">Khoảng giá</h2>
 
-              <div className="mt-6 space-y-4">
-                <label className="flex cursor-pointer items-center gap-3 text-lg text-slate-800">
+              <div className="space-y-3">
+                <label className="flex cursor-pointer items-center gap-3 text-sm font-medium text-slate-700 hover:text-slate-900">
                   <input
                     type="checkbox"
                     checked={selectedPriceRange.includes("under2m")}
                     onChange={() => handlePriceRangeChange("under2m")}
-                    className="h-6 w-6 rounded border-slate-300"
+                    className="h-5 w-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 transition-all cursor-pointer"
                   />
                   <span>Dưới 2.000.000đ</span>
                 </label>
 
-                <label className="flex cursor-pointer items-center gap-3 text-lg text-slate-800">
+                <label className="flex cursor-pointer items-center gap-3 text-sm font-medium text-slate-700 hover:text-slate-900">
                   <input
                     type="checkbox"
                     checked={selectedPriceRange.includes("2mTo5m")}
                     onChange={() => handlePriceRangeChange("2mTo5m")}
-                    className="h-6 w-6 rounded border-slate-300"
+                    className="h-5 w-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 transition-all cursor-pointer"
                   />
                   <span>2.000.000đ - 5.000.000đ</span>
                 </label>
 
-                <label className="flex cursor-pointer items-center gap-3 text-lg text-slate-800">
+                <label className="flex cursor-pointer items-center gap-3 text-sm font-medium text-slate-700 hover:text-slate-900">
                   <input
                     type="checkbox"
                     checked={selectedPriceRange.includes("over5m")}
                     onChange={() => handlePriceRangeChange("over5m")}
-                    className="h-6 w-6 rounded border-slate-300"
+                    className="h-5 w-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 transition-all cursor-pointer"
                   />
                   <span>Trên 5.000.000đ</span>
                 </label>
@@ -202,62 +212,80 @@ export default function ProductsPage() {
             </div>
           </aside>
 
-          {/* Main */}
+          {/* ================== MAIN CONTENT ================== */}
           <section>
-            <div className="mb-7 flex flex-col gap-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm md:flex-row md:items-center md:justify-between">
+            
+            {/* Toolbar */}
+            <div className="mb-6 flex flex-col gap-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="text-2xl font-semibold text-slate-900">
+                <p className="text-base font-bold text-slate-900">
                   Hiển thị {filteredAndSortedProducts.length} sản phẩm
                 </p>
-                <p className="mt-2 text-lg text-slate-600">
-                  Khoảng giá từ {formatVND(minPrice)} đến {formatVND(maxPrice)}
-                </p>
+                {filteredAndSortedProducts.length > 0 && (
+                  <p className="mt-1 text-xs text-slate-500 font-medium">
+                    Giá từ {formatVND(minPrice)} - {formatVND(maxPrice)}
+                  </p>
+                )}
               </div>
 
-              <div className="flex items-center gap-4">
-                <label className="text-lg font-medium text-slate-700">
+              <div className="flex items-center gap-3">
+                <label className="text-sm font-semibold text-slate-600">
                   Sắp xếp:
                 </label>
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as SortType)}
-                  className="rounded-2xl border border-slate-300 bg-white px-5 py-3 text-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="newest">Mới nhất</option>
-                  <option value="priceAsc">Giá tăng dần</option>
-                  <option value="priceDesc">Giá giảm dần</option>
-                  <option value="nameAsc">Tên A-Z</option>
-                </select>
+                <div className="relative">
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as SortType)}
+                    className="appearance-none rounded-xl border border-slate-200 bg-slate-50 pl-4 pr-10 py-2 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                  >
+                    <option value="newest">Mới nhất</option>
+                    <option value="priceAsc">Giá tăng dần</option>
+                    <option value="priceDesc">Giá giảm dần</option>
+                    <option value="nameAsc">Tên A-Z</option>
+                  </select>
+                  <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                </div>
               </div>
             </div>
 
+            {/* Product Grid */}
             {loading ? (
-              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
+              // Skeleton Loader
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
                 {Array.from({ length: 6 }).map((_, index) => (
                   <div
                     key={index}
-                    className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm"
+                    className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
                   >
-                    <div className="h-56 animate-pulse bg-slate-200" />
+                    <div className="h-48 animate-pulse bg-slate-100" />
                     <div className="space-y-3 p-5">
-                      <div className="h-6 w-3/4 animate-pulse rounded bg-slate-200" />
-                      <div className="h-5 w-1/2 animate-pulse rounded bg-slate-200" />
+                      <div className="h-4 w-1/3 animate-pulse rounded bg-slate-100" />
+                      <div className="h-5 w-3/4 animate-pulse rounded bg-slate-100" />
+                      <div className="h-6 w-1/2 animate-pulse rounded bg-slate-100 mt-4" />
                     </div>
                   </div>
                 ))}
               </div>
             ) : filteredAndSortedProducts.length === 0 ? (
+              // Empty State
               <div className="rounded-3xl border border-slate-200 bg-white p-16 text-center shadow-sm">
-                <div className="mb-4 text-6xl">📦</div>
-                <h3 className="text-2xl font-bold text-slate-900">
+                <div className="mb-4 text-5xl">📦</div>
+                <h3 className="text-xl font-bold text-slate-900">
                   Không tìm thấy sản phẩm phù hợp
                 </h3>
-                <p className="mt-3 text-lg text-slate-600">
+                <p className="mt-2 text-sm text-slate-600">
                   Hãy thử thay đổi danh mục hoặc khoảng giá.
                 </p>
+                <button 
+                  onClick={() => { setSelectedCategory("all"); setSelectedPriceRange([]); }}
+                  className="mt-6 inline-flex px-5 py-2.5 bg-blue-50 text-blue-700 font-semibold rounded-xl hover:bg-blue-100 transition"
+                >
+                  Xóa bộ lọc
+                </button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
+              // Product List
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
                 {filteredAndSortedProducts.map((p) => {
                   const displayPrice = getDisplayPrice(p);
                   const hasDiscount = !!p.discount && p.discount > 0;
@@ -266,69 +294,75 @@ export default function ProductsPage() {
                     <Link
                       key={p.id}
                       href={`/products/${p.id}`}
-                      className="group overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl"
+                      className="group flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition duration-200 hover:-translate-y-1 hover:border-blue-200 hover:shadow-md"
                     >
-                      <div className="relative overflow-hidden">
+                      {/* Image container - Đã thu nhỏ h-48 */}
+                      <div className="relative overflow-hidden bg-white p-2">
                         {p.imageUrl ? (
                           <img
                             src={p.imageUrl}
                             alt={p.name}
-                            className="h-60 w-full object-cover transition duration-500 group-hover:scale-105"
+                            className="h-48 w-full rounded-xl object-contain transition duration-500 group-hover:scale-105"
                           />
                         ) : (
-                          <div className="flex h-60 w-full items-center justify-center bg-slate-100 text-6xl">
+                          <div className="flex h-48 w-full rounded-xl items-center justify-center bg-slate-50 text-4xl">
                             📦
                           </div>
                         )}
 
                         {hasDiscount && (
                           <div className="absolute left-4 top-4">
-                            <span className="rounded-full bg-red-500 px-3 py-1 text-sm font-semibold text-white shadow">
+                            <span className="rounded-lg bg-red-500 px-2.5 py-1 text-xs font-bold text-white shadow-sm">
                               -{p.discount}%
                             </span>
                           </div>
                         )}
                       </div>
 
-                      <div className="p-5">
+                      {/* Content container */}
+                      <div className="flex flex-1 flex-col p-5 border-t border-slate-50">
                         {p.categoryName && (
-                          <p className="mb-2 text-sm font-medium uppercase tracking-wide text-slate-400">
+                          <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-slate-400">
                             {p.categoryName}
                           </p>
                         )}
 
-                        <h3 className="line-clamp-2 text-2xl font-bold text-slate-900">
+                        {/* Title - Đã giảm xuống text-base */}
+                        <h3 className="line-clamp-2 text-base font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
                           {p.name}
                         </h3>
 
-                        <div className="mt-4 flex items-end gap-3">
-                          <span className="text-3xl font-bold text-red-600">
-                            {formatVND(displayPrice)}
-                          </span>
-
-                          {hasDiscount && (
-                            <span className="pb-1 text-lg text-slate-400 line-through">
-                              {formatVND(p.price)}
+                        <div className="mt-auto pt-4">
+                          <div className="flex items-center gap-2">
+                            {/* Price - Đã giảm xuống text-lg */}
+                            <span className="text-lg font-bold text-red-600">
+                              {formatVND(displayPrice)}
                             </span>
-                          )}
-                        </div>
+                            {hasDiscount && (
+                              <span className="text-xs font-medium text-slate-400 line-through">
+                                {formatVND(p.price)}
+                              </span>
+                            )}
+                          </div>
 
-                        <div className="mt-4 flex items-center justify-between">
-                          <span
-                            className={`rounded-full px-3 py-1 text-sm font-medium ${
-                              p.stock > 10
-                                ? "bg-green-100 text-green-700"
-                                : p.stock > 0
-                                ? "bg-yellow-100 text-yellow-700"
-                                : "bg-red-100 text-red-700"
-                            }`}
-                          >
-                            {p.stock > 0 ? `Còn ${p.stock}` : "Hết hàng"}
-                          </span>
+                          <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3">
+                            {/* Stock Badge - Giữ nguyên màu xanh/vàng/đỏ cũ của ông */}
+                            <span
+                              className={`rounded-md px-2 py-1 text-[11px] font-bold uppercase tracking-wider ${
+                                p.stock > 10
+                                  ? "bg-green-100 text-green-700"
+                                  : p.stock > 0
+                                  ? "bg-yellow-100 text-yellow-700"
+                                  : "bg-red-100 text-red-700"
+                              }`}
+                            >
+                              {p.stock > 0 ? `Còn ${p.stock}` : "Hết hàng"}
+                            </span>
 
-                          <span className="text-sm font-medium text-blue-600 transition group-hover:translate-x-1">
-                            Xem chi tiết →
-                          </span>
+                            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider transition group-hover:translate-x-1 group-hover:text-blue-600">
+                              Chi tiết →
+                            </span>
+                          </div>
                         </div>
                       </div>
                     </Link>
