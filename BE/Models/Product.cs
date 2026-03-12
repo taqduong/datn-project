@@ -31,7 +31,9 @@ public partial class Product
     [StringLength(500)]
     public string? ImageUrl { get; set; }
 
+    [InverseProperty("Product")]
+    public virtual ICollection<Cart> Carts { get; set; } = new List<Cart>();
+
     [ForeignKey(nameof(CategoryId))]
-    [InverseProperty(nameof(BE.Models.Category.Products))]
     public virtual Category Category { get; set; } = null!;
 }

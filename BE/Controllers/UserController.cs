@@ -16,7 +16,8 @@ namespace Controllers
             _context = context;
         }
 
-        // ================== Tạo mới người dùng ==================
+        // ... Các hàm GetUsers, GetUser, DeleteUser giữ nguyên ...
+
         [HttpPost]
         public async Task<ActionResult<User>> CreateUser([FromBody] CreateUserRequest request)
         {
@@ -43,34 +44,26 @@ namespace Controllers
             return CreatedAtAction(nameof(GetUser), new { id = user.Id }, user);
         }
 
-        // ================== Lấy tất cả user ==================
         [HttpGet]
         public async Task<ActionResult<IEnumerable<User>>> GetUsers()
         {
-            var users = await _context.Users.ToListAsync();
-            return Ok(users);
+            return await _context.Users.ToListAsync();
         }
 
-        // ================== Lấy user theo ID ==================
         [HttpGet("{id}")]
         public async Task<ActionResult<User>> GetUser(int id)
         {
             var user = await _context.Users.FindAsync(id);
-            if (user == null)
-                return NotFound(new { message = "Không tìm thấy người dùng." });
-
+            if (user == null) return NotFound(new { message = "Không tìm thấy người dùng." });
             return Ok(user);
         }
 
-        // ================== Cập nhật thông tin user ==================
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateUser(int id, [FromBody] UpdateUserRequest request)
         {
             var user = await _context.Users.FindAsync(id);
-            if (user == null)
-                return NotFound(new { message = "Không tìm thấy người dùng." });
+            if (user == null) return NotFound(new { message = "Không tìm thấy người dùng." });
 
-            // Gán lại các giá trị mới (nếu có)
             user.FullName = request.FullName ?? user.FullName;
             user.Email = request.Email ?? user.Email;
             user.Phone = request.Phone ?? user.Phone;
@@ -78,21 +71,14 @@ namespace Controllers
             user.Age = request.Age ?? user.Age;
 
             await _context.SaveChangesAsync();
-
-            return Ok(new
-            {
-                message = "Cập nhật thông tin thành công.",
-                user
-            });
+            return Ok(new { message = "Cập nhật thông tin thành công.", user });
         }
 
-        // ================== Đăng ký ==================
         [HttpPost("register")]
         public async Task<IActionResult> Register(CreateUserRequest dto)
         {
             var userExists = await _context.Users.AnyAsync(u => u.Username == dto.Username || u.Email == dto.Email);
-            if (userExists)
-                return BadRequest("Tên người dùng hoặc email đã tồn tại");
+            if (userExists) return BadRequest("Tên người dùng hoặc email đã tồn tại");
 
             var user = new User
             {
@@ -110,42 +96,43 @@ namespace Controllers
 
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
-
             return Ok(new { message = "Đăng ký thành công" });
         }
 
-        // ================== Xóa người dùng ==================
         [HttpDelete("{id}")]
         public async Task<ActionResult> DeleteUser(int id)
         {
             var user = await _context.Users.FindAsync(id);
-            if (user == null)
-                return NotFound(new { message = "Không tìm thấy người dùng." });
+            if (user == null) return NotFound(new { message = "Không tìm thấy người dùng." });
 
             _context.Users.Remove(user);
             await _context.SaveChangesAsync();
-
             return Ok(new { message = "Xóa người dùng thành công." });
         }
-        // ================== Cập nhật Avatar ==================
+
+        // ================== Cập nhật Avatar (ĐÃ FIX LỖI SWAGGER) ==================
         [HttpPut("{id}/avatar")]
-        public async Task<IActionResult> UpdateAvatar(int id, [FromForm] IFormFile avatarFile)
+        [Consumes("multipart/form-data")] // Ép kiểu để Swagger nhận diện file
+        public async Task<IActionResult> UpdateAvatar(int id, [FromForm] UserAvatarUploadRequest request)
         {
             var user = await _context.Users.FindAsync(id);
-            if (user == null)
-                return NotFound(new { message = "Không tìm thấy người dùng." });
+            if (user == null) return NotFound(new { message = "Không tìm thấy người dùng." });
 
-            if (avatarFile != null)
+            var avatarFile = request.AvatarFile;
+            if (avatarFile != null && avatarFile.Length > 0)
             {
-                // Lưu ảnh vào thư mục hoặc upload image logic
-                var filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "avatars", avatarFile.FileName);
+                var avatarsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "avatars");
+                if (!Directory.Exists(avatarsFolder)) Directory.CreateDirectory(avatarsFolder);
+
+                var fileName = Guid.NewGuid().ToString() + Path.GetExtension(avatarFile.FileName);
+                var filePath = Path.Combine(avatarsFolder, fileName);
+
                 using (var stream = new FileStream(filePath, FileMode.Create))
                 {
                     await avatarFile.CopyToAsync(stream);
                 }
 
-                // Cập nhật đường dẫn avatar trong cơ sở dữ liệu
-                user.Avatar = "/avatars/" + avatarFile.FileName;
+                user.Avatar = "/avatars/" + fileName;
                 await _context.SaveChangesAsync();
 
                 return Ok(new { message = "Cập nhật avatar thành công.", avatarUrl = user.Avatar });
@@ -155,14 +142,14 @@ namespace Controllers
         }
     }
 
-    // ================== DTOs ==================
+    // ================== DTOs (FIX WARNING CS8618) ==================
     public class CreateUserRequest
     {
-        public string Username { get; set; }
-        public string Password { get; set; }
-        public string FullName { get; set; }
-        public string Phone { get; set; }
-        public string Email { get; set; }
+        public string Username { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
+        public string FullName { get; set; } = string.Empty;
+        public string Phone { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
         public string? Gender { get; set; }
         public int? Age { get; set; }
     }
@@ -174,5 +161,11 @@ namespace Controllers
         public string? Phone { get; set; }
         public string? Gender { get; set; }
         public int? Age { get; set; }
+    }
+
+    // Class bọc File để Swagger không bị Crash
+    public class UserAvatarUploadRequest
+    {
+        public IFormFile AvatarFile { get; set; } = null!;
     }
 }

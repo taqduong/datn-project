@@ -106,6 +106,25 @@ export interface LoginResponse {
   user: AuthUser;
 }
 
+export interface CartItem {
+  cartItemId: number;
+  productId: number;
+  quantity: number;
+  product: {
+    id: number;
+    name: string;
+    price: number;
+    discount?: number;
+    priceAfterDiscount: number;
+    imageUrl?: string;
+  };
+}
+
+export interface CartRequest {
+  productId: number;
+  quantity: number;
+}
+
 // ================= Categories API =================
 export const categoriesAPI = {
   getAll: () => api.get<Category[]>("/categories"),
@@ -147,6 +166,17 @@ export const productsAPI = {
       params: { keyword },
     }),
 };
+// ================= Carts API =================
+export const cartAPI = {
+  // api.get<CartItem[]> giúp Axios hiểu kết quả trả về là một mảng các CartItem
+  get: () => api.get<CartItem[]>("/cart/get"),
+
+  add: (data: CartRequest) => api.post("/cart/add", data),
+
+  updateQuantity: (data: CartRequest) => api.put("/cart/update-quantity", data),
+
+  remove: (productId: number | string) => api.delete(`/cart/remove/${productId}`),
+};
 // ================= Auth API =================
 export const authAPI = {
   register: (data: RegisterPayload) =>
@@ -169,7 +199,22 @@ export const authAPI = {
 
     return res;
   },
+  logout: () => {
+    // 1. Xóa sạch dữ liệu trong bộ nhớ máy tính
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      
+      // 2. Thông báo cho toàn bộ Website biết là User đã thoát
+      window.dispatchEvent(new Event("userUpdated"));
+    }
+    
+    // 3. Có thể gọi thêm API logout ở Backend nếu cần xóa session/blacklist token
+    return api.post("/auth/logout");
+  },
 };
+
+
 
 // ================= Upload API =================
 export const uploadImage = (formData: FormData) => {
@@ -199,6 +244,7 @@ export const uploadAvatar = (userId: number, avatarFile: File) => {
 };
 
 
+
 // ================= Helper Exports =================
 export const fetchCategories = categoriesAPI.getAll;
 export const fetchCategoryById = categoriesAPI.getById;
@@ -216,6 +262,12 @@ export const deleteProduct = productsAPI.delete;
 
 export const registerUser = authAPI.register;
 export const loginUser = authAPI.login;
+export const logoutUser = authAPI.logout;
+
+export const fetchCart = cartAPI.get;
+export const addToCart = (productId: number, quantity: number) => cartAPI.add({ productId, quantity });
+export const updateCartItem = (productId: number, quantity: number) => cartAPI.updateQuantity({ productId, quantity });
+export const removeCartItem = cartAPI.remove;
 
 export default api;
 // ================= Chatbot API (demo) =================

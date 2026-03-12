@@ -13,7 +13,10 @@ public partial class ShopDbContext : DbContext
     public virtual DbSet<Category> Categories { get; set; }
 
     public virtual DbSet<Product> Products { get; set; }
+
     public virtual DbSet<User> Users { get; set; }
+
+    public virtual DbSet<Cart> Carts { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -24,6 +27,16 @@ public partial class ShopDbContext : DbContext
         });
 
         modelBuilder.Entity<Category>(entity =>
+        {
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETDATE()");
+        });
+
+        modelBuilder.Entity<User>(entity =>
+        {
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETDATE()");
+        });
+
+        modelBuilder.Entity<Cart>(entity =>
         {
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETDATE()");
         });

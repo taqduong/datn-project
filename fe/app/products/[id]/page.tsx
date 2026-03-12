@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { fetchProductById, type Product } from "@/services/api";
+import { fetchProductById, addToCart, type Product } from "@/services/api";
 
 
 export default function ProductDetailPage() {
@@ -15,6 +15,9 @@ export default function ProductDetailPage() {
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [isAdding, setIsAdding] = useState(false);
+
+  
 
   const loadProduct = async () => {
     try {
@@ -66,6 +69,50 @@ export default function ProductDetailPage() {
 
   const handleDecrease = () => {
     setQuantity((prev) => Math.max(prev - 1, 1));
+  };
+
+  // Xử lý Thêm vào giỏ & Mua ngay
+  const handleAddToCart = async (isBuyNow = false) => {
+    // 1. Nếu chưa load xong sản phẩm thì cấm bấm
+    if (!product) return;
+
+    // 2. Kiểm tra thẻ xe (Token):
+    // Phải kiểm tra xem máy khách đã lưu token chưa (tức là đã đăng nhập chưa).
+    const token = localStorage.getItem("token");
+    if (!token) {
+      alert("Vui lòng đăng nhập để mua hàng!");
+      router.push("/login"); // Đá văng ra trang đăng nhập
+      return;
+    }
+
+    try {
+      // 3. Khóa nút lại để chống spam click
+      setIsAdding(true);
+
+      // 4. Gửi yêu cầu sang Backend: Báo nó nhét productId này với quantity này vào bảng Cart
+      await addToCart(product.id, quantity);
+      
+      // 5. Cập nhật giao diện:
+      // Phát ra một cái loa thông báo trên toàn Website tên là 'cartUpdated'.
+      // Lát nữa ở cái Header (chỗ có icon giỏ hàng), mình sẽ viết code để nó nghe thấy tiếng loa này 
+      // là nó tự động load lại API để lấy số lượng mới (từ 1 lên 2).
+      window.dispatchEvent(new Event('cartUpdated')); 
+
+      // 6. Rẽ nhánh theo nút khách bấm:
+      if (isBuyNow) {
+        // Nếu là nút "Mua ngay" (isBuyNow = true) -> Chuyển thẳng sang trang Giỏ hàng để chốt đơn
+        router.push("/cart"); 
+      } else {
+        // Nếu là nút "Thêm vào giỏ" (isBuyNow = false) -> Báo thành công rồi để khách ở lại mua tiếp
+        alert("Đã thêm sản phẩm vào giỏ hàng!"); 
+      }
+    } catch (error) {
+      console.error("Lỗi khi thêm vào giỏ hàng:", error);
+      alert("Có lỗi xảy ra, vui lòng thử lại sau.");
+    } finally {
+      // 7. Dù thành công hay thất bại (mạng rớt), cũng phải mở khóa cho cái nút để khách còn bấm lại được
+      setIsAdding(false);
+    }
   };
 
   if (loading) {
@@ -306,19 +353,34 @@ export default function ProductDetailPage() {
               </div>
 
               <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {/* 1. NÚT MUA NGAY */}
+                {/* onClick gọi hàm kèm chữ 'true' (báo hiệu đây là nút mua ngay) */}
                 <button
-                  disabled={product.stock <= 0}
-                  className={`rounded-2xl px-5 py-4 font-semibold text-white transition ${
-                    product.stock <= 0
-                      ? "cursor-not-allowed bg-slate-300"
-                      : "bg-slate-900 hover:bg-slate-800"
+                  onClick={() => handleAddToCart(true)}
+                  // Nút sẽ bị liệt (disabled) nếu: hết hàng (stock <= 0) HOẶC mạng đang quay (isAdding = true)
+                  disabled={product.stock <= 0 || isAdding}
+                  className={`rounded-2xl px-5 py-4 font-semibold text-white transition flex justify-center items-center ${
+                    product.stock <= 0 || isAdding
+                      ? "cursor-not-allowed bg-slate-300" // Đổi màu xám nếu bị liệt
+                      : "bg-slate-900 hover:bg-slate-800" // Màu đen ngầu lòi nếu bình thường
                   }`}
                 >
-                  Mua ngay
+                  {/* Nếu isAdding đang là true -> Hiện chữ "Đang xử lý...". Nếu false -> Hiện "Mua ngay" */}
+                  {isAdding ? "Đang xử lý..." : "Mua ngay"}
                 </button>
 
-                <button className="rounded-2xl border border-slate-300 bg-white px-5 py-4 font-semibold text-slate-800 transition hover:bg-slate-50">
-                  Thêm vào giỏ hàng
+                {/* 2. NÚT THÊM VÀO GIỎ HÀNG */}
+                {/* onClick gọi hàm kèm chữ 'false' (báo hiệu chỉ thêm chứ không chuyển trang) */}
+                <button 
+                  onClick={() => handleAddToCart(false)}
+                  disabled={product.stock <= 0 || isAdding}
+                  className={`rounded-2xl border px-5 py-4 font-semibold transition flex justify-center items-center ${
+                    product.stock <= 0 || isAdding
+                      ? "cursor-not-allowed border-slate-200 text-slate-400 bg-slate-50"
+                      : "border-slate-300 bg-white text-slate-800 hover:bg-slate-50"
+                  }`}
+                >
+                  {isAdding ? "Đang thêm..." : "Thêm vào giỏ hàng"}
                 </button>
               </div>
 
