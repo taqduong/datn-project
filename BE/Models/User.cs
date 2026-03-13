@@ -44,8 +44,8 @@ namespace BE.Models
         [InverseProperty("User")]
         public virtual ICollection<Cart> Carts { get; set; } = new List<Cart>();
 
-        // [InverseProperty("User")]
-        // public virtual ICollection<Order> Orders { get; set; } = new List<Order>();
+        [InverseProperty("User")]
+        public virtual ICollection<Order> Orders { get; set; } = new List<Order>();
 
         // [InverseProperty("User")]
         // public virtual ICollection<Review> Reviews { get; set; } = new List<Review>();

@@ -23,6 +23,24 @@ api.interceptors.request.use(
   },
   (error) => Promise.reject(error)
 );
+api.interceptors.response.use(
+  (response) => response, // Trả về bình thường nếu API gọi thành công (200 OK)
+  (error) => {
+    // Nếu Backend trả về lỗi 401 (Unauthorized - Token hết hạn hoặc chưa login)
+    if (error.response && error.response.status === 401) {
+      if (typeof window !== "undefined") {
+        // 1. Âm thầm xóa Token đã "chết" khỏi localStorage
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        
+        // 2. Phát tín hiệu cho các Component (như Navbar) biết để cập nhật lại giao diện (ẩn avatar đi)
+        window.dispatchEvent(new Event("userUpdated"));
+      }
+    }
+    // Trả lỗi về cho component tự xử lý tiếp (ví dụ: catch(err) { set giỏ hàng = 0 })
+    return Promise.reject(error);
+  }
+);
 
 // ================= Types =================
 export interface Category {
@@ -125,6 +143,40 @@ export interface CartRequest {
   quantity: number;
 }
 
+export interface CheckoutPayload {
+  fullName: string;
+  phone: string;
+  address: string;
+  email?: string;
+  city?: string;
+  district?: string;
+  ward?: string;
+  note?: string;
+}
+
+export interface OrderDetailDto {
+  productId: number;
+  productName: string;
+  quantity: number;
+  price: number;
+  imageUrl: string;
+}
+
+export interface OrderDto {
+  orderId: number;
+  orderDate: string;
+  totalAmount: number;
+  status: string;
+  fullName: string;
+  phone: string;
+  address: string;
+  email?: string;
+  city?: string;
+  district?: string;
+  ward?: string;
+  note?: string;
+  orderDetails: OrderDetailDto[];
+}
 // ================= Categories API =================
 export const categoriesAPI = {
   getAll: () => api.get<Category[]>("/categories"),
@@ -243,6 +295,15 @@ export const uploadAvatar = (userId: number, avatarFile: File) => {
   });
 };
 
+// ================= Orders API =================
+export const ordersAPI = {
+  checkout: (data: CheckoutPayload) => api.post("/Order/checkout", data),
+  getAdminOrders: () => api.get<OrderDto[]>("/Order/admin"),
+  getUserOrders: () => api.get<OrderDto[]>("/Order"),
+  getById: (id: number | string) => api.get<OrderDto>(`/Order/${id}`),
+  delete: (id: number | string) => api.delete(`/Order/${id}`),
+};
+
 
 
 // ================= Helper Exports =================
@@ -268,6 +329,12 @@ export const fetchCart = cartAPI.get;
 export const addToCart = (productId: number, quantity: number) => cartAPI.add({ productId, quantity });
 export const updateCartItem = (productId: number, quantity: number) => cartAPI.updateQuantity({ productId, quantity });
 export const removeCartItem = cartAPI.remove;
+
+export const checkoutOrder = ordersAPI.checkout;
+export const fetchAdminOrders = ordersAPI.getAdminOrders;
+export const fetchUserOrders = ordersAPI.getUserOrders;
+export const fetchOrderById = ordersAPI.getById;
+export const deleteOrder = ordersAPI.delete;
 
 export default api;
 // ================= Chatbot API (demo) =================

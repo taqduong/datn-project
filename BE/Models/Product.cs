@@ -36,4 +36,7 @@ public partial class Product
 
     [ForeignKey(nameof(CategoryId))]
     public virtual Category Category { get; set; } = null!;
+
+    [InverseProperty("Product")]
+    public virtual ICollection<OrderDetail> OrderDetails { get; set; } = new List<OrderDetail>();
 }
