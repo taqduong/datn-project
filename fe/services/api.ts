@@ -302,6 +302,7 @@ export const ordersAPI = {
   getUserOrders: () => api.get<OrderDto[]>("/Order"),
   getById: (id: number | string) => api.get<OrderDto>(`/Order/${id}`),
   delete: (id: number | string) => api.delete(`/Order/${id}`),
+  updateStatus: (id: number | string, status: string) => api.put(`/Order/${id}/status`, { status }),
 };
 
 
@@ -335,6 +336,7 @@ export const fetchAdminOrders = ordersAPI.getAdminOrders;
 export const fetchUserOrders = ordersAPI.getUserOrders;
 export const fetchOrderById = ordersAPI.getById;
 export const deleteOrder = ordersAPI.delete;
+export const updateOrderStatus = ordersAPI.updateStatus;
 
 export default api;
 // ================= Chatbot API (demo) =================

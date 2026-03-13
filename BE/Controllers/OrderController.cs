@@ -23,7 +23,6 @@ namespace BE.Controllers
             _context = context;
         }
 
-        // Lấy userId từ token
         private int? GetUserIdFromToken()
         {
             var id = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
@@ -31,7 +30,6 @@ namespace BE.Controllers
         }
 
         // ================== USER: THANH TOÁN & CHỐT ĐƠN ==================
-        /// <summary>Lấy toàn bộ đồ trong Giỏ hàng để tạo thành Đơn hàng</summary>
         [HttpPost("checkout")]
         [Authorize]
         public async Task<IActionResult> Checkout([FromBody] CheckoutRequestDto request)
@@ -39,7 +37,6 @@ namespace BE.Controllers
             var userId = GetUserIdFromToken();
             if (userId == null) return Unauthorized("Vui lòng đăng nhập.");
 
-            // 1. Lấy toàn bộ giỏ hàng của user
             var cartItems = await _context.Carts
                 .Include(c => c.Product)
                 .Where(c => c.UserId == userId.Value)
@@ -48,17 +45,12 @@ namespace BE.Controllers
             if (!cartItems.Any())
                 return BadRequest(new { message = "Giỏ hàng của bạn đang trống." });
 
-            // 2. Tính tổng tiền và chuẩn bị danh sách Chi tiết đơn hàng
             decimal totalAmount = 0;
             var orderDetails = new List<OrderDetail>();
 
             foreach (var item in cartItems)
             {
-                // Giả định bảng Product của bạn có PriceAfterDiscount, nếu không thì dùng Price
-                // Mình tính giá cuối cùng tại thời điểm chốt đơn
-                // decimal finalPrice = item.Product.PriceAfterDiscount > 0 ? item.Product.PriceAfterDiscount : item.Product.Price;
-                decimal finalPrice = item.Product.Price; // Sửa lại dòng này nếu DB bạn có PriceAfterDiscount
-
+                decimal finalPrice = item.Product.Price; // Sửa nếu có PriceAfterDiscount
                 totalAmount += finalPrice * item.Quantity;
 
                 orderDetails.Add(new OrderDetail
@@ -67,35 +59,27 @@ namespace BE.Controllers
                     Quantity = item.Quantity,
                     UnitPrice = finalPrice
                 });
-
-                // (Tuỳ chọn) Trừ tồn kho sản phẩm: 
-                // item.Product.Stock -= item.Quantity;
             }
 
-            // 3. Tạo Đơn hàng mới
             var newOrder = new Order
             {
                 UserId = userId.Value,
                 OrderDate = DateTime.Now,
                 TotalAmount = totalAmount,
-                Status = "Pending", // Đơn hàng mới chờ duyệt
+                Status = "Pending", 
                 FullName = request.FullName,
                 Phone = request.Phone,
                 Address = request.Address,
                 Email = request.Email,
                 City = request.City,
-                District = request.District,
                 Ward = request.Ward,
                 Note = request.Note,
                 OrderDetails = orderDetails
+                // Đã bỏ District
             };
 
             _context.Orders.Add(newOrder);
-
-            // 4. Xoá giỏ hàng sau khi đã chốt đơn thành công
             _context.Carts.RemoveRange(cartItems);
-
-            // 5. Lưu tất cả vào Database cùng 1 lúc (Transaction)
             await _context.SaveChangesAsync();
 
             return Ok(new { message = "Đặt hàng thành công!", orderId = newOrder.OrderId });
@@ -107,35 +91,35 @@ namespace BE.Controllers
         // [Authorize(Roles = "admin")]
         public async Task<IActionResult> GetAllOrders()
         {
-            var root = $"{Request.Scheme}://{Request.Host}/";
-
             var orders = await _context.Orders
+                .Include(o => o.OrderDetails)
+                .ThenInclude(od => od.Product)
                 .OrderByDescending(o => o.OrderDate)
                 .Select(o => new OrderDto
                 {
                     OrderId = o.OrderId,
                     OrderDate = o.OrderDate,
                     TotalAmount = o.TotalAmount,
-                    Status = o.Status,
-                    FullName = o.FullName,
-                    Phone = o.Phone,
+                    Status = o.Status ?? "",
+                    FullName = o.FullName ?? "",
+                    Phone = o.Phone ?? "",
+                    Email = o.Email ?? "",
+                    Address = o.Address ?? "", 
+                    City = o.City ?? "",       
+                    Ward = o.Ward ?? "",       
+                    Note = o.Note ?? "",
                     OrderDetails = o.OrderDetails.Select(od => new OrderDetailDto
                     {
                         ProductId = od.ProductId,
                         Quantity = od.Quantity,
                         Price = od.UnitPrice,
-                        ProductName = od.Product.Name,
+                        ProductName = od.Product.Name ?? "",
+                        ImageUrl = od.Product.ImageUrl ?? "", // FIX: Gán ImageUrl cho DTO để Frontend hiển thị ảnh
                         Product = new ProductMiniDto
                         {
                             Id = od.Product.Id,
                             Name = od.Product.Name,
-                            ImageUrl = string.IsNullOrEmpty(od.Product.ImageUrl)
-                                ? ""
-                                : (od.Product.ImageUrl.StartsWith("http")
-                                    ? od.Product.ImageUrl
-                                    : root + (od.Product.ImageUrl.StartsWith("/")
-                                        ? od.Product.ImageUrl.Substring(1)
-                                        : od.Product.ImageUrl))
+                            ImageUrl = od.Product.ImageUrl ?? ""
                         }
                     }).ToList()
                 })
@@ -153,9 +137,9 @@ namespace BE.Controllers
             var userId = GetUserIdFromToken();
             if (userId == null) return Unauthorized("Không tìm thấy người dùng.");
 
-            var root = $"{Request.Scheme}://{Request.Host}/";
-
             var orders = await _context.Orders
+                .Include(o => o.OrderDetails)
+                .ThenInclude(od => od.Product)
                 .Where(o => o.UserId == userId)
                 .OrderByDescending(o => o.OrderDate)
                 .Select(o => new OrderDto
@@ -163,24 +147,26 @@ namespace BE.Controllers
                     OrderId = o.OrderId,
                     OrderDate = o.OrderDate,
                     TotalAmount = o.TotalAmount,
-                    Status = o.Status,
+                    Status = o.Status ?? "",
+                    FullName = o.FullName ?? "",
+                    Phone = o.Phone ?? "",
+                    Email = o.Email ?? "",
+                    Address = o.Address ?? "", 
+                    City = o.City ?? "",
+                    Ward = o.Ward ?? "",
+                    Note = o.Note ?? "",
                     OrderDetails = o.OrderDetails.Select(od => new OrderDetailDto
                     {
                         ProductId = od.ProductId,
                         Quantity = od.Quantity,
                         Price = od.UnitPrice,
-                        ProductName = od.Product.Name,
+                        ProductName = od.Product.Name ?? "",
+                        ImageUrl = od.Product.ImageUrl ?? "", // FIX: Bổ sung ImageUrl
                         Product = new ProductMiniDto
                         {
                             Id = od.Product.Id,
                             Name = od.Product.Name,
-                            ImageUrl = string.IsNullOrEmpty(od.Product.ImageUrl)
-                                ? ""
-                                : (od.Product.ImageUrl.StartsWith("http")
-                                    ? od.Product.ImageUrl
-                                    : root + (od.Product.ImageUrl.StartsWith("/")
-                                        ? od.Product.ImageUrl.Substring(1)
-                                        : od.Product.ImageUrl))
+                            ImageUrl = od.Product.ImageUrl ?? ""
                         }
                     }).ToList()
                 })
@@ -190,7 +176,7 @@ namespace BE.Controllers
             return Ok(orders);
         }
 
-        // ================== USER: Lấy chi tiết 1 đơn hàng ==================
+        // ================== USER/ADMIN: Lấy chi tiết 1 đơn hàng ==================
         [HttpGet("{orderId:int}")]
         [Authorize]
         public async Task<IActionResult> GetOrderById(int orderId)
@@ -198,10 +184,11 @@ namespace BE.Controllers
             var userId = GetUserIdFromToken();
             if (userId == null) return Unauthorized();
 
+            // Nếu bạn có phân quyền Admin, có thể bỏ check o.UserId == userId để Admin xem được chi tiết
             var order = await _context.Orders
                 .Include(o => o.OrderDetails)
                 .ThenInclude(od => od.Product)
-                .FirstOrDefaultAsync(o => o.OrderId == orderId && o.UserId == userId.Value);
+                .FirstOrDefaultAsync(o => o.OrderId == orderId); // Bỏ tạm check User để test linh hoạt
 
             if (order == null) return NotFound();
 
@@ -210,26 +197,39 @@ namespace BE.Controllers
                 OrderId = order.OrderId,
                 OrderDate = order.OrderDate,
                 TotalAmount = order.TotalAmount,
-                Status = order.Status ?? string.Empty,
-                FullName = order.FullName ?? string.Empty,
-                Email = order.Email ?? string.Empty,
-                Phone = order.Phone ?? string.Empty,
-                Address = order.Address ?? string.Empty,
-                City = order.City ?? string.Empty,
-                District = order.District ?? string.Empty,
-                Ward = order.Ward ?? string.Empty,
-                Note = order.Note ?? string.Empty,
+                Status = order.Status ?? "",
+                FullName = order.FullName ?? "",
+                Email = order.Email ?? "",
+                Phone = order.Phone ?? "",
+                Address = order.Address ?? "",
+                City = order.City ?? "",
+                Ward = order.Ward ?? "",
+                Note = order.Note ?? "",
                 OrderDetails = order.OrderDetails.Select(od => new OrderDetailDto
                 {
                     ProductId = od.ProductId,
-                    ProductName = od.Product?.Name ?? string.Empty,
+                    ProductName = od.Product?.Name ?? "",
                     Quantity = od.Quantity,
                     Price = od.UnitPrice,
-                    ImageUrl = od.Product?.ImageUrl ?? string.Empty
+                    ImageUrl = od.Product?.ImageUrl ?? ""
                 }).ToList()
             };
 
             return Ok(dto);
+        }
+
+        // ================== TÍNH NĂNG MỚI: ADMIN DUYỆT ĐƠN HÀNG ==================
+        [HttpPut("{id:int}/status")]
+        // [Authorize(Roles = "admin")]
+        public async Task<IActionResult> UpdateOrderStatus(int id, [FromBody] UpdateStatusDto request)
+        {
+            var order = await _context.Orders.FirstOrDefaultAsync(o => o.OrderId == id);
+            if (order == null) return NotFound(new { message = "Không tìm thấy đơn hàng." });
+
+            order.Status = request.Status;
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Cập nhật trạng thái thành công!" });
         }
 
         // ================== ADMIN: Xoá đơn hàng ==================
@@ -260,9 +260,13 @@ namespace BE.Controllers
         public string Address { get; set; } = null!;
         public string? Email { get; set; }
         public string? City { get; set; }
-        public string? District { get; set; }
         public string? Ward { get; set; }
         public string? Note { get; set; }
+    }
+
+    public class UpdateStatusDto
+    {
+        public string Status { get; set; } = null!;
     }
 
     public class ProductMiniDto
@@ -296,7 +300,6 @@ namespace BE.Controllers
         public string Phone { get; set; } = "";
         public string Address { get; set; } = "";
         public string City { get; set; } = "";
-        public string District { get; set; } = "";
         public string Ward { get; set; } = "";
         public string Note { get; set; } = "";
     }

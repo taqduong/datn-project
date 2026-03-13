@@ -149,7 +149,7 @@ export default function CartPage() {
     )
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 pt-24 pb-20">
+    <div className="min-h-screen bg-linear-to-br from-gray-50 to-gray-100 pt-24 pb-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Header Section */}
@@ -202,7 +202,7 @@ export default function CartPage() {
                     className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow flex flex-col sm:flex-row gap-5"
                   >
                     {/* Ảnh sản phẩm */}
-                    <div className="w-full sm:w-28 h-28 flex-shrink-0 bg-gray-50 rounded-xl overflow-hidden border border-gray-100">
+                    <div className="w-full sm:w-28 h-28 shrink-0 bg-gray-50 rounded-xl overflow-hidden border border-gray-100">
                       <img
                         src={item.product.imageUrl || '/placeholder.png'}
                         alt={item.product.name}

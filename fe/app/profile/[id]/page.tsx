@@ -133,8 +133,8 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
       if (activeTab !== 'orders' || !userData?.id) return
       setLoadingOrders(true)
       try {
-        const res = await api.get(`/users/${userData.id}/orders`)
-        setOrders((res.data as any).data || [])
+        const res = await api.get('/Order')
+        setOrders(res.data || [])
       } catch (err) {
         console.error('❌ Lỗi khi lấy đơn hàng:', err)
       } finally {
@@ -593,14 +593,118 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
               </div>
             )}
 
-            {/* TAB PLACEHOLDER: ORDER / SETTINGS */}
-            {activeTab !== 'info' && (
-              <div className="bg-white rounded-4xl shadow-sm border border-zinc-200 p-12 text-center">
-                <div className="w-20 h-20 bg-zinc-50 text-zinc-400 rounded-full flex items-center justify-center mx-auto mb-4">
-                  {activeTab === 'orders' ? <ShoppingBag size={32} /> : <Settings size={32} />}
+            {/* ================== TAB: ĐƠN HÀNG CỦA TÔI ================== */}
+            {activeTab === 'orders' && (
+              <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="bg-white rounded-4xl shadow-sm border border-zinc-200 p-8 flex items-center justify-between bg-linear-to-r from-blue-50/30 to-white">
+                  <div>
+                    <h2 className="text-2xl font-bold text-zinc-900">Lịch sử đơn hàng</h2>
+                    <p className="text-sm text-zinc-500 mt-1">Theo dõi quá trình vận chuyển và quản lý các đơn hàng đã đặt</p>
+                  </div>
+                  <div className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-lg shadow-blue-100">
+                    {orders.length} đơn hàng
+                  </div>
                 </div>
-                <h2 className="text-2xl font-bold text-zinc-900 mb-2">Đang cập nhật...</h2>
-                <p className="text-zinc-500">Tính năng này sẽ sớm ra mắt trong tương lai.</p>
+
+                {loadingOrders ? (
+                  <div className="bg-white rounded-4xl border border-zinc-200 p-20 text-center">
+                    <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <p className="text-zinc-500 font-medium">Đang tải danh sách đơn hàng...</p>
+                  </div>
+                ) : orders.length === 0 ? (
+                  <div className="bg-white rounded-4xl border border-zinc-200 p-20 text-center shadow-sm">
+                    <div className="w-20 h-20 bg-zinc-50 text-zinc-300 rounded-full flex items-center justify-center mx-auto mb-6">
+                      <ShoppingBag size={40} />
+                    </div>
+                    <h3 className="text-xl font-bold text-zinc-900 mb-2">Bạn chưa có đơn hàng nào</h3>
+                    <p className="text-zinc-500 mb-8">Hãy khám phá thêm nhiều sản phẩm hấp dẫn tại HomeMart nhé!</p>
+                    <Link href="/products" className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition shadow-md">
+                      Mua sắm ngay <ChevronRight size={18} />
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {orders.map((order) => (
+                      <div key={order.orderId} className="bg-white rounded-3xl border border-zinc-200 shadow-sm hover:shadow-md transition-all overflow-hidden group">
+                        <div className="p-6 sm:p-8">
+                          {/* Order Header */}
+                          <div className="flex flex-wrap items-center justify-between gap-4 mb-6 pb-6 border-b border-zinc-100">
+                            <div className="flex items-center gap-4">
+                              <div className="w-12 h-12 rounded-2xl bg-zinc-50 flex items-center justify-center text-zinc-400 group-hover:bg-blue-50 group-hover:text-blue-500 transition-colors">
+                                <ShoppingBag size={24} />
+                              </div>
+                              <div>
+                                <h4 className="font-bold text-zinc-900">Đơn hàng #{order.orderId}</h4>
+                                <p className="text-sm text-zinc-500 flex items-center gap-1.5 mt-0.5">
+                                  <Calendar size={14} /> {new Date(order.orderDate).toLocaleDateString('vi-VN')}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex flex-col items-end gap-2">
+                              <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${
+                                order.status?.toLowerCase() === 'pending' ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                                order.status?.toLowerCase() === 'completed' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                                'bg-blue-50 text-blue-600 border-blue-100'
+                              }`}>
+                                {order.status === 'Pending' ? 'Chờ duyệt' : order.status}
+                              </span>
+                              <p className="text-lg font-black text-blue-600">
+                                {new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(order.totalAmount)}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Order Items Preview */}
+                          <div className="space-y-4">
+                            {order.details?.slice(0, 2).map((item, idx) => (
+                              <div key={idx} className="flex items-center gap-4">
+                                <div className="w-16 h-16 rounded-xl border border-zinc-100 overflow-hidden shrink-0 bg-white p-1">
+                                  <img 
+                                    src={
+                                      Array.isArray(item.imageUrls) ? item.imageUrls[0] : 
+                                      (item.imageUrls?.startsWith('http') ? item.imageUrls : `http://localhost:5270/${item.imageUrls}`)
+                                    } 
+                                    alt={item.name}
+                                    className="w-full h-full object-cover rounded-lg"
+                                    onError={(e) => e.currentTarget.src = 'https://placehold.co/100x100?text=SP'}
+                                  />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <h5 className="font-bold text-zinc-800 text-sm truncate">{item.name}</h5>
+                                  <p className="text-xs text-zinc-500 mt-1">Số lượng: {item.quantity} × {new Intl.NumberFormat("vi-VN").format(item.unitPrice)}đ</p>
+                                </div>
+                              </div>
+                            ))}
+                            {order.details?.length > 2 && (
+                              <p className="text-xs text-zinc-400 font-medium pl-20">... và {order.details.length - 2} sản phẩm khác</p>
+                            )}
+                          </div>
+
+                          {/* Footer Action */}
+                          <div className="mt-6 pt-6 border-t border-zinc-100 flex justify-end">
+                            <Link 
+                              href={`/orders/${order.orderId}`}
+                              className="inline-flex items-center gap-2 px-5 py-2.5 bg-zinc-900 text-white text-sm font-bold rounded-xl hover:bg-blue-600 transition-all shadow-sm"
+                            >
+                              Xem chi tiết đơn <ChevronRight size={16} />
+                            </Link>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* TAB: CÀI ĐẶT */}
+            {activeTab === 'settings' && (
+              <div className="bg-white rounded-4xl shadow-sm border border-zinc-200 p-12 text-center animate-in fade-in duration-500">
+                <div className="w-20 h-20 bg-zinc-50 text-zinc-400 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Settings size={32} />
+                </div>
+                <h2 className="text-2xl font-bold text-zinc-900 mb-2">Cài đặt tài khoản</h2>
+                <p className="text-zinc-500">Tính năng đổi mật khẩu và bảo mật đang được phát triển.</p>
               </div>
             )}
 
