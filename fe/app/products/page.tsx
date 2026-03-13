@@ -10,6 +10,7 @@ import {
   type Category,
 } from "@/services/api";
 import { Filter, ChevronDown } from "lucide-react";
+import ProductCard from "@/components/ProductCard";
 
 type SortType = "newest" | "priceAsc" | "priceDesc" | "nameAsc";
 
@@ -286,88 +287,9 @@ export default function ProductsPage() {
             ) : (
               // Product List
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                {filteredAndSortedProducts.map((p) => {
-                  const displayPrice = getDisplayPrice(p);
-                  const hasDiscount = !!p.discount && p.discount > 0;
-
-                  return (
-                    <Link
-                      key={p.id}
-                      href={`/products/${p.id}`}
-                      className="group flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition duration-200 hover:-translate-y-1 hover:border-blue-200 hover:shadow-md"
-                    >
-                      {/* Image container - Đã thu nhỏ h-48 */}
-                      <div className="relative overflow-hidden bg-white p-2">
-                        {p.imageUrl ? (
-                          <img
-                            src={p.imageUrl}
-                            alt={p.name}
-                            className="h-48 w-full rounded-xl object-contain transition duration-500 group-hover:scale-105"
-                          />
-                        ) : (
-                          <div className="flex h-48 w-full rounded-xl items-center justify-center bg-slate-50 text-4xl">
-                            📦
-                          </div>
-                        )}
-
-                        {hasDiscount && (
-                          <div className="absolute left-4 top-4">
-                            <span className="rounded-lg bg-red-500 px-2.5 py-1 text-xs font-bold text-white shadow-sm">
-                              -{p.discount}%
-                            </span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Content container */}
-                      <div className="flex flex-1 flex-col p-5 border-t border-slate-50">
-                        {p.categoryName && (
-                          <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-slate-400">
-                            {p.categoryName}
-                          </p>
-                        )}
-
-                        {/* Title - Đã giảm xuống text-base */}
-                        <h3 className="line-clamp-2 text-base font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
-                          {p.name}
-                        </h3>
-
-                        <div className="mt-auto pt-4">
-                          <div className="flex items-center gap-2">
-                            {/* Price - Đã giảm xuống text-lg */}
-                            <span className="text-lg font-bold text-red-600">
-                              {formatVND(displayPrice)}
-                            </span>
-                            {hasDiscount && (
-                              <span className="text-xs font-medium text-slate-400 line-through">
-                                {formatVND(p.price)}
-                              </span>
-                            )}
-                          </div>
-
-                          <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3">
-                            {/* Stock Badge - Giữ nguyên màu xanh/vàng/đỏ cũ của ông */}
-                            <span
-                              className={`rounded-md px-2 py-1 text-[11px] font-bold uppercase tracking-wider ${
-                                p.stock > 10
-                                  ? "bg-green-100 text-green-700"
-                                  : p.stock > 0
-                                  ? "bg-yellow-100 text-yellow-700"
-                                  : "bg-red-100 text-red-700"
-                              }`}
-                            >
-                              {p.stock > 0 ? `Còn ${p.stock}` : "Hết hàng"}
-                            </span>
-
-                            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider transition group-hover:translate-x-1 group-hover:text-blue-600">
-                              Chi tiết →
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </Link>
-                  );
-                })}
+                {filteredAndSortedProducts.map((p) => (
+                  <ProductCard key={p.id} product={p as any} />
+                ))}
               </div>
             )}
           </section>

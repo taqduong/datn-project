@@ -104,7 +104,7 @@ export default function ProductDetailPage() {
         router.push("/cart"); 
       } else {
         // Nếu là nút "Thêm vào giỏ" (isBuyNow = false) -> Báo thành công rồi để khách ở lại mua tiếp
-        alert("Đã thêm sản phẩm vào giỏ hàng!"); 
+      alert(`Đã thêm ${product.name} vào giỏ hàng!`);
       }
     } catch (error) {
       console.error("Lỗi khi thêm vào giỏ hàng:", error);

@@ -9,7 +9,7 @@ import {
   type Product,
   type Category,
 } from "@/services/api";
-
+import ProductCard from "@/components/ProductCard";
 const benefits = [
   {
     title: "Giao hàng nhanh",
@@ -280,75 +280,10 @@ export default function HomePage() {
             <p className="mt-2 text-sm text-slate-500">Hãy thêm sản phẩm từ trang admin.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {featuredProducts.map((product) => {
-              const hasDiscount = !!product.discount && product.discount > 0;
-              const displayPrice = getDisplayPrice(product);
-
-              return (
-                <div
-                  key={product.id}
-                  className="group flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs transition duration-200 hover:-translate-y-1 hover:shadow-md"
-                >
-                  <div className="relative overflow-hidden bg-slate-50">
-                    {product.imageUrl ? (
-                      <img
-                        src={product.imageUrl}
-                        alt={product.name}
-                        className="h-56 w-full object-cover transition duration-500 group-hover:scale-105"
-                      />
-                    ) : (
-                      <div className="flex h-56 w-full items-center justify-center text-4xl">
-                        📦
-                      </div>
-                    )}
-
-                    {hasDiscount && (
-                      <div className="absolute left-3 top-3 rounded-lg bg-red-500 px-2.5 py-1 text-xs font-bold text-white shadow-sm">
-                        -{product.discount}%
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex flex-1 flex-col p-5">
-                    {product.categoryName && (
-                      <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-slate-400">
-                        {product.categoryName}
-                      </p>
-                    )}
-
-                    <h3 className="line-clamp-2 text-base font-bold text-slate-900">
-                      {product.name}
-                    </h3>
-
-                    <div className="mt-auto pt-4">
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg font-bold text-blue-600">
-                          {formatVND(displayPrice)}
-                        </span>
-                        {hasDiscount && (
-                          <span className="text-sm text-slate-400 line-through">
-                            {formatVND(product.price)}
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="mt-4 flex gap-2">
-                        <Link
-                          href={`/products/${product.id}`}
-                          className="flex-1 rounded-xl bg-slate-900 py-2.5 text-center text-sm font-semibold text-white transition hover:bg-slate-800"
-                        >
-                          Chi tiết
-                        </Link>
-                        <button className="flex items-center justify-center rounded-xl border border-slate-200 px-4 text-slate-600 transition hover:bg-slate-50 hover:text-red-500">
-                          ♡
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4">
+            {featuredProducts.map((product) => (
+              <ProductCard key={product.id} product={product as any} />
+            ))}
           </div>
         )}
       </section>

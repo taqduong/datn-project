@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Search, ShoppingCart, User, Menu, Heart, X, LogOut, LayoutDashboard, Store } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { searchProducts } from "@/services/api"; 
+import { searchProducts, fetchCart } from "@/services/api";
 type UserType = {
   id?: number | string;
   username?: string;
@@ -43,18 +43,6 @@ export default function Navbar() {
         setRole(null);
       }
 
-      const storedCart = localStorage.getItem("cart");
-      if (storedCart) {
-        const parsedCart: CartItem[] = JSON.parse(storedCart);
-        const totalQuantity = parsedCart.reduce(
-          (sum, item) => sum + (item.quantity || 1),
-          0
-        );
-        setCartCount(totalQuantity);
-      } else {
-        setCartCount(0);
-      }
-
       const storedWishlist = localStorage.getItem("wishlist");
       if (storedWishlist) {
         const parsedWishlist = JSON.parse(storedWishlist);
@@ -71,19 +59,43 @@ export default function Navbar() {
     }
   };
 
-  useEffect(() => {
+  const fetchCartCount = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setCartCount(0); // Chưa đăng nhập thì số giỏ hàng = 0
+      return;
+    }
+    
+    try {
+      const res = await fetchCart(); // Gọi API lấy giỏ hàng từ DB
+      const data = Array.isArray(res.data) ? res.data : [];
+      // ✅ CHỈ CẦN ĐẾM SỐ LƯỢNG MÓN (Số dòng trong giỏ hàng)
+      setCartCount(data.length);
+    } catch (error) {
+      console.error("Lỗi đồng bộ số lượng giỏ hàng:", error);
+    }
+  };
+
+useEffect(() => {
     if (!mounted) return;
-    loadData();
+    
+    loadData(); // Load User, Wishlist từ localStorage
+    fetchCartCount(); // ✅ Chạy lấy số giỏ hàng từ Database ngay khi mở web
+
     window.addEventListener("storage", loadData);
     window.addEventListener("wishlistUpdated", loadData as EventListener);
-    window.addEventListener("cartUpdated", loadData as EventListener);
     window.addEventListener("userUpdated", loadData as EventListener);
+    
+    // ✅ Gắn tai nghe: Hễ có ai hét "cartUpdated" thì chạy hàm fetchCartCount đếm lại
+    window.addEventListener("cartUpdated", fetchCartCount); 
 
     return () => {
       window.removeEventListener("storage", loadData);
       window.removeEventListener("wishlistUpdated", loadData as EventListener);
-      window.removeEventListener("cartUpdated", loadData as EventListener);
       window.removeEventListener("userUpdated", loadData as EventListener);
+      
+      // ✅ Tháo tai nghe khi tắt component
+      window.removeEventListener("cartUpdated", fetchCartCount); 
     };
   }, [mounted]);
 
@@ -93,6 +105,7 @@ export default function Navbar() {
     setUser(null);
     setRole(null);
     window.dispatchEvent(new Event("userUpdated"));
+    setCartCount(0);
     router.push("/login");
   };
 
