@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Search, ShoppingCart, User, Menu, Heart, X, LogOut, LayoutDashboard, Store } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { searchProducts, fetchCart } from "@/services/api";
+import { searchProducts, fetchCart, fetchWishlist } from "@/services/api";
 type UserType = {
   id?: number | string;
   username?: string;
@@ -76,26 +76,44 @@ export default function Navbar() {
     }
   };
 
-useEffect(() => {
+  // ✅ Gọi API đếm số lượng Wishlist
+  const fetchWishlistCount = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setWishlistCount(0);
+      return;
+    }
+    try {
+      const res = await fetchWishlist();
+      if (res.data && res.data.success) {
+        setWishlistCount(res.data.data.length);
+      }
+    } catch (error) {
+      console.error("Lỗi đồng bộ số lượng wishlist:", error);
+    }
+  };
+
+  useEffect(() => {
     if (!mounted) return;
     
-    loadData(); // Load User, Wishlist từ localStorage
-    fetchCartCount(); // ✅ Chạy lấy số giỏ hàng từ Database ngay khi mở web
+    loadData(); // Load User từ localStorage
+    fetchCartCount(); // Chạy lấy số giỏ hàng
+    fetchWishlistCount(); // ✅ Chạy lấy số wishlist
 
     window.addEventListener("storage", loadData);
-    window.addEventListener("wishlistUpdated", loadData as EventListener);
     window.addEventListener("userUpdated", loadData as EventListener);
     
-    // ✅ Gắn tai nghe: Hễ có ai hét "cartUpdated" thì chạy hàm fetchCartCount đếm lại
+    // ✅ Gắn tai nghe cho Cart
     window.addEventListener("cartUpdated", fetchCartCount); 
+    
+    // ✅ Gắn tai nghe cho Wishlist (Hễ ai báo wishlistUpdated là gọi lại hàm đếm)
+    window.addEventListener("wishlistUpdated", fetchWishlistCount);
 
     return () => {
       window.removeEventListener("storage", loadData);
-      window.removeEventListener("wishlistUpdated", loadData as EventListener);
       window.removeEventListener("userUpdated", loadData as EventListener);
-      
-      // ✅ Tháo tai nghe khi tắt component
       window.removeEventListener("cartUpdated", fetchCartCount); 
+      window.removeEventListener("wishlistUpdated", fetchWishlistCount); // ✅ Tháo tai nghe
     };
   }, [mounted]);
 

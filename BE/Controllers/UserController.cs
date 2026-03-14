@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using BE.Models;
 using BE.Data;
 
-namespace Controllers
+namespace BE.Controllers
 {
     [ApiController]
     [Route("api/users")]
@@ -15,8 +15,6 @@ namespace Controllers
         {
             _context = context;
         }
-
-        // ... Các hàm GetUsers, GetUser, DeleteUser giữ nguyên ...
 
         [HttpPost]
         public async Task<ActionResult<User>> CreateUser([FromBody] CreateUserRequest request)

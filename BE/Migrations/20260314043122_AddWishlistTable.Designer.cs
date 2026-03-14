@@ -4,6 +4,7 @@ using BE.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BE.Migrations
 {
     [DbContext(typeof(ShopDbContext))]
-    partial class ShopDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260314043122_AddWishlistTable")]
+    partial class AddWishlistTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -279,32 +282,6 @@ namespace BE.Migrations
                     b.ToTable("Users");
                 });
 
-            modelBuilder.Entity("BE.Models.Wishlist", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("ProductId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex(new[] { "ProductId" }, "IX_Wishlist_ProductId");
-
-                    b.HasIndex(new[] { "UserId" }, "IX_Wishlist_UserId");
-
-                    b.ToTable("Wishlist");
-                });
-
             modelBuilder.Entity("BE.Models.Cart", b =>
                 {
                     b.HasOne("BE.Models.Product", "Product")
@@ -365,25 +342,6 @@ namespace BE.Migrations
                     b.Navigation("Category");
                 });
 
-            modelBuilder.Entity("BE.Models.Wishlist", b =>
-                {
-                    b.HasOne("BE.Models.Product", "Product")
-                        .WithMany("Wishlists")
-                        .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("BE.Models.User", "User")
-                        .WithMany("Wishlists")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Product");
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("BE.Models.Category", b =>
                 {
                     b.Navigation("Products");
@@ -399,8 +357,6 @@ namespace BE.Migrations
                     b.Navigation("Carts");
 
                     b.Navigation("OrderDetails");
-
-                    b.Navigation("Wishlists");
                 });
 
             modelBuilder.Entity("BE.Models.User", b =>
@@ -408,8 +364,6 @@ namespace BE.Migrations
                     b.Navigation("Carts");
 
                     b.Navigation("Orders");
-
-                    b.Navigation("Wishlists");
                 });
 #pragma warning restore 612, 618
         }

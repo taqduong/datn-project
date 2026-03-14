@@ -6,7 +6,7 @@ using BE.Data;
 
 namespace BE.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/cart")]
     [ApiController]
     public class CartController : ControllerBase
     {

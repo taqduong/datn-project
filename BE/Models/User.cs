@@ -50,7 +50,7 @@ namespace BE.Models
         // [InverseProperty("User")]
         // public virtual ICollection<Review> Reviews { get; set; } = new List<Review>();
 
-        // [InverseProperty("User")]
-        // public virtual ICollection<Wishlist> Wishlists { get; set; } = new List<Wishlist>();
+        [InverseProperty("User")]
+        public virtual ICollection<Wishlist> Wishlists { get; set; } = new List<Wishlist>();
     }
 }

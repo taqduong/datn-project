@@ -12,7 +12,7 @@ using BE.Models;
 
 namespace BE.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/Order")]
     [ApiController]
     public class OrderController : ControllerBase
     {

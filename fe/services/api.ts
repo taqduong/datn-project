@@ -305,6 +305,21 @@ export const ordersAPI = {
   updateStatus: (id: number | string, status: string) => api.put(`/Order/${id}/status`, { status }),
 };
 
+// ================= Wishlist API =================
+export const wishlistAPI = {
+  // 1. Lấy danh sách (Backend tự biết là của ai nhờ Token)
+  getAll: () => api.get('/wishlist'),
+  
+  // 2. Thêm vào yêu thích (Bắn thẳng productId lên URL)
+  add: (productId: number) => api.post(`/wishlist/${productId}`),
+  
+  // 3. Xóa khỏi yêu thích
+  remove: (productId: number) => api.delete(`/wishlist/${productId}`),
+
+  // 4. Xóa sạch sành sanh giỏ yêu thích
+  clear: () => api.delete('/wishlist/clear'),
+}
+
 
 
 // ================= Helper Exports =================
@@ -337,6 +352,11 @@ export const fetchUserOrders = ordersAPI.getUserOrders;
 export const fetchOrderById = ordersAPI.getById;
 export const deleteOrder = ordersAPI.delete;
 export const updateOrderStatus = ordersAPI.updateStatus;
+
+export const fetchWishlist = wishlistAPI.getAll
+export const addToWishlist = wishlistAPI.add
+export const removeFromWishlist = wishlistAPI.remove
+export const clearWishlist = wishlistAPI.clear
 
 export default api;
 // ================= Chatbot API (demo) =================

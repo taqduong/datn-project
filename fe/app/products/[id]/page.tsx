@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { fetchProductById, addToCart, type Product } from "@/services/api";
+import { Heart } from "lucide-react";
+import { fetchProductById, addToCart, addToWishlist, type Product } from "@/services/api";
 
 
 export default function ProductDetailPage() {
@@ -16,6 +17,7 @@ export default function ProductDetailPage() {
   const [quantity, setQuantity] = useState(1);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
+  const [isWishlisting, setIsWishlisting] = useState(false);
 
   
 
@@ -112,6 +114,30 @@ export default function ProductDetailPage() {
     } finally {
       // 7. Dù thành công hay thất bại (mạng rớt), cũng phải mở khóa cho cái nút để khách còn bấm lại được
       setIsAdding(false);
+    }
+  };
+
+  // Xử lý Thêm vào Danh sách yêu thích
+  const handleAddToWishlist = async () => {
+    if (!product) return;
+    
+    const token = localStorage.getItem("token");
+    if (!token) {
+      alert("Vui lòng đăng nhập để thêm vào yêu thích!");
+      return;
+    }
+
+    try {
+      setIsWishlisting(true);
+      await addToWishlist(product.id);
+      window.dispatchEvent(new Event('wishlistUpdated')); // Báo Header chớp số
+      alert(`Đã thêm ${product.name} vào danh sách yêu thích!`);
+    } catch (error: any) {
+      console.error("Lỗi khi thêm yêu thích:", error);
+      const msg = error.response?.data?.message || "Sản phẩm đã có trong danh sách yêu thích!";
+      alert(msg);
+    } finally {
+      setIsWishlisting(false);
     }
   };
 
@@ -382,6 +408,20 @@ export default function ProductDetailPage() {
                 >
                   {isAdding ? "Đang thêm..." : "Thêm vào giỏ hàng"}
                 </button>
+
+                {/* 3. NÚT THÊM VÀO YÊU THÍCH */}
+              <button
+                onClick={handleAddToWishlist}
+                disabled={isWishlisting}
+                className="sm:col-span-2 flex w-full items-center justify-center gap-2 rounded-2xl border border-pink-200 bg-pink-50 px-5 py-4 font-semibold text-pink-600 transition hover:bg-pink-100 disabled:opacity-50"
+              >
+                {isWishlisting ? (
+                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-pink-600 border-t-transparent" />
+                ) : (
+                  <Heart size={20} className="text-pink-500" />
+                )}
+                {isWishlisting ? "Đang xử lý..." : "Thêm vào danh sách yêu thích"}
+              </button>
               </div>
 
               
