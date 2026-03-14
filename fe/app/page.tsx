@@ -10,6 +10,7 @@ import {
   type Category,
 } from "@/services/api";
 import ProductCard from "@/components/ProductCard";
+
 const benefits = [
   {
     title: "Giao hàng nhanh",
@@ -74,97 +75,96 @@ export default function HomePage() {
       currency: "VND",
     }).format(value || 0);
 
-  const getDisplayPrice = (product: Product) => {
-    return product.priceAfterDiscount && product.priceAfterDiscount > 0
-      ? product.priceAfterDiscount
-      : product.price;
-  };
-
   return (
-    <div className="bg-slate-50 text-slate-800 min-h-screen">
-      {/* Hero Section */}
-      <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="relative overflow-hidden rounded-3xl bg-slate-900 px-6 py-10 text-white shadow-xl sm:px-10 lg:py-14">
+    <div className="bg-slate-50 text-slate-800 min-h-screen font-sans">
+      {/* Hero Section - Đã lột xác sang giao diện Sáng, Hiện đại */}
+      <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+        <div className="relative overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-blue-50 via-white to-indigo-50 px-6 py-12 sm:px-12 lg:py-20 shadow-sm border border-blue-100">
+          
           {/* Subtle background glow */}
-          <div className="absolute top-0 right-0 -translate-y-12 translate-x-1/3 h-96 w-96 rounded-full bg-blue-500/20 blur-[80px]" />
-          <div className="absolute bottom-0 left-0 translate-y-1/3 -translate-x-1/3 h-96 w-96 rounded-full bg-indigo-500/20 blur-[80px]" />
+          <div className="absolute top-0 right-0 -translate-y-12 translate-x-1/3 h-96 w-96 rounded-full bg-blue-200/40 blur-[80px]" />
+          <div className="absolute bottom-0 left-0 translate-y-1/3 -translate-x-1/3 h-96 w-96 rounded-full bg-indigo-200/40 blur-[80px]" />
 
-          <div className="relative z-10 grid items-center gap-10 lg:grid-cols-[1.1fr_0.9fr]">
+          <div className="relative z-10 grid items-center gap-12 lg:grid-cols-[1.1fr_0.9fr]">
+            {/* Cột chữ */}
             <div>
-              <div className="mb-4 inline-flex rounded-full border border-slate-700 bg-slate-800/50 px-3 py-1.5 text-xs font-medium text-slate-300 backdrop-blur-md">
-                ✨ Bộ sưu tập mới 2026
+              <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-blue-200 bg-white/60 px-4 py-2 text-sm font-semibold text-blue-700 shadow-sm backdrop-blur-md">
+                <span className="flex h-2 w-2 rounded-full bg-blue-600 animate-pulse"></span>
+                Bộ sưu tập mới 2026
               </div>
 
-              <h1 className="text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl lg:text-5xl">
-                Mua sắm hiện đại, <br className="hidden lg:block" /> trải nghiệm mượt mà.
+              <h1 className="text-4xl font-extrabold leading-[1.15] tracking-tight text-slate-900 sm:text-5xl lg:text-[3.5rem]">
+                Mua sắm <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">hiện đại</span>, <br className="hidden lg:block" /> 
+                trải nghiệm <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">mượt mà</span>.
               </h1>
 
-              <p className="mt-4 max-w-xl text-base leading-relaxed text-slate-400">
-                Khám phá hàng ngàn sản phẩm nổi bật với mức giá ưu đãi. Giao diện tối giản, thanh toán dễ dàng.
+              <p className="mt-6 max-w-lg text-lg leading-relaxed text-slate-600 font-medium">
+                Khám phá hàng ngàn sản phẩm nổi bật với mức giá ưu đãi. Giao diện tối giản, thanh toán dễ dàng chỉ với vài chạm.
               </p>
 
-              <div className="mt-8 flex flex-wrap gap-3">
+              <div className="mt-10 flex flex-wrap items-center gap-4">
                 <Link
                   href="/products"
-                  className="inline-flex items-center justify-center rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-slate-900 transition hover:bg-slate-100"
+                  className="inline-flex items-center justify-center rounded-2xl bg-blue-600 px-8 py-4 text-base font-bold text-white transition-all hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-200 hover:-translate-y-0.5"
                 >
                   Khám phá ngay
                 </Link>
                 <Link
                   href="/sale"
-                  className="inline-flex items-center justify-center rounded-xl border border-slate-600 bg-slate-800/50 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700"
+                  className="inline-flex items-center justify-center rounded-2xl bg-rose-500 px-8 py-4 text-base font-bold text-white transition-all hover:bg-rose-600 hover:shadow-lg hover:shadow-rose-200 hover:-translate-y-0.5"
                 >
-                  Xem ưu đãi
+                  🔥 Sale Sập Sàn
                 </Link>
               </div>
 
-              <div className="mt-10 flex gap-8 border-t border-slate-700/50 pt-6">
+              {/* Thống kê */}
+              <div className="mt-12 flex gap-10 border-t border-slate-200/60 pt-8">
                 <div>
-                  <p className="text-2xl font-bold">{products.length}+</p>
-                  <p className="text-xs text-slate-400">Sản phẩm</p>
+                  <p className="text-3xl font-black text-slate-900">{products.length}+</p>
+                  <p className="text-sm font-semibold text-slate-500 mt-1">Sản phẩm</p>
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{categories.length}+</p>
-                  <p className="text-xs text-slate-400">Danh mục</p>
+                  <p className="text-3xl font-black text-slate-900">{categories.length}+</p>
+                  <p className="text-sm font-semibold text-slate-500 mt-1">Danh mục</p>
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">24/7</p>
-                  <p className="text-xs text-slate-400">Hỗ trợ</p>
+                  <p className="text-3xl font-black text-slate-900">24/7</p>
+                  <p className="text-sm font-semibold text-slate-500 mt-1">Hỗ trợ</p>
                 </div>
               </div>
             </div>
 
-            {/* Hero Images Grid */}
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="overflow-hidden rounded-2xl border border-slate-700/50 bg-slate-800/30 p-2 backdrop-blur-sm">
+            {/* Cột Hình ảnh */}
+            <div className="grid gap-4 sm:grid-cols-2 relative">
+              <div className="overflow-hidden rounded-[2rem] border-8 border-white bg-white shadow-xl rotate-[-2deg] hover:rotate-0 transition-transform duration-500 z-10">
                 <img
                   src={
                     featuredProducts[0]?.imageUrl ||
                     "https://images.unsplash.com/photo-1523381210434-271e8be1f52b?q=80&w=800&auto=format&fit=crop"
                   }
                   alt="Hero product"
-                  className="h-56 w-full rounded-xl object-cover sm:h-64"
+                  className="h-64 w-full object-cover sm:h-80"
                 />
               </div>
-              <div className="grid gap-3">
-                <div className="overflow-hidden rounded-2xl border border-slate-700/50 bg-slate-800/30 p-2 backdrop-blur-sm">
+              <div className="grid gap-4 translate-y-6">
+                <div className="overflow-hidden rounded-[1.5rem] border-4 border-white bg-white shadow-lg rotate-[3deg] hover:rotate-0 transition-transform duration-500">
                   <img
                     src={
                       featuredProducts[1]?.imageUrl ||
                       "https://images.unsplash.com/photo-1542291026-7eec264c27ff?q=80&w=800&auto=format&fit=crop"
                     }
                     alt="Hero sub product 1"
-                    className="h-24 w-full rounded-xl object-cover sm:h-29.5"
+                    className="h-32 w-full object-cover sm:h-40"
                   />
                 </div>
-                <div className="overflow-hidden rounded-2xl border border-slate-700/50 bg-slate-800/30 p-2 backdrop-blur-sm">
+                <div className="overflow-hidden rounded-[1.5rem] border-4 border-white bg-white shadow-lg rotate-[-1deg] hover:rotate-0 transition-transform duration-500">
                   <img
                     src={
                       featuredProducts[2]?.imageUrl ||
                       "https://images.unsplash.com/photo-1511499767150-a48a237f0083?q=80&w=800&auto=format&fit=crop"
                     }
                     alt="Hero sub product 2"
-                    className="h-24 w-full rounded-xl object-cover sm:h-29.5"
+                    className="h-32 w-full object-cover sm:h-36"
                   />
                 </div>
               </div>
@@ -174,19 +174,19 @@ export default function HomePage() {
       </section>
 
       {/* Benefits */}
-      <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+      <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
           {benefits.map((item) => (
             <div
               key={item.title}
-              className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-xs transition hover:shadow-sm"
+              className="flex items-center gap-5 rounded-3xl border border-slate-100 bg-white p-6 shadow-sm transition hover:shadow-md hover:-translate-y-1"
             >
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-xl">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-2xl">
                 {item.icon}
               </div>
               <div>
                 <h3 className="text-base font-bold text-slate-900">{item.title}</h3>
-                <p className="mt-0.5 text-sm text-slate-500">{item.desc}</p>
+                <p className="mt-1 text-sm font-medium text-slate-500">{item.desc}</p>
               </div>
             </div>
           ))}
@@ -194,48 +194,48 @@ export default function HomePage() {
       </section>
 
       {/* Categories */}
-      <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-        <div className="mb-6 flex items-end justify-between gap-4">
+      <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+        <div className="mb-8 flex items-end justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+            <h2 className="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
               Danh mục nổi bật
             </h2>
           </div>
           <Link
             href="/products"
-            className="hidden text-sm font-semibold text-blue-600 hover:text-blue-700 sm:block"
+            className="hidden text-sm font-bold text-blue-600 hover:text-blue-700 sm:block bg-blue-50 px-4 py-2 rounded-full"
           >
             Xem tất cả &rarr;
           </Link>
         </div>
 
         {loading ? (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="rounded-2xl border border-slate-200 bg-white p-5">
-                <div className="mb-4 h-12 w-12 animate-pulse rounded-xl bg-slate-100" />
-                <div className="h-5 w-1/2 animate-pulse rounded bg-slate-100" />
-                <div className="mt-2 h-4 w-full animate-pulse rounded bg-slate-100" />
+              <div key={i} className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
+                <div className="mb-4 h-14 w-14 animate-pulse rounded-2xl bg-slate-100" />
+                <div className="h-5 w-1/2 animate-pulse rounded-lg bg-slate-100" />
+                <div className="mt-3 h-4 w-full animate-pulse rounded-lg bg-slate-100" />
               </div>
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {featuredCategories.map((category, index) => {
               const icons = ["👕", "🎧", "🪑", "⌚", "💄", "📱"];
               return (
                 <Link
                   href="/products"
                   key={category.id}
-                  className="group rounded-2xl border border-slate-200 bg-white p-5 shadow-xs transition duration-200 hover:-translate-y-1 hover:border-blue-200 hover:shadow-md"
+                  className="group rounded-3xl border border-slate-100 bg-white p-6 shadow-sm transition duration-300 hover:-translate-y-1.5 hover:border-blue-200 hover:shadow-xl hover:shadow-blue-100"
                 >
-                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-slate-50 text-2xl transition group-hover:bg-blue-50">
+                  <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-50 text-2xl transition group-hover:bg-blue-50 group-hover:scale-110">
                     {icons[index % icons.length]}
                   </div>
                   <h3 className="text-lg font-bold text-slate-900">
                     {category.name}
                   </h3>
-                  <p className="mt-1 line-clamp-2 text-sm text-slate-500">
+                  <p className="mt-1.5 line-clamp-2 text-sm font-medium text-slate-500">
                     {category.description || "Khám phá các sản phẩm nổi bật."}
                   </p>
                 </Link>
@@ -246,41 +246,41 @@ export default function HomePage() {
       </section>
 
       {/* Featured products */}
-      <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-        <div className="mb-6 flex items-end justify-between gap-4">
+      <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+        <div className="mb-8 flex items-end justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+            <h2 className="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
               Sản phẩm mới nhất
             </h2>
           </div>
           <Link
             href="/products"
-            className="hidden text-sm font-semibold text-blue-600 hover:text-blue-700 sm:block"
+            className="hidden text-sm font-bold text-blue-600 hover:text-blue-700 sm:block bg-blue-50 px-4 py-2 rounded-full"
           >
             Xem thêm &rarr;
           </Link>
         </div>
 
         {loading ? (
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {Array.from({ length: 6 }).map((_, index) => (
-              <div key={index} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs">
-                <div className="h-56 animate-pulse bg-slate-100" />
-                <div className="space-y-2 p-5">
-                  <div className="h-6 w-3/4 animate-pulse rounded bg-slate-100" />
-                  <div className="h-5 w-1/2 animate-pulse rounded bg-slate-100" />
+              <div key={index} className="overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-sm">
+                <div className="h-64 animate-pulse bg-slate-100" />
+                <div className="space-y-3 p-6">
+                  <div className="h-6 w-3/4 animate-pulse rounded-lg bg-slate-100" />
+                  <div className="h-5 w-1/2 animate-pulse rounded-lg bg-slate-100" />
                 </div>
               </div>
             ))}
           </div>
         ) : featuredProducts.length === 0 ? (
-          <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center shadow-xs">
-            <div className="mb-3 text-4xl">📦</div>
-            <h3 className="text-lg font-bold text-slate-900">Chưa có sản phẩm nào</h3>
-            <p className="mt-2 text-sm text-slate-500">Hãy thêm sản phẩm từ trang admin.</p>
+          <div className="rounded-3xl border border-slate-100 bg-white p-12 text-center shadow-sm">
+            <div className="mb-4 text-5xl">📦</div>
+            <h3 className="text-xl font-bold text-slate-900">Chưa có sản phẩm nào</h3>
+            <p className="mt-2 text-base text-slate-500">Hãy thêm sản phẩm từ trang admin.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4">
             {featuredProducts.map((product) => (
               <ProductCard key={product.id} product={product as any} />
             ))}
@@ -289,39 +289,42 @@ export default function HomePage() {
       </section>
 
       {/* Promo banner & Newsletter */}
-      <section className="mx-auto max-w-7xl px-4 py-10 pb-16 sm:px-6 lg:px-8">
-        <div className="grid gap-6 lg:grid-cols-2">
+      <section className="mx-auto max-w-7xl px-4 py-12 pb-20 sm:px-6 lg:px-8">
+        <div className="grid gap-8 lg:grid-cols-2">
           {/* Promo */}
-          <div className="overflow-hidden rounded-3xl bg-linear-to-br from-blue-600 to-indigo-700 p-8 text-white shadow-lg sm:p-10">
-            <p className="text-xs font-bold uppercase tracking-wider text-blue-200">
-              Ưu đãi giới hạn
-            </p>
-            <h2 className="mt-2 text-2xl font-bold sm:text-3xl">
-              Mua sắm thông minh <br /> tiết kiệm mỗi ngày
-            </h2>
-            <Link
-              href="/products"
-              className="mt-6 inline-flex items-center justify-center rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-slate-900 transition hover:bg-slate-100"
-            >
-              Mua sắm ngay
-            </Link>
+          <div className="overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-blue-600 to-indigo-700 p-10 text-white shadow-xl sm:p-12 relative">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
+            <div className="relative z-10">
+              <p className="text-sm font-black uppercase tracking-widest text-blue-200 mb-3">
+                Ưu đãi giới hạn
+              </p>
+              <h2 className="text-3xl font-black leading-tight sm:text-4xl">
+                Mua sắm thông minh <br /> tiết kiệm mỗi ngày
+              </h2>
+              <Link
+                href="/products"
+                className="mt-8 inline-flex items-center justify-center rounded-2xl bg-white px-8 py-4 text-base font-bold text-blue-700 transition hover:bg-slate-50 hover:scale-105 hover:shadow-lg"
+              >
+                Mua sắm ngay
+              </Link>
+            </div>
           </div>
 
           {/* Newsletter */}
-          <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-xs sm:p-10">
-            <h2 className="text-2xl font-bold text-slate-900">
+          <div className="rounded-[2.5rem] border border-slate-100 bg-white p-10 shadow-lg sm:p-12">
+            <h2 className="text-3xl font-black text-slate-900">
               Nhận thông báo ưu đãi
             </h2>
-            <p className="mt-2 text-sm text-slate-500">
-              Cập nhật chương trình giảm giá và sản phẩm mới qua email của bạn.
+            <p className="mt-3 text-base font-medium text-slate-500">
+              Cập nhật chương trình giảm giá và sản phẩm mới qua email của bạn. Không lo bỏ lỡ deal hời!
             </p>
-            <div className="mt-6 flex flex-col gap-2 sm:flex-row">
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <input
                 type="email"
-                placeholder="Nhập email của bạn"
-                className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-1 focus:ring-blue-500"
+                placeholder="Nhập email của bạn..."
+                className="flex-1 rounded-2xl border-2 border-slate-100 bg-slate-50 px-5 py-4 text-base font-medium text-slate-900 outline-none transition focus:border-blue-500 focus:bg-white"
               />
-              <button className="rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800">
+              <button className="rounded-2xl bg-slate-900 px-8 py-4 text-base font-bold text-white transition hover:bg-slate-800 hover:shadow-lg">
                 Đăng ký
               </button>
             </div>
