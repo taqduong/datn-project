@@ -6,6 +6,7 @@ using BE.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.AspNetCore.Authorization;
 
 namespace BE.Controllers
 {
@@ -50,6 +51,40 @@ namespace BE.Controllers
             });
         }
 
+        // API Đổi mật khẩu
+        [Authorize]
+        [HttpPut("change-password")]
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request)
+        {
+            // 1. Lấy User ID từ Token (Ánh xạ từ JwtRegisteredClaimNames.Sub)
+            var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value 
+                            ?? User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
+
+            if (string.IsNullOrEmpty(userIdString) || !int.TryParse(userIdString, out int userId))
+            {
+                return Unauthorized(new { success = false, message = "Không xác thực được người dùng." });
+            }
+
+            // 2. Tìm người dùng trong DB
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null)
+            {
+                return NotFound(new { success = false, message = "Không tìm thấy người dùng." });
+            }
+
+            // 3. Kiểm tra mật khẩu cũ
+            if (!BCrypt.Net.BCrypt.Verify(request.OldPassword, user.Password))
+            {
+                return BadRequest(new { success = false, message = "Mật khẩu cũ không chính xác." });
+            }
+
+            // 4. Mã hóa mật khẩu mới và lưu lại
+            user.Password = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { success = true, message = "Đổi mật khẩu thành công!" });
+        }
+
         // Phương thức tạo token
         private string GenerateJwtToken(User user)
         {
@@ -84,5 +119,11 @@ namespace BE.Controllers
     {
         public string Username { get; set; } = string.Empty;
         public string Password { get; set; } = string.Empty;
+    }
+
+    public class ChangePasswordRequest
+    {
+        public string OldPassword { get; set; } = string.Empty;
+        public string NewPassword { get; set; } = string.Empty;
     }
 }

@@ -107,6 +107,11 @@ export interface LoginPayload {
   password: string;
 }
 
+export interface ChangePasswordPayload {
+  oldPassword: string;
+  newPassword: string;
+}
+
 export interface AuthUser {
   id?: number;
   username: string;
@@ -234,6 +239,9 @@ export const authAPI = {
   register: (data: RegisterPayload) =>
     api.post("/users/register", data),
 
+  changePassword: (data: ChangePasswordPayload) =>
+    api.put("/auth/change-password", data),
+
   login: async (data: LoginPayload) => {
     const res = await api.post<LoginResponse>("/auth/login", data);
 
@@ -340,6 +348,7 @@ export const deleteProduct = productsAPI.delete;
 export const registerUser = authAPI.register;
 export const loginUser = authAPI.login;
 export const logoutUser = authAPI.logout;
+export const changePassword = authAPI.changePassword;
 
 export const fetchCart = cartAPI.get;
 export const addToCart = (productId: number, quantity: number) => cartAPI.add({ productId, quantity });

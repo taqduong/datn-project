@@ -4,12 +4,13 @@ import { use, useEffect, useState } from 'react'
 import Link from 'next/link'
 import {
   User, Mail, Phone, Shield, Edit2, Save, X,
-  ShoppingBag, Heart, Settings, LogOut, Calendar, ChevronRight
+  ShoppingBag, Heart, Settings, LogOut, Calendar, ChevronRight, Eye, EyeOff, Lock
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { api } from '@/services/api' 
 import { updateUser } from '@/services/api'
 import { uploadAvatar } from '@/services/api'
+import { changePassword } from '@/services/api'
 
 
 // ================== Kiểu dữ liệu ==================
@@ -58,6 +59,15 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
   // Thêm state để lưu avatar
   const [avatar, setAvatar] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+
+  // ================= STATE CHO ĐỔI MẬT KHẨU =================
+  const [oldPassword, setOldPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [showOldPassword, setShowOldPassword] = useState(false)
+  const [showNewPassword, setShowNewPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [isChangingPwd, setIsChangingPwd] = useState(false)
 
  // Load thông tin user (ĐÃ VÁ LỖ HỔNG BẢO MẬT)
   useEffect(() => {
@@ -244,6 +254,48 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
     router.push('/login')
   }
 
+ // ================= HÀM XỬ LÝ ĐỔI MẬT KHẨU =================
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!oldPassword || !newPassword || !confirmPassword) {
+      alert("Vui lòng nhập đầy đủ thông tin!");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      alert("Mật khẩu mới và xác nhận mật khẩu không khớp!");
+      return;
+    }
+    if (newPassword.length < 6) {
+      alert("Mật khẩu mới phải có ít nhất 6 ký tự!");
+      return;
+    }
+
+    try {
+      setIsChangingPwd(true);
+      await changePassword({ oldPassword, newPassword }); // Gọi API
+      
+      // ✅ SỬA TỪ ĐOẠN NÀY
+      alert("✅ Đổi mật khẩu thành công! Vui lòng đăng nhập lại với mật khẩu mới.");
+      
+      // 1. Xóa vé VIP cũ
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      
+      // 2. Kêu gọi Navbar load lại giao diện (mất avatar góc phải)
+      window.dispatchEvent(new Event("userUpdated"));
+      
+      // 3. Đá văng khách ra trang đăng nhập
+      router.push('/login');
+
+    } catch (error: any) {
+      console.error("Lỗi đổi mật khẩu:", error);
+      const msg = error.response?.data?.message || "Mật khẩu cũ không chính xác hoặc có lỗi xảy ra.";
+      alert("❌ " + msg);
+    } finally {
+      setIsChangingPwd(false);
+    }
+  };
+
   // Role Formatter
   const getRoleDisplayName = (role: string) => {
     switch (role.toLowerCase()) {
@@ -382,7 +434,7 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
                   }`}
                 >
                   <Settings size={20} className={activeTab === 'settings' ? 'text-blue-600' : 'text-zinc-400'} />
-                  <span>Cài đặt</span>
+                  <span>Đổi mật khẩu</span>
                 </button>
 
                 <button
@@ -697,14 +749,107 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
               </div>
             )}
 
-            {/* TAB: CÀI ĐẶT */}
+            {/* TAB: CÀI ĐẶT (BẢO MẬT & ĐỔI MẬT KHẨU) */}
             {activeTab === 'settings' && (
-              <div className="bg-white rounded-4xl shadow-sm border border-zinc-200 p-12 text-center animate-in fade-in duration-500">
-                <div className="w-20 h-20 bg-zinc-50 text-zinc-400 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Settings size={32} />
+              <div className="bg-white rounded-4xl shadow-sm border border-zinc-200 overflow-hidden animate-in fade-in duration-500">
+                {/* Header */}
+                <div className="px-8 py-6 border-b border-zinc-100 flex items-center justify-between gap-4 bg-zinc-50/50">
+                  <div>
+                    <h2 className="text-2xl font-bold text-zinc-900">Bảo mật tài khoản</h2>
+                    <p className="text-sm text-zinc-500 mt-1">Cập nhật mật khẩu thường xuyên để bảo vệ tài khoản của bạn</p>
+                  </div>
+                  <div className="w-12 h-12 bg-blue-50 text-blue-500 rounded-2xl flex items-center justify-center shadow-sm">
+                    <Shield size={24} />
+                  </div>
                 </div>
-                <h2 className="text-2xl font-bold text-zinc-900 mb-2">Cài đặt tài khoản</h2>
-                <p className="text-zinc-500">Tính năng đổi mật khẩu và bảo mật đang được phát triển.</p>
+
+                {/* Form Content */}
+                <div className="p-8 max-w-2xl">
+                  <form onSubmit={handleChangePassword} className="space-y-6">
+                    {/* Mật khẩu cũ */}
+                    <div>
+                      <label className="block text-sm font-semibold text-zinc-900 mb-2">Mật khẩu hiện tại</label>
+                      <div className="relative">
+                        <Lock className="absolute left-4 top-3.5 text-zinc-400" size={20} />
+                        <input
+                          type={showOldPassword ? "text" : "password"}
+                          value={oldPassword}
+                          onChange={(e) => setOldPassword(e.target.value)}
+                          placeholder="Nhập mật khẩu cũ..."
+                          className="w-full pl-12 pr-12 py-3.5 border border-zinc-200 rounded-xl font-medium focus:outline-none focus:ring-4 focus:ring-blue-50 focus:border-blue-400 transition-all"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowOldPassword(!showOldPassword)}
+                          className="absolute right-4 top-3.5 text-zinc-400 hover:text-blue-600 transition"
+                        >
+                          {showOldPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Mật khẩu mới */}
+                    <div>
+                      <label className="block text-sm font-semibold text-zinc-900 mb-2">Mật khẩu mới</label>
+                      <div className="relative">
+                        <Shield className="absolute left-4 top-3.5 text-zinc-400" size={20} />
+                        <input
+                          type={showNewPassword ? "text" : "password"}
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                          placeholder="Nhập mật khẩu mới..."
+                          className="w-full pl-12 pr-12 py-3.5 border border-zinc-200 rounded-xl font-medium focus:outline-none focus:ring-4 focus:ring-blue-50 focus:border-blue-400 transition-all"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowNewPassword(!showNewPassword)}
+                          className="absolute right-4 top-3.5 text-zinc-400 hover:text-blue-600 transition"
+                        >
+                          {showNewPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                        </button>
+                      </div>
+                      <p className="text-xs text-zinc-400 mt-2 ml-1">Mật khẩu phải có ít nhất 6 ký tự.</p>
+                    </div>
+
+                    {/* Xác nhận mật khẩu mới */}
+                    <div>
+                      <label className="block text-sm font-semibold text-zinc-900 mb-2">Xác nhận mật khẩu mới</label>
+                      <div className="relative">
+                        <Shield className="absolute left-4 top-3.5 text-zinc-400" size={20} />
+                        <input
+                          type={showConfirmPassword ? "text" : "password"}
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          placeholder="Nhập lại mật khẩu mới..."
+                          className="w-full pl-12 pr-12 py-3.5 border border-zinc-200 rounded-xl font-medium focus:outline-none focus:ring-4 focus:ring-blue-50 focus:border-blue-400 transition-all"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          className="absolute right-4 top-3.5 text-zinc-400 hover:text-blue-600 transition"
+                        >
+                          {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Submit Button */}
+                    <div className="pt-4 border-t border-zinc-100">
+                      <button
+                        type="submit"
+                        disabled={isChangingPwd || !oldPassword || !newPassword || !confirmPassword}
+                        className="inline-flex items-center justify-center gap-2 px-8 py-3.5 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition shadow-md disabled:bg-zinc-300 disabled:cursor-not-allowed"
+                      >
+                        {isChangingPwd ? (
+                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        ) : (
+                          <Save size={18} />
+                        )}
+                        Cập nhật mật khẩu
+                      </button>
+                    </div>
+                  </form>
+                </div>
               </div>
             )}
 
