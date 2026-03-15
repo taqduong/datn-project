@@ -42,4 +42,7 @@ public partial class Product
 
     [InverseProperty("Product")]
     public virtual ICollection<Wishlist> Wishlists { get; set; } = new List<Wishlist>();
+
+    [InverseProperty("Product")]
+    public virtual ProductAnalytics? ProductAnalytics { get; set; }
 }

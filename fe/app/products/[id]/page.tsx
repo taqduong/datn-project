@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { Heart } from "lucide-react";
-import { fetchProductById, addToCart, addToWishlist, type Product } from "@/services/api";
+import { fetchProductById, addToCart, addToWishlist, type Product, trackProductView, trackProductAddToCart } from "@/services/api";
 
 
 export default function ProductDetailPage() {
@@ -18,6 +18,8 @@ export default function ProductDetailPage() {
   const [imageLoaded, setImageLoaded] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [isWishlisting, setIsWishlisting] = useState(false);
+  // ✅ Lưu lại cái ID sản phẩm đã đếm
+  const trackedIdRef = useRef<string | null>(null);
 
   
 
@@ -26,6 +28,14 @@ export default function ProductDetailPage() {
       setLoading(true);
       const res = await fetchProductById(id);
       setProduct(res.data);
+
+      // ✅ GẮN CẢM BIẾN LƯỢT XEM Ở ĐÂY:
+      // Gọi API chạy ngầm (không dùng await) để không làm chậm trải nghiệm của khách
+      if (res.data?.id && trackedIdRef.current !== id) {
+        trackedIdRef.current = id; // Đánh dấu là đã đếm ID này rồi
+        trackProductView(res.data.id).catch(err => console.error("Lỗi tracking view:", err));
+      }
+
     } catch (error) {
       console.error("Lỗi khi tải chi tiết sản phẩm:", error);
       setProduct(null);
@@ -93,6 +103,9 @@ export default function ProductDetailPage() {
 
       // 4. Gửi yêu cầu sang Backend: Báo nó nhét productId này với quantity này vào bảng Cart
       await addToCart(product.id, quantity);
+
+      // ✅ GẮN CẢM BIẾN THÊM GIỎ HÀNG Ở ĐÂY:
+      trackProductAddToCart(product.id).catch(err => console.error("Lỗi tracking cart:", err));
       
       // 5. Cập nhật giao diện:
       // Phát ra một cái loa thông báo trên toàn Website tên là 'cartUpdated'.

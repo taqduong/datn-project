@@ -182,6 +182,15 @@ export interface OrderDto {
   note?: string;
   orderDetails: OrderDetailDto[];
 }
+
+export interface AnalyticsSummary {
+  productId: number;
+  productName: string;
+  views: number;
+  addToCartCount: number;
+  purchaseCount: number;
+  lastUpdated: string;
+}
 // ================= Categories API =================
 export const categoriesAPI = {
   getAll: () => api.get<Category[]>("/categories"),
@@ -328,6 +337,26 @@ export const wishlistAPI = {
   clear: () => api.delete('/wishlist/clear'),
 }
 
+// ================= Analytics API =================
+export const analyticsAPI = {
+  // 1. Ghi nhận lượt xem
+  trackView: (productId: number) => 
+    api.post(`/analytics/view/${productId}`),
+
+  // 2. Ghi nhận lượt thêm giỏ hàng
+  trackAddToCart: (productId: number) => 
+    api.post(`/analytics/cart/${productId}`),
+
+  // 3. Ghi nhận lượt mua
+  trackPurchase: (productId: number, quantity: number) => 
+    api.post(`/analytics/purchase/${productId}`, quantity, {
+      headers: { "Content-Type": "application/json" } // Gửi số lượng dạng số
+    }),
+
+  // 4. Lấy báo cáo cho Admin
+  getSummary: () => 
+    api.get<AnalyticsSummary[]>("/analytics/summary"),
+};
 
 
 // ================= Helper Exports =================
@@ -366,6 +395,11 @@ export const fetchWishlist = wishlistAPI.getAll
 export const addToWishlist = wishlistAPI.add
 export const removeFromWishlist = wishlistAPI.remove
 export const clearWishlist = wishlistAPI.clear
+
+export const fetchAnalyticsSummary = analyticsAPI.getSummary;
+export const trackProductView = analyticsAPI.trackView;
+export const trackProductAddToCart = analyticsAPI.trackAddToCart;
+export const trackProductPurchase = analyticsAPI.trackPurchase;
 
 export default api;
 // ================= Chatbot API (demo) =================

@@ -71,8 +71,12 @@ export default function Navbar() {
       const data = Array.isArray(res.data) ? res.data : [];
       // ✅ CHỈ CẦN ĐẾM SỐ LƯỢNG MÓN (Số dòng trong giỏ hàng)
       setCartCount(data.length);
-    } catch (error) {
-      console.error("Lỗi đồng bộ số lượng giỏ hàng:", error);
+    } catch (error: any) {
+      // ✅ THÊM ĐOẠN NÀY: Nếu lỗi 401 (hết hạn Token) thì im lặng set về 0, không in lỗi đỏ
+      if (error.response?.status !== 401) {
+        console.error("Lỗi đồng bộ số lượng giỏ hàng:", error);
+      }
+      setCartCount(0);
     }
   };
 
@@ -88,8 +92,12 @@ export default function Navbar() {
       if (res.data && res.data.success) {
         setWishlistCount(res.data.data.length);
       }
-    } catch (error) {
-      console.error("Lỗi đồng bộ số lượng wishlist:", error);
+    } catch (error: any) {
+      // ✅ THÊM ĐOẠN NÀY
+      if (error.response?.status !== 401) {
+        console.error("Lỗi đồng bộ số lượng wishlist:", error);
+      }
+      setWishlistCount(0);
     }
   };
 

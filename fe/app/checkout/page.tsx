@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { fetchCart, checkoutOrder, type CartItem } from "@/services/api";
+import { fetchCart, checkoutOrder, type CartItem, trackProductPurchase } from "@/services/api";
 import { 
   MapPin, Phone, User, FileText, ShoppingBag, 
   ArrowRight, CheckCircle2, CreditCard, Mail, Wallet, Building2
@@ -89,6 +89,15 @@ export default function CheckoutPage() {
       // Gọi đường ống API đã viết sẵn (checkoutOrder)
       // Lưu ý: Nếu Backend C# chưa hứng field paymentMethod, nó sẽ tạm bỏ qua nhưng vẫn tạo đơn chuẩn
       await checkoutOrder(formData);
+
+      // =======================================================
+      // ✅ GẮN CẢM BIẾN LƯỢT MUA Ở ĐÂY (Vừa chốt đơn xong)
+      // Lặp qua từng món trong giỏ hàng để báo cáo số lượng đã bán
+      // =======================================================
+      cartItems.forEach(item => {
+        trackProductPurchase(item.product.id, item.quantity)
+          .catch(err => console.error("Lỗi tracking mua hàng:", err));
+      });
       
       setIsSuccess(true);
       // Báo cho Navbar reset số đếm giỏ hàng

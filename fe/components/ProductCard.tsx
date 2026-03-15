@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { ShoppingCart, Heart } from "lucide-react";
 import { useState } from "react";
-import { addToCart, addToWishlist } from "@/services/api";
+import { addToCart, addToWishlist, trackProductAddToCart } from "@/services/api";
 
 export interface Product {
   id: number;
@@ -45,6 +45,10 @@ export default function ProductCard({ product }: { product: Product }) {
     try {
       setIsAdding(true);
       await addToCart(product.id, 1); // Bấm ngoài thẻ thì mặc định thêm 1 cái
+
+      // ✅ GẮN CẢM BIẾN THÊM GIỎ HÀNG Ở ĐÂY:
+      trackProductAddToCart(product.id).catch(err => console.error("Lỗi tracking cart:", err));
+
       window.dispatchEvent(new Event('cartUpdated')); // Kêu Header nhảy số
       // ✅ THÊM DÒNG NÀY ĐỂ BÁO THÀNH CÔNG:
       alert(`Đã thêm ${product.name} vào giỏ hàng!`);
