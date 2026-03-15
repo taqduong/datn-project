@@ -192,7 +192,11 @@ export default function AdminOrdersPage() {
                                     />
                                     <span className="font-bold text-slate-800 line-clamp-1">{detail.productName}</span>
                                   </td>
-                                  <td className="px-4 py-3 text-center font-medium">{detail.quantity}</td>
+                                  <td className="px-4 py-3 text-center">
+                                    <span className="inline-flex items-center justify-center min-w-9 px-3 py-1.5 rounded-lg bg-white border border-slate-300 font-bold text-slate-900 shadow-sm">
+                                      {detail.quantity}
+                                    </span>
+                                  </td>
                                   <td className="px-4 py-3 text-right font-bold text-blue-600">{formatVND(detail.price * detail.quantity)}</td>
                                 </tr>
                               ))}

@@ -42,20 +42,11 @@ export default function Navbar() {
         setUser(null);
         setRole(null);
       }
-
-      const storedWishlist = localStorage.getItem("wishlist");
-      if (storedWishlist) {
-        const parsedWishlist = JSON.parse(storedWishlist);
-        setWishlistCount(Array.isArray(parsedWishlist) ? parsedWishlist.length : 0);
-      } else {
-        setWishlistCount(0);
-      }
+      // ✅ ĐÃ XÓA PHẦN CHECK LOCALSTORAGE CỦA WISHLIST Ở ĐÂY
     } catch (error) {
       console.error("Lỗi khi đọc localStorage:", error);
       setUser(null);
       setRole(null);
-      setCartCount(0);
-      setWishlistCount(0);
     }
   };
 
@@ -80,20 +71,29 @@ export default function Navbar() {
     }
   };
 
-  // ✅ Gọi API đếm số lượng Wishlist
+  // ✅ Gọi API đếm số lượng Wishlist (Sửa lại cho đúng chuẩn API của sếp)
   const fetchWishlistCount = async () => {
     const token = localStorage.getItem("token");
     if (!token) {
       setWishlistCount(0);
       return;
     }
+    
     try {
       const res = await fetchWishlist();
-      if (res.data && res.data.success) {
-        setWishlistCount(res.data.data.length);
+      
+      // ✅ SỬA Ở ĐÂY: API Wishlist nó bọc mảng trong cục data
+      // Check xem res.data có tồn tại không, rồi check tiếp res.data.data có phải Mảng không
+      let count = 0;
+      if (res.data && Array.isArray(res.data.data)) {
+        count = res.data.data.length; // Lấy length của mảng bên trong
+      } else if (Array.isArray(res.data)) {
+        count = res.data.length; // Phòng hờ nếu sếp lỡ đổi Backend trả về mảng trực tiếp
       }
+      
+      setWishlistCount(count);
+      
     } catch (error: any) {
-      // ✅ THÊM ĐOẠN NÀY
       if (error.response?.status !== 401) {
         console.error("Lỗi đồng bộ số lượng wishlist:", error);
       }
@@ -126,13 +126,14 @@ export default function Navbar() {
   }, [mounted]);
 
   const handleLogout = () => {
+    // 1. Quét sạch mọi thông tin của user cũ trong kho chứa
     localStorage.removeItem("token");
     localStorage.removeItem("user");
-    setUser(null);
-    setRole(null);
-    window.dispatchEvent(new Event("userUpdated"));
-    setCartCount(0);
-    router.push("/login");
+    localStorage.removeItem("wishlist"); // (Tùy chọn) Xóa luôn nếu sếp có lưu
+    
+    // 2. TÁT VẬT LÝ: Ép trình duyệt tải lại toàn bộ trang từ con số 0
+    // Thay vì dùng router.push, ta dùng cái này để dọn sạch 100% rác bộ nhớ
+    window.location.href = "/login";
   };
 
   const handleSearch = async (e: React.FormEvent<HTMLFormElement>) => {

@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { fetchCart, checkoutOrder, type CartItem, trackProductPurchase } from "@/services/api";
+import { useRouter, useSearchParams } from "next/navigation";
+import { fetchCart, checkoutOrder, type CartItem, trackProductPurchase, fetchProductById } from "@/services/api";
 import { 
   MapPin, Phone, User, FileText, ShoppingBag, 
   ArrowRight, CheckCircle2, CreditCard, Mail, Wallet, Building2
@@ -11,6 +11,11 @@ import Link from "next/link";
 
 export default function CheckoutPage() {
   const router = useRouter();
+
+  // ✅ 1. LẤY DỮ LIỆU TỪ URL (NẾU CÓ)
+  const searchParams = useSearchParams();
+  const buyNowId = searchParams.get("buyNowId");
+  const qty = searchParams.get("qty");
   
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [loadingCart, setLoadingCart] = useState(true);
@@ -33,9 +38,23 @@ export default function CheckoutPage() {
     const loadCart = async () => {
       try {
         setLoadingCart(true);
-        const res = await fetchCart();
-        const items = Array.isArray(res.data) ? res.data : [];
-        setCartItems(items);
+        // ✅ 2. THAY ĐOẠN FETCH GIỎ HÀNG BẰNG CỤM NÀY:
+        if (buyNowId && qty) {
+          // Nếu đang "Mua ngay" -> Chỉ fetch 1 món
+          const res = await fetchProductById(buyNowId);
+          const p = res.data;
+          setCartItems([{
+            cartItemId: 0, // ID ảo để giao diện không lỗi
+            productId: p.id,
+            quantity: Number(qty),
+            product: { ...p, priceAfterDiscount: p.priceAfterDiscount || 0 }
+          }]);
+        } else {
+          // Nếu vô từ Giỏ hàng -> Lấy data như bình thường
+          const res = await fetchCart();
+          const items = Array.isArray(res.data) ? res.data : [];
+          setCartItems(items);
+        }
         
         // Tự động điền thông tin user từ localStorage lên form
         const storedUser = localStorage.getItem("user");
@@ -55,7 +74,7 @@ export default function CheckoutPage() {
       }
     };
     loadCart();
-  }, []);
+  }, [buyNowId, qty]);
 
   // Tính tổng tiền dựa trên giá sau khi giảm (priceAfterDiscount)
   const subtotal = cartItems.reduce((sum, item) => {
@@ -82,13 +101,19 @@ export default function CheckoutPage() {
       router.push("/products");
       return;
     }
-
-    try {
+      try {
       setIsSubmitting(true);
       
-      // Gọi đường ống API đã viết sẵn (checkoutOrder)
-      // Lưu ý: Nếu Backend C# chưa hứng field paymentMethod, nó sẽ tạm bỏ qua nhưng vẫn tạo đơn chuẩn
-      await checkoutOrder(formData);
+      // ✅ 3. THAY LỆNH GỌI API CŨ BẰNG CỤC NÀY ĐỂ GỬI KÈM DỮ LIỆU MUA NGAY:
+      const payload: any = { ...formData };
+      if (buyNowId && qty) {
+        payload.buyNowProductId = Number(buyNowId);
+        payload.buyNowQuantity = Number(qty);
+      }
+      
+      await checkoutOrder(payload);
+
+      // =======================================================
 
       // =======================================================
       // ✅ GẮN CẢM BIẾN LƯỢT MUA Ở ĐÂY (Vừa chốt đơn xong)
@@ -297,7 +322,7 @@ export default function CheckoutPage() {
                   const hasDiscount = item.product.priceAfterDiscount > 0 && item.product.priceAfterDiscount < item.product.price;
 
                   return (
-                    <div key={item.cartItemId} className="flex gap-4">
+                    <div key={item.cartItemId || item.productId} className="flex gap-4">
                       <img 
                         src={item.product.imageUrl || "https://placehold.co/100x100?text=No+Image"} 
                         alt={item.product.name} 

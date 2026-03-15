@@ -37,6 +37,10 @@ export default function LoginPage() {
       const { password, ...safeUser } = user
       localStorage.setItem('user', JSON.stringify(safeUser))
 
+      // ✅ NAVBAR CẬP NHẬT LẠI SỐ LƯỢNG:
+      window.dispatchEvent(new Event('cartUpdated'));
+      window.dispatchEvent(new Event('wishlistUpdated'));
+
       setSuccess(true)
 
       setTimeout(() => {

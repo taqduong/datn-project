@@ -37,30 +37,55 @@ namespace BE.Controllers
             var userId = GetUserIdFromToken();
             if (userId == null) return Unauthorized("Vui lòng đăng nhập.");
 
-            var cartItems = await _context.Carts
-                .Include(c => c.Product)
-                .Where(c => c.UserId == userId.Value)
-                .ToListAsync();
-
-            if (!cartItems.Any())
-                return BadRequest(new { message = "Giỏ hàng của bạn đang trống." });
-
             decimal totalAmount = 0;
             var orderDetails = new List<OrderDetail>();
 
-            foreach (var item in cartItems)
+            // ✅ RẼ NHÁNH 1: NẾU KHÁCH BẤM "MUA NGAY"
+            if (request.BuyNowProductId.HasValue && request.BuyNowQuantity.HasValue)
             {
-                decimal finalPrice = item.Product.Price; // Sửa nếu có PriceAfterDiscount
-                totalAmount += finalPrice * item.Quantity;
+                // Lấy thông tin đúng 1 sản phẩm đó, KHÔNG đụng gì đến giỏ hàng
+                var product = await _context.Products.FindAsync(request.BuyNowProductId.Value);
+                if (product == null) return BadRequest(new { message = "Sản phẩm không tồn tại." });
+
+                decimal finalPrice = product.Price; // Sửa thành product.PriceAfterDiscount nếu model sếp có
+                totalAmount = finalPrice * request.BuyNowQuantity.Value;
 
                 orderDetails.Add(new OrderDetail
                 {
-                    ProductId = item.ProductId,
-                    Quantity = item.Quantity,
+                    ProductId = product.Id,
+                    Quantity = request.BuyNowQuantity.Value,
                     UnitPrice = finalPrice
                 });
             }
+            // ✅ RẼ NHÁNH 2: NẾU KHÁCH MUA TỪ GIỎ HÀNG
+            else
+            {
+                var cartItems = await _context.Carts
+                    .Include(c => c.Product)
+                    .Where(c => c.UserId == userId.Value)
+                    .ToListAsync();
 
+                if (!cartItems.Any())
+                    return BadRequest(new { message = "Giỏ hàng của bạn đang trống." });
+
+                foreach (var item in cartItems)
+                {
+                    decimal finalPrice = item.Product.Price; // Sửa thành item.Product.PriceAfterDiscount nếu có
+                    totalAmount += finalPrice * item.Quantity;
+
+                    orderDetails.Add(new OrderDetail
+                    {
+                        ProductId = item.ProductId,
+                        Quantity = item.Quantity,
+                        UnitPrice = finalPrice
+                    });
+                }
+
+                // Nhớ xóa giỏ hàng sau khi chốt đơn thành công
+                _context.Carts.RemoveRange(cartItems);
+            }
+
+            // ✅ TẠO ĐƠN HÀNG (Dùng chung cho cả 2 nhánh)
             var newOrder = new Order
             {
                 UserId = userId.Value,
@@ -75,11 +100,9 @@ namespace BE.Controllers
                 Ward = request.Ward,
                 Note = request.Note,
                 OrderDetails = orderDetails
-                // Đã bỏ District
             };
 
             _context.Orders.Add(newOrder);
-            _context.Carts.RemoveRange(cartItems);
             await _context.SaveChangesAsync();
 
             return Ok(new { message = "Đặt hàng thành công!", orderId = newOrder.OrderId });
@@ -262,6 +285,8 @@ namespace BE.Controllers
         public string? City { get; set; }
         public string? Ward { get; set; }
         public string? Note { get; set; }
+        public int? BuyNowProductId { get; set; }
+        public int? BuyNowQuantity { get; set; }
     }
 
     public class UpdateStatusDto

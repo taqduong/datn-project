@@ -83,49 +83,48 @@ export default function ProductDetailPage() {
     setQuantity((prev) => Math.max(prev - 1, 1));
   };
 
-  // Xử lý Thêm vào giỏ & Mua ngay
-  const handleAddToCart = async (isBuyNow = false) => {
-    // 1. Nếu chưa load xong sản phẩm thì cấm bấm
+// =========================================================
+  // 1. HÀM XỬ LÝ "MUA NGAY" ĐỘC LẬP
+  // =========================================================
+  const handleBuyNow = () => {
     if (!product) return;
-
-    // 2. Kiểm tra thẻ xe (Token):
-    // Phải kiểm tra xem máy khách đã lưu token chưa (tức là đã đăng nhập chưa).
+    
     const token = localStorage.getItem("token");
     if (!token) {
       alert("Vui lòng đăng nhập để mua hàng!");
-      router.push("/login"); // Đá văng ra trang đăng nhập
+      router.push("/login");
+      return;
+    }
+
+    // Đẩy thông tin lên URL để sang trang Checkout
+    router.push(`/checkout?buyNowId=${product.id}&qty=${quantity}`);
+  };
+
+  // =========================================================
+  // 2. HÀM THÊM VÀO GIỎ
+  // =========================================================
+  const handleAddToCart = async () => {
+    if (!product) return;
+
+    const token = localStorage.getItem("token");
+    if (!token) {
+      alert("Vui lòng đăng nhập để mua hàng!");
+      router.push("/login");
       return;
     }
 
     try {
-      // 3. Khóa nút lại để chống spam click
       setIsAdding(true);
-
-      // 4. Gửi yêu cầu sang Backend: Báo nó nhét productId này với quantity này vào bảng Cart
       await addToCart(product.id, quantity);
-
-      // ✅ GẮN CẢM BIẾN THÊM GIỎ HÀNG Ở ĐÂY:
-      trackProductAddToCart(product.id).catch(err => console.error("Lỗi tracking cart:", err));
       
-      // 5. Cập nhật giao diện:
-      // Phát ra một cái loa thông báo trên toàn Website tên là 'cartUpdated'.
-      // Lát nữa ở cái Header (chỗ có icon giỏ hàng), mình sẽ viết code để nó nghe thấy tiếng loa này 
-      // là nó tự động load lại API để lấy số lượng mới (từ 1 lên 2).
+      trackProductAddToCart(product.id).catch(err => console.error("Lỗi tracking cart:", err));
       window.dispatchEvent(new Event('cartUpdated')); 
-
-      // 6. Rẽ nhánh theo nút khách bấm:
-      if (isBuyNow) {
-        // Nếu là nút "Mua ngay" (isBuyNow = true) -> Chuyển thẳng sang trang Giỏ hàng để chốt đơn
-        router.push("/cart"); 
-      } else {
-        // Nếu là nút "Thêm vào giỏ" (isBuyNow = false) -> Báo thành công rồi để khách ở lại mua tiếp
       alert(`Đã thêm ${product.name} vào giỏ hàng!`);
-      }
+      
     } catch (error) {
       console.error("Lỗi khi thêm vào giỏ hàng:", error);
       alert("Có lỗi xảy ra, vui lòng thử lại sau.");
     } finally {
-      // 7. Dù thành công hay thất bại (mạng rớt), cũng phải mở khóa cho cái nút để khách còn bấm lại được
       setIsAdding(false);
     }
   };
@@ -393,25 +392,21 @@ export default function ProductDetailPage() {
 
               <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
               {/* 1. NÚT MUA NGAY */}
-                {/* onClick gọi hàm kèm chữ 'true' (báo hiệu đây là nút mua ngay) */}
                 <button
-                  onClick={() => handleAddToCart(true)}
-                  // Nút sẽ bị liệt (disabled) nếu: hết hàng (stock <= 0) HOẶC mạng đang quay (isAdding = true)
-                  disabled={product.stock <= 0 || isAdding}
+                  onClick={handleBuyNow} // ✅ Đổi thành gọi hàm mới
+                  disabled={product.stock <= 0} // ✅ Bỏ cái isAdding đi
                   className={`rounded-2xl px-5 py-4 font-semibold text-white transition flex justify-center items-center ${
-                    product.stock <= 0 || isAdding
-                      ? "cursor-not-allowed bg-slate-300" // Đổi màu xám nếu bị liệt
-                      : "bg-slate-900 hover:bg-slate-800" // Màu đen ngầu lòi nếu bình thường
+                    product.stock <= 0
+                      ? "cursor-not-allowed bg-slate-300"
+                      : "bg-slate-900 hover:bg-slate-800"
                   }`}
                 >
-                  {/* Nếu isAdding đang là true -> Hiện chữ "Đang xử lý...". Nếu false -> Hiện "Mua ngay" */}
-                  {isAdding ? "Đang xử lý..." : "Mua ngay"}
+                  Mua ngay
                 </button>
 
                 {/* 2. NÚT THÊM VÀO GIỎ HÀNG */}
-                {/* onClick gọi hàm kèm chữ 'false' (báo hiệu chỉ thêm chứ không chuyển trang) */}
                 <button 
-                  onClick={() => handleAddToCart(false)}
+                  onClick={handleAddToCart} // ✅ Bỏ chữ 'false' ở trong đi
                   disabled={product.stock <= 0 || isAdding}
                   className={`rounded-2xl border px-5 py-4 font-semibold transition flex justify-center items-center ${
                     product.stock <= 0 || isAdding
