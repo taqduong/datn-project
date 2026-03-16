@@ -22,28 +22,30 @@ namespace BE.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<ProductDto>>> GetProducts()
         {
-            var products = await _context.Products
-                .Include(p => p.Category)
-                .Include(p => p.ProductImages)
+            var result = await _context.Products
+                .Select(p => new ProductDto
+                {
+                    Id = p.Id,
+                    Name = p.Name,
+                    Price = p.Price,
+                    Discount = p.Discount,
+                    Description = p.Description,
+                    ImageUrl = p.ImageUrl,
+                    Stock = p.Stock,
+                    PriceAfterDiscount = p.Discount.HasValue
+                        ? Math.Round(p.Price * (1 - (decimal)p.Discount.Value / 100), 0)
+                        : p.Price,
+                    CategoryId = p.CategoryId,
+                    CategoryName = p.Category != null ? p.Category.Name : null,
+                    CreatedAt = p.CreatedAt,
+                    AdditionalImages = p.ProductImages.Select(pi => pi.ImageUrl).ToList(),
+                    
+                    // ✅ BƯỚC 2: CÔNG THỨC ĐẾM LƯỢT BÁN
+                    SoldCount = p.OrderDetails
+                        .Where(od => od.Order != null && (od.Order.Status == "Completed" || od.Order.Status == "Hoàn thành"))
+                        .Sum(od => (int?)od.Quantity) ?? 0
+                })
                 .ToListAsync();
-
-            var result = products.Select(p => new ProductDto
-            {
-                Id = p.Id,
-                Name = p.Name,
-                Price = p.Price,
-                Discount = p.Discount,
-                Description = p.Description,
-                ImageUrl = p.ImageUrl,
-                Stock = p.Stock,
-                PriceAfterDiscount = p.Discount.HasValue
-                    ? Math.Round(p.Price * (1 - (decimal)p.Discount.Value / 100), 0)
-                    : p.Price,
-                CategoryId = p.CategoryId,
-                CategoryName = p.Category != null ? p.Category.Name : null,
-                CreatedAt = p.CreatedAt,
-                AdditionalImages = p.ProductImages.Select(pi => pi.ImageUrl).ToList()
-            });
 
             return Ok(result);
         }
@@ -69,7 +71,9 @@ namespace BE.Controllers
                     CategoryName = p.Category.Name,
                     ImageUrl = p.ImageUrl,
                     CreatedAt = p.CreatedAt,
-                    AdditionalImages = p.ProductImages.Select(pi => pi.ImageUrl).ToList()
+                    AdditionalImages = p.ProductImages.Select(pi => pi.ImageUrl).ToList(),
+                    SoldCount = p.OrderDetails.Where(od => od.Order != null && (od.Order.Status == "Completed" || od.Order.Status == "Hoàn thành")).Sum(od => (int?)od.Quantity) ?? 0
+                    
                 })
                 .FirstOrDefaultAsync();
 
@@ -120,7 +124,8 @@ namespace BE.Controllers
                     ImageUrl = p.ImageUrl,
                     CreatedAt = p.CreatedAt,
                     // ✅ THÊM DÒNG NÀY (Vì tạo mới nên mảng rỗng):
-                    AdditionalImages = new List<string>()
+                    AdditionalImages = new List<string>(),
+                    SoldCount = 0
                 })
                 .FirstAsync();
 
@@ -184,7 +189,8 @@ namespace BE.Controllers
                     CategoryName = p.Category.Name,
                     ImageUrl = p.ImageUrl,
                     CreatedAt = p.CreatedAt,
-                    AdditionalImages = p.ProductImages.Select(pi => pi.ImageUrl).ToList()
+                    AdditionalImages = p.ProductImages.Select(pi => pi.ImageUrl).ToList(),
+                    SoldCount = p.OrderDetails.Where(od => od.Order != null && (od.Order.Status == "Completed" || od.Order.Status == "Hoàn thành")).Sum(od => (int?)od.Quantity) ?? 0
                 })
                 .AsNoTracking()
                 .FirstAsync();
@@ -274,7 +280,8 @@ namespace BE.Controllers
                     CategoryName = p.Category.Name,
                     ImageUrl = p.ImageUrl,
                     CreatedAt = p.CreatedAt,
-                    AdditionalImages = p.ProductImages.Select(pi => pi.ImageUrl).ToList()
+                    AdditionalImages = p.ProductImages.Select(pi => pi.ImageUrl).ToList(),
+                    SoldCount = p.OrderDetails.Where(od => od.Order != null && (od.Order.Status == "Completed" || od.Order.Status == "Hoàn thành")).Sum(od => (int?)od.Quantity) ?? 0
                 })
                 .ToListAsync();
 
@@ -306,7 +313,8 @@ namespace BE.Controllers
                     CategoryName = p.Category.Name,
                     ImageUrl = p.ImageUrl,
                     CreatedAt = p.CreatedAt,
-                    AdditionalImages = p.ProductImages.Select(pi => pi.ImageUrl).ToList()
+                    AdditionalImages = p.ProductImages.Select(pi => pi.ImageUrl).ToList(),
+                    SoldCount = p.OrderDetails.Where(od => od.Order != null && (od.Order.Status == "Completed" || od.Order.Status == "Hoàn thành")).Sum(od => (int?)od.Quantity) ?? 0
                 })
                 .ToListAsync();
 
@@ -328,6 +336,7 @@ namespace BE.Controllers
             public DateTime CreatedAt { get; set; }
             // ✅ THÊM DÒNG NÀY ĐỂ HỨNG MẢNG ẢNH TRẢ VỀ:
             public List<string> AdditionalImages { get; set; } = new List<string>();
+            public int SoldCount { get; set; }
         }
 
         public class ProductCreateDto

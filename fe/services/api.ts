@@ -63,6 +63,7 @@ export interface Product {
   categoryName?: string;
   createdAt?: string;
   additionalImages?: string[];
+  soldCount?: number;
 }
 
 export interface CreateCategoryPayload {

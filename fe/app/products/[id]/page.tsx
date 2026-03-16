@@ -66,6 +66,15 @@ export default function ProductDetailPage() {
       currency: "VND",
     }).format(value || 0);
 
+    const formatSoldCount = (count?: number) => {
+    if (!count || count === 0) return "0";
+    if (count >= 1000) {
+      return (count / 1000).toFixed(1).replace('.0', '').replace('.', ',') + 'k';
+    }
+    return count.toString();
+  };
+
+
   const stockStatus = useMemo(() => {
     if (!product) return null;
     if (product.stock <= 0) {
@@ -323,7 +332,8 @@ export default function ProductDetailPage() {
               <h3 className="mb-3 text-lg font-semibold text-slate-900">
                 Điểm nổi bật
               </h3>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              {/* ✅ SỬA LẠI GRID THÀNH 2 CỘT ĐỂ CHỨA VỪA 4 Ô */}
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 <div className="rounded-2xl bg-slate-50 p-4">
                   <p className="text-sm text-slate-500">Danh mục</p>
                   <p className="mt-1 font-semibold text-slate-900">
@@ -336,9 +346,16 @@ export default function ProductDetailPage() {
                     {product.stock} sản phẩm
                   </p>
                 </div>
+                {/* ✅ THÊM Ô ĐÃ BÁN VÀO ĐÂY */}
+                <div className="rounded-2xl bg-slate-50 p-4">
+                  <p className="text-sm text-slate-500">Đã bán</p>
+                  <p className="mt-1 font-semibold text-blue-600">
+                    {formatSoldCount(product.soldCount)}
+                  </p>
+                </div>
                 <div className="rounded-2xl bg-slate-50 p-4">
                   <p className="text-sm text-slate-500">Giảm giá</p>
-                  <p className="mt-1 font-semibold text-slate-900">
+                  <p className="mt-1 font-semibold text-red-600">
                     {product.discount ? `${product.discount}%` : "Không có"}
                   </p>
                 </div>

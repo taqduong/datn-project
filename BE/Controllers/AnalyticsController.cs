@@ -79,13 +79,19 @@ namespace BE.Controllers
         public async Task<IActionResult> Summary()
         {
             var data = await _context.ProductAnalytics
-                .Include(a => a.Product)
                 .Select(a => new {
                     a.ProductId,
                     ProductName = a.Product != null ? a.Product.Name : "Sản phẩm ẩn",
                     a.Views,
                     a.AddToCartCount,
-                    a.PurchaseCount,
+                    
+                    // ✅ THAY THẾ SỐ LIỆU CŨ BẰNG CÔNG THỨC ĐẾM ĐỘNG (KHỚP 100% VỚI PRODUCT CARD)
+                    PurchaseCount = a.Product != null 
+                        ? a.Product.OrderDetails
+                            .Where(od => od.Order != null && (od.Order.Status == "Completed" || od.Order.Status == "Hoàn thành"))
+                            .Sum(od => (int?)od.Quantity) ?? 0 
+                        : 0,
+                        
                     a.LastUpdated
                 })
                 .AsNoTracking() // Tối ưu tốc độ đọc

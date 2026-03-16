@@ -14,6 +14,7 @@ export interface Product {
   imageUrl: string;
   categoryName?: string;
   stock: number;
+  soldCount?: number;
 }
 
 export default function ProductCard({ product }: { product: Product }) {
@@ -40,6 +41,14 @@ export default function ProductCard({ product }: { product: Product }) {
       style: "currency",
       currency: "VND",
     }).format(value || 0);
+  
+  const formatSoldCount = (count?: number) => {
+    if (!count || count === 0) return "0";
+    if (count >= 1000) {
+      return (count / 1000).toFixed(1).replace('.0', '').replace('.', ',') + 'k';
+    }
+    return count.toString();
+  };
 
   const handleAddToCart = async (e: React.MouseEvent) => {
     e.preventDefault(); // ✅ Quan trọng: Ngăn chặn việc click vào nút mà bị chuyển sang trang Chi tiết
@@ -166,18 +175,27 @@ export default function ProductCard({ product }: { product: Product }) {
         </h3>
 
         <div className="mt-auto pt-4">
-          <div className="flex items-center gap-2">
-            <span className="text-lg font-bold text-red-600">
-              {formatVND(displayPrice)}
-            </span>
-            {hasDiscount && (
-              <span className="text-xs font-medium text-slate-400 line-through">
-                {formatVND(product.price)}
+          {/* ✅ HÀNG NGANG BỌC LẤY GIÁ TIỀN VÀ SỐ LƯỢNG BÁN */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-lg font-bold text-red-600">
+                {formatVND(displayPrice)}
               </span>
-            )}
+              {hasDiscount && (
+                <span className="text-xs font-medium text-slate-400 line-through">
+                  {formatVND(product.price)}
+                </span>
+              )}
+            </div>
+            
+            {/* ✅ HIỂN THỊ SỐ LƯỢNG ĐÃ BÁN */}
+            <div className="text-xs text-slate-500 font-medium">
+              Đã bán {formatSoldCount(product.soldCount)}
+            </div>
           </div>
 
-          {/* Dòng dưới cùng: Trạng thái kho & Xem chi tiết */}
+
+          {/* Dòng dưới cùng: Trạng thái kho & Xem chi tiết sản phẩm */}
           <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3">
             <span
               className={`rounded-md px-2 py-1 text-[11px] font-bold uppercase tracking-wider ${

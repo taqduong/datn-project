@@ -127,11 +127,11 @@ export default function AnalyticsPage() {
       <div className="rounded-3xl bg-white p-6 shadow-sm border border-zinc-200">
         <h2 className="text-lg font-bold text-zinc-800 mb-6">Biểu đồ hành vi trên từng sản phẩm</h2>
         {data.length === 0 ? (
-          <div className="h-100 flex items-center justify-center text-zinc-400 font-medium">
+          <div className="flex h-96 items-center justify-center text-zinc-400 font-medium">
             Chưa có dữ liệu thống kê nào.
           </div>
         ) : (
-          <div className="h-112.5 w-full">
+          <div className="h-96 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={data}
@@ -145,7 +145,7 @@ export default function AnalyticsPage() {
                   axisLine={{ stroke: '#e4e4e7' }}
                   angle={-45}
                   textAnchor="end"
-                  height={80} // Tăng chiều cao để chữ không bị cắt
+                  height={80} 
                 />
                 <YAxis 
                   tick={{ fill: '#71717a', fontSize: 12 }}
