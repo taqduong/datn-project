@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import {
   fetchProducts,
@@ -15,6 +16,7 @@ import ProductCard from "@/components/ProductCard";
 type SortType = "newest" | "priceAsc" | "priceDesc" | "nameAsc";
 
 export default function ProductsPage() {
+  const router = useRouter();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -23,17 +25,28 @@ export default function ProductsPage() {
   const [selectedPriceRange, setSelectedPriceRange] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<SortType>("newest");
 
+  const searchParams = useSearchParams();
+  const keyword = searchParams.get("keyword");
+
   const loadData = async () => {
     try {
       setLoading(true);
+      
+      // Chạy lấy danh mục song song
+      const categoriesRes = await fetchCategories();
+      setCategories(categoriesRes.data);
 
-      const [productsRes, categoriesRes] = await Promise.all([
-        fetchProducts(),
-        fetchCategories(),
-      ]);
+      // ✅ LOGIC TÌM KIẾM THÔNG MINH
+      let productsRes;
+      if (keyword) {
+        // Nếu có từ khóa -> Gọi API Search
+        productsRes = await searchProducts(keyword);
+      } else {
+        // Nếu không có -> Lấy tất cả như cũ
+        productsRes = await fetchProducts();
+      }
 
       setProducts(productsRes.data);
-      setCategories(categoriesRes.data);
     } catch (error) {
       console.error("Lỗi khi tải dữ liệu sản phẩm:", error);
     } finally {
@@ -41,9 +54,10 @@ export default function ProductsPage() {
     }
   };
 
+  // ✅ QUAN TRỌNG: Phải thêm [keyword] vào đây để khi sếp gõ từ mới, trang tự tải lại
   useEffect(() => {
     loadData();
-  }, []);
+  }, [keyword]);
 
   const getDisplayPrice = (product: Product) => {
     return product.priceAfterDiscount && product.priceAfterDiscount > 0
@@ -125,10 +139,12 @@ export default function ProductsPage() {
         {/* Hero Section - Đã trả về nền trắng như cũ */}
         <section className="mb-8 rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-            Sản phẩm
+            {keyword ? `Kết quả tìm kiếm cho: "${keyword}"` : "Tất cả sản phẩm"}
           </h1>
           <p className="mt-2 text-sm text-slate-600 max-w-2xl">
-            Khám phá các sản phẩm mới nhất với nhiều ưu đãi hấp dẫn.
+            {keyword 
+              ? `Tìm thấy ${filteredAndSortedProducts.length} sản phẩm phù hợp.` 
+              : "Khám phá các sản phẩm mới nhất với nhiều ưu đãi hấp dẫn."}
           </p>
         </section>
 
@@ -268,20 +284,29 @@ export default function ProductsPage() {
                 ))}
               </div>
             ) : filteredAndSortedProducts.length === 0 ? (
-              // Empty State
+              // Empty State - Xuất hiện khi tìm kiếm/lọc không ra gì
               <div className="rounded-3xl border border-slate-200 bg-white p-16 text-center shadow-sm">
                 <div className="mb-4 text-5xl">📦</div>
                 <h3 className="text-xl font-bold text-slate-900">
                   Không tìm thấy sản phẩm phù hợp
                 </h3>
                 <p className="mt-2 text-sm text-slate-600">
-                  Hãy thử thay đổi danh mục hoặc khoảng giá.
+                  {keyword 
+                    ? `Không có kết quả nào cho từ khóa "${keyword}".` 
+                    : "Hãy thử thay đổi danh mục hoặc khoảng giá."}
                 </p>
+                
                 <button 
-                  onClick={() => { setSelectedCategory("all"); setSelectedPriceRange([]); }}
+                  onClick={() => { 
+                    // 1. Reset các bộ lọc local
+                    setSelectedCategory("all"); 
+                    setSelectedPriceRange([]); 
+                    // 2. Xóa từ khóa trên URL bằng cách đẩy về trang gốc
+                    router.push("/products"); 
+                  }}
                   className="mt-6 inline-flex px-5 py-2.5 bg-blue-50 text-blue-700 font-semibold rounded-xl hover:bg-blue-100 transition"
                 >
-                  Xóa bộ lọc
+                  Xem tất cả sản phẩm
                 </button>
               </div>
             ) : (

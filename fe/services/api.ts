@@ -88,6 +88,7 @@ export interface UpdateProductPayload {
   stock?: number;
   discount?: number;
   categoryId?: number;
+  retainedAdditionalImages?: string[];
 }
 
 export interface UploadImageResponse {
@@ -230,7 +231,7 @@ export const productsAPI = {
 
   search: (keyword: string) =>
     api.get<Product[]>("/products/search", {
-      params: { keyword },
+      params: { keyword: keyword.trim() },
     }),
 
   uploadImages: (id: number | string, formData: FormData) =>
@@ -415,6 +416,14 @@ export const trackProductAddToCart = analyticsAPI.trackAddToCart;
 export const trackProductPurchase = analyticsAPI.trackPurchase;
 
 export default api;
+
+export const resolveImgUrl = (url?: string) => {
+  if (!url) return "";
+  if (url.startsWith("http://") || url.startsWith("https://")) return url;
+  const baseUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5270/api").replace("/api", "");
+  return `${baseUrl}${url.startsWith("/") ? "" : "/"}${url}`;
+};
+
 // ================= Chatbot API (demo) =================
 export const fetchChatbotAnswer = async (message: string): Promise<string> => {
   await new Promise((resolve) => setTimeout(resolve, 800));
