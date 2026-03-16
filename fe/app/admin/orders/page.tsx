@@ -3,9 +3,11 @@
 import { useEffect, useState } from "react";
 import { 
   FileText, Calendar, ShoppingCart, User, 
-  MapPin, Phone, Mail, ChevronDown, ChevronUp, Trash2, PackageOpen
+  MapPin, Phone, Mail, ChevronDown, ChevronUp, Trash2, PackageOpen,
+  Download
 } from "lucide-react";
 import { fetchAdminOrders, deleteOrder, updateOrderStatus, type OrderDto } from "@/services/api";
+import * as XLSX from "xlsx";
 
 // Hàm xử lý link ảnh sản phẩm
 const resolveImgUrl = (url?: string) => {
@@ -66,7 +68,44 @@ export default function AdminOrdersPage() {
       alert("Cập nhật trạng thái thất bại!");
     }
   };
+  
+  // ==================== BẮT ĐẦU CODE EXCEL ====================
+  const handleExportExcel = () => {
+    if (!orders || orders.length === 0) {
+      alert("Không có dữ liệu đơn hàng để xuất!");
+      return;
+    }
 
+    const exportData = orders.map((order, index) => {
+      const addressParts = [order.address, order.ward, order.city].filter(p => p && p.trim() !== "");
+      const displayAddress = addressParts.length > 0 ? addressParts.join(", ") : "Chưa có địa chỉ";
+
+      return {
+        "STT": index + 1,
+        "Mã ĐH": `#${order.orderId}`,
+        "Ngày đặt": new Date(order.orderDate).toLocaleString("vi-VN"),
+        "Tên khách hàng": order.fullName,
+        "Số điện thoại": order.phone,
+        "Địa chỉ": displayAddress,
+        "Tổng tiền (VNĐ)": order.totalAmount,
+        "Trạng thái": order.status,
+        "Ghi chú": order.note || "Không có"
+      };
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const columnWidths = [
+      { wch: 5 }, { wch: 10 }, { wch: 20 }, { wch: 25 }, { wch: 15 }, 
+      { wch: 40 }, { wch: 15 }, { wch: 15 }, { wch: 20 }
+    ];
+    worksheet["!cols"] = columnWidths;
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Danh_Sach_Don_Hang");
+    XLSX.writeFile(workbook, `ThongKeDonHang_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  };
+  // ==================== KẾT THÚC CODE EXCEL ====================
+  
   const formatVND = (val: number) =>
     new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(val);
 
@@ -80,7 +119,8 @@ export default function AdminOrdersPage() {
     <div className="min-h-screen bg-slate-50 py-10">
       <div className="max-w-5xl mx-auto px-4">
         
-        <div className="flex items-center justify-between mb-8">
+        {/* THAY THẾ KHU VỰC HEADER NÀY */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
           <div className="flex items-center gap-4">
             <div className="bg-blue-600 p-3 rounded-xl text-white shadow-lg shadow-blue-200">
               <FileText className="w-6 h-6" />
@@ -90,6 +130,16 @@ export default function AdminOrdersPage() {
               <p className="text-slate-500 mt-1">Hệ thống ghi nhận {orders.length} đơn hàng</p>
             </div>
           </div>
+          
+          {/* NÚT XUẤT EXCEL */}
+          <button
+            onClick={handleExportExcel}
+            className="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl font-semibold shadow-md shadow-emerald-600/20 transition-all active:scale-95"
+          >
+            <Download size={18} />
+            <span className="hidden sm:inline">Xuất file Excel</span>
+            <span className="sm:hidden">Xuất Excel</span>
+          </button>
         </div>
 
         {orders.length === 0 ? (
