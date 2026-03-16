@@ -333,6 +333,7 @@ export const ordersAPI = {
   getById: (id: number | string) => api.get<OrderDto>(`/Order/${id}`),
   delete: (id: number | string) => api.delete(`/Order/${id}`),
   updateStatus: (id: number | string, status: string) => api.put(`/Order/${id}/status`, { status }),
+  cancel: (id: number | string) => api.put(`/Order/${id}/cancel`),
 };
 
 // ================= Wishlist API =================
@@ -404,6 +405,7 @@ export const fetchUserOrders = ordersAPI.getUserOrders;
 export const fetchOrderById = ordersAPI.getById;
 export const deleteOrder = ordersAPI.delete;
 export const updateOrderStatus = ordersAPI.updateStatus;
+export const cancelOrder = ordersAPI.cancel;
 
 export const fetchWishlist = wishlistAPI.getAll
 export const addToWishlist = wishlistAPI.add

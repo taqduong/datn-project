@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { fetchOrderById, type OrderDto } from "@/services/api";
+import { fetchOrderById, cancelOrder, type OrderDto } from "@/services/api"; 
 import {
   ArrowLeft, Calendar, Package, MapPin, Phone, 
   User, CheckCircle2, Clock, Truck, XCircle, ShoppingBag, 
@@ -18,24 +18,43 @@ export default function OrderDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  // ✅ Tách hàm load dữ liệu ra để gọi lại sau khi Hủy đơn
+  const loadOrderDetail = useCallback(async () => {
     if (!orderId) return;
-
-    const getOrderDetail = async () => {
-      try {
-        setLoading(true);
-        const res = await fetchOrderById(orderId);
-        setOrder(res.data);
-      } catch (err: any) {
-        console.error("Lỗi tải chi tiết đơn:", err);
-        setError("Không thể tải thông tin đơn hàng hoặc đơn hàng không tồn tại.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    getOrderDetail();
+    try {
+      setLoading(true);
+      const res = await fetchOrderById(orderId);
+      setOrder(res.data);
+    } catch (err: any) {
+      console.error("Lỗi tải chi tiết đơn:", err);
+      setError("Không thể tải thông tin đơn hàng hoặc đơn hàng không tồn tại.");
+    } finally {
+      setLoading(false);
+    }
   }, [orderId]);
+
+  useEffect(() => {
+    loadOrderDetail();
+  }, [loadOrderDetail]);
+
+  // ✅ Hàm xử lý Hủy đơn hàng
+  const handleCancelOrder = async () => {
+    if (!window.confirm("Sếp có chắc chắn muốn hủy đơn hàng này không? Quá trình này không thể hoàn tác.")) {
+      return;
+    }
+    
+    try {
+      if (orderId) {
+        await cancelOrder(orderId);
+        alert("Hủy đơn hàng thành công! Số lượng đã được hoàn lại vào kho.");
+        // Load lại dữ liệu để cập nhật trạng thái "Đã hủy"
+        await loadOrderDetail(); 
+      }
+    } catch (error: any) {
+      alert(error.response?.data?.message || "Có lỗi xảy ra, không thể hủy đơn.");
+      console.error(error);
+    }
+  };
 
   const formatVND = (val: number) =>
     new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(val);
@@ -46,12 +65,14 @@ export default function OrderDetailPage() {
       case 'delivered':
         return { icon: <CheckCircle2 className="w-5 h-5" />, color: "bg-emerald-100 text-emerald-700 border-emerald-200", text: "Hoàn thành" };
       case 'pending':
+      case 'chờ xử lý': // ✅ Map thêm tiếng Việt nếu DB trả về tiếng Việt
         return { icon: <Clock className="w-5 h-5" />, color: "bg-amber-100 text-amber-700 border-amber-200", text: "Chờ xử lý" };
       case 'processing':
         return { icon: <Package className="w-5 h-5" />, color: "bg-blue-100 text-blue-700 border-blue-200", text: "Đang xử lý" };
       case 'shipped':
         return { icon: <Truck className="w-5 h-5" />, color: "bg-purple-100 text-purple-700 border-purple-200", text: "Đang giao hàng" };
       case 'cancelled':
+      case 'đã hủy': // ✅ Map thêm tiếng Việt
         return { icon: <XCircle className="w-5 h-5" />, color: "bg-red-100 text-red-700 border-red-200", text: "Đã hủy" };
       default:
         return { icon: <Clock className="w-5 h-5" />, color: "bg-slate-100 text-slate-700 border-slate-200", text: status };
@@ -71,7 +92,7 @@ export default function OrderDetailPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
         <div className="bg-white p-10 rounded-3xl shadow-sm border border-slate-200 text-center max-w-md w-full">
-          <AlertCircle className="w-20 h-20 text-red-500 mx-auto mb-4" />
+          <AlertCircle className="w-20 h-20 text-red-50 mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-slate-900 mb-2">Lỗi truy xuất</h2>
           <p className="text-slate-500 mb-8">{error || "Đơn hàng không tồn tại."}</p>
           <button 
@@ -86,8 +107,14 @@ export default function OrderDetailPage() {
   }
 
   const statusConfig = getStatusConfig(order.status);
-  // Vì hiện tại chưa có bảng giảm giá, ta gán cứng = 0. Tạm tính = Tổng tiền.
   const subTotal = order.totalAmount; 
+
+  // ✅ Đã bổ sung thêm 'đang xử lý' và 'processing' để bắt đúng mọi thể loại ngôn ngữ
+  const canCancel = 
+    order.status.toLowerCase() === 'pending' || 
+    order.status.toLowerCase() === 'chờ xử lý' || 
+    order.status.toLowerCase() === 'processing' || 
+    order.status.toLowerCase() === 'đang xử lý';
 
   return (
     <div className="min-h-screen bg-slate-50 py-10">
@@ -122,8 +149,6 @@ export default function OrderDetailPage() {
           
           {/* CỘT TRÁI: Sản phẩm & Thanh toán */}
           <div className="lg:col-span-2 space-y-8">
-            
-            {/* Box: Danh sách sản phẩm */}
             <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
               <div className="p-6 border-b border-slate-100 flex items-center gap-3 bg-slate-50/50">
                 <ShoppingBag className="text-blue-600" />
@@ -174,7 +199,6 @@ export default function OrderDetailPage() {
                 </div>
               </div>
             </div>
-
           </div>
 
           {/* CỘT PHẢI: Thông tin khách & Giao hàng */}
@@ -242,8 +266,18 @@ export default function OrderDetailPage() {
               </div>
             </div>
 
-          </div>
+            {/* ✅ NÚT HỦY ĐƠN ĐẶT Ở ĐÂY (CHỈ HIỂN THỊ KHI ĐƠN CHƯA DUYỆT) */}
+            {canCancel && (
+              <button 
+                onClick={handleCancelOrder}
+                className="w-full mt-2 flex items-center justify-center gap-2 bg-white text-red-600 border border-red-200 font-semibold py-3.5 rounded-2xl shadow-sm transition hover:bg-red-50 hover:border-red-300"
+              >
+                <XCircle size={18} />
+                Hủy đơn hàng này
+              </button>
+            )}
 
+          </div>
         </div>
       </div>
     </div>

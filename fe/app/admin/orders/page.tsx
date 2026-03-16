@@ -202,7 +202,16 @@ export default function AdminOrdersPage() {
                         <p className="text-xl font-bold text-red-600">{formatVND(order.totalAmount)}</p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <button onClick={(e) => handleDelete(e, order.orderId)} className="p-2 text-slate-400 hover:text-red-600"><Trash2 size={20}/></button>
+                        {/* NÚT XÓA CHỈ HIỆN KHI ĐƠN ĐÃ BỊ HỦY */}
+                        {['cancelled', 'đã hủy', 'đã hủy đơn'].includes(order.status.toLowerCase()) && (
+                          <button 
+                            onClick={(e) => handleDelete(e, order.orderId)} 
+                            className="p-2 text-slate-400 hover:text-red-600 transition-colors"
+                            title="Xóa vĩnh viễn"
+                          >
+                            <Trash2 size={20}/>
+                          </button>
+                        )}
                         <div className="p-2 text-slate-400">{isExpanded ? <ChevronUp size={24}/> : <ChevronDown size={24}/>}</div>
                       </div>
                     </div>
