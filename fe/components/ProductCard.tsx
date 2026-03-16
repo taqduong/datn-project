@@ -21,6 +21,14 @@ export default function ProductCard({ product }: { product: Product }) {
 
   const [isWishlisting, setIsWishlisting] = useState(false);
 
+  // ✅ THÊM HÀM NÀY ĐỂ NỐI LINK BACKEND
+  const resolveImgUrl = (url?: string) => {
+    if (!url) return "";
+    if (url.startsWith("http://") || url.startsWith("https://")) return url;
+    const baseUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5270/api").replace("/api", "");
+    return `${baseUrl}${url.startsWith("/") ? "" : "/"}${url}`;
+  };
+
   const displayPrice = product.priceAfterDiscount && product.priceAfterDiscount > 0
     ? product.priceAfterDiscount
     : product.price;
@@ -93,7 +101,7 @@ export default function ProductCard({ product }: { product: Product }) {
       <div className="relative overflow-hidden bg-white p-2">
         {product.imageUrl ? (
           <img
-            src={product.imageUrl}
+            src={resolveImgUrl(product.imageUrl)}
             alt={product.name}
             className="h-48 w-full rounded-xl object-contain transition duration-500 group-hover:scale-105"
           />

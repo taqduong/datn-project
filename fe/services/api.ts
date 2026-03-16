@@ -62,6 +62,7 @@ export interface Product {
   categoryId: number;
   categoryName?: string;
   createdAt?: string;
+  additionalImages?: string[];
 }
 
 export interface CreateCategoryPayload {
@@ -231,6 +232,17 @@ export const productsAPI = {
     api.get<Product[]>("/products/search", {
       params: { keyword },
     }),
+
+  uploadImages: (id: number | string, formData: FormData) =>
+    api.post<{ message: string; urls: string[] }>(
+      `/products/${id}/upload-images`,
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    ),
 };
 // ================= Carts API =================
 export const cartAPI = {
@@ -373,6 +385,7 @@ export const searchProducts = productsAPI.search;
 export const createProduct = productsAPI.create;
 export const updateProduct = productsAPI.update;
 export const deleteProduct = productsAPI.delete;
+export const uploadProductImages = productsAPI.uploadImages;
 
 export const registerUser = authAPI.register;
 export const loginUser = authAPI.login;

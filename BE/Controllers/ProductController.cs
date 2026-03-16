@@ -10,10 +10,12 @@ namespace BE.Controllers
     public class ProductController : ControllerBase
     {
         private readonly ShopDbContext _context;
+        private readonly IWebHostEnvironment _env;
 
-        public ProductController(ShopDbContext context)
+        public ProductController(ShopDbContext context, IWebHostEnvironment env)
         {
             _context = context;
+            _env = env;
         }
 
         // GET: api/products
@@ -22,6 +24,7 @@ namespace BE.Controllers
         {
             var products = await _context.Products
                 .Include(p => p.Category)
+                .Include(p => p.ProductImages)
                 .ToListAsync();
 
             var result = products.Select(p => new ProductDto
@@ -38,13 +41,14 @@ namespace BE.Controllers
                     : p.Price,
                 CategoryId = p.CategoryId,
                 CategoryName = p.Category != null ? p.Category.Name : null,
-                CreatedAt = p.CreatedAt
+                CreatedAt = p.CreatedAt,
+                AdditionalImages = p.ProductImages.Select(pi => pi.ImageUrl).ToList()
             });
 
             return Ok(result);
         }
 
-        // GET: api/products/5
+        // GET: api/products/id
         [HttpGet("{id:int}")]
         public async Task<IActionResult> GetById(int id)
         {
@@ -64,7 +68,8 @@ namespace BE.Controllers
                     CategoryId = p.CategoryId,
                     CategoryName = p.Category.Name,
                     ImageUrl = p.ImageUrl,
-                    CreatedAt = p.CreatedAt
+                    CreatedAt = p.CreatedAt,
+                    AdditionalImages = p.ProductImages.Select(pi => pi.ImageUrl).ToList()
                 })
                 .FirstOrDefaultAsync();
 
@@ -113,14 +118,16 @@ namespace BE.Controllers
                     CategoryId = p.CategoryId,
                     CategoryName = p.Category.Name,
                     ImageUrl = p.ImageUrl,
-                    CreatedAt = p.CreatedAt
+                    CreatedAt = p.CreatedAt,
+                    // ✅ THÊM DÒNG NÀY (Vì tạo mới nên mảng rỗng):
+                    AdditionalImages = new List<string>()
                 })
                 .FirstAsync();
 
             return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
         }
 
-        // PUT: api/products/5
+        // PUT: api/products/id
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id, [FromBody] ProductUpdateDto dto)
         {
@@ -176,7 +183,8 @@ namespace BE.Controllers
                     CategoryId = p.CategoryId,
                     CategoryName = p.Category.Name,
                     ImageUrl = p.ImageUrl,
-                    CreatedAt = p.CreatedAt
+                    CreatedAt = p.CreatedAt,
+                    AdditionalImages = p.ProductImages.Select(pi => pi.ImageUrl).ToList()
                 })
                 .AsNoTracking()
                 .FirstAsync();
@@ -184,7 +192,7 @@ namespace BE.Controllers
             return Ok(result);
         }
 
-        // DELETE: api/products/5
+        // DELETE: api/products/id
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
@@ -198,11 +206,58 @@ namespace BE.Controllers
             return Ok(new { message = "Xóa sản phẩm thành công." });
         }
 
-        // GET: api/products/categories/1
+        // =========================================================================
+        // ✅ API MỚI: UPLOAD NHIỀU ẢNH PHỤ
+        // =========================================================================
+        [HttpPost("{id}/upload-images")]
+        public async Task<IActionResult> UploadImages(int id, [FromForm] List<IFormFile> files)
+        {
+            if (files == null || files.Count == 0)
+                return BadRequest(new { message = "Không có file nào được chọn." });
+
+            var product = await _context.Products.FindAsync(id);
+            if (product == null)
+                return NotFound(new { message = "Sản phẩm không tồn tại." });
+
+            var uploadPath = Path.Combine(_env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot"), "uploads", "products");
+            if (!Directory.Exists(uploadPath)) Directory.CreateDirectory(uploadPath);
+
+            var uploadedUrls = new List<string>();
+
+            foreach (var file in files)
+            {
+                if (file.Length > 0)
+                {
+                    var extension = Path.GetExtension(file.FileName).ToLower();
+                    if (!new[] { ".jpg", ".jpeg", ".png", ".webp" }.Contains(extension)) continue;
+
+                    var fileName = $"{Guid.NewGuid()}{extension}";
+                    var filePath = Path.Combine(uploadPath, fileName);
+
+                    using (var stream = new FileStream(filePath, FileMode.Create))
+                    {
+                        await file.CopyToAsync(stream);
+                    }
+
+                    var dbUrl = $"/uploads/products/{fileName}";
+                    uploadedUrls.Add(dbUrl);
+
+                    _context.ProductImages.Add(new ProductImage
+                    {
+                        ProductId = id, ImageUrl = dbUrl, CreatedAt = DateTime.Now
+                    });
+                }
+            }
+            await _context.SaveChangesAsync();
+            return Ok(new { message = $"Tải lên thành công {uploadedUrls.Count} ảnh.", urls = uploadedUrls });
+        }
+
+        // GET: api/products/categories/id
         [HttpGet("categories/{id}")]
         public async Task<IActionResult> GetProductsByCategory(int id)
         {
             var products = await _context.Products
+                .Include(p => p.ProductImages)
                 .Where(p => p.CategoryId == id)
                 .Select(p => new ProductDto
                 {
@@ -218,7 +273,8 @@ namespace BE.Controllers
                     CategoryId = p.CategoryId,
                     CategoryName = p.Category.Name,
                     ImageUrl = p.ImageUrl,
-                    CreatedAt = p.CreatedAt
+                    CreatedAt = p.CreatedAt,
+                    AdditionalImages = p.ProductImages.Select(pi => pi.ImageUrl).ToList()
                 })
                 .ToListAsync();
 
@@ -233,6 +289,7 @@ namespace BE.Controllers
                 return BadRequest(new { message = "Từ khóa không hợp lệ." });
 
             var results = await _context.Products
+                .Include(p => p.ProductImages)
                 .Where(p => p.Name.Contains(keyword))
                 .Select(p => new ProductDto
                 {
@@ -248,7 +305,8 @@ namespace BE.Controllers
                     CategoryId = p.CategoryId,
                     CategoryName = p.Category.Name,
                     ImageUrl = p.ImageUrl,
-                    CreatedAt = p.CreatedAt
+                    CreatedAt = p.CreatedAt,
+                    AdditionalImages = p.ProductImages.Select(pi => pi.ImageUrl).ToList()
                 })
                 .ToListAsync();
 
@@ -268,6 +326,8 @@ namespace BE.Controllers
             public int CategoryId { get; set; }
             public string? CategoryName { get; set; }
             public DateTime CreatedAt { get; set; }
+            // ✅ THÊM DÒNG NÀY ĐỂ HỨNG MẢNG ẢNH TRẢ VỀ:
+            public List<string> AdditionalImages { get; set; } = new List<string>();
         }
 
         public class ProductCreateDto

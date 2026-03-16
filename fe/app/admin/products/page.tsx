@@ -8,6 +8,7 @@ import {
   deleteProduct,
   fetchCategories,
   uploadImage,
+  uploadProductImages,
   type Product,
   type Category,
 } from "@/services/api";
@@ -24,6 +25,14 @@ type ProductForm = {
   categoryId: number;
 };
 
+// Hàm xử lý link ảnh (nếu backend trả về link tương đối /uploads/...)
+const resolveImgUrl = (url?: string) => {
+  if (!url) return "";
+  if (url.startsWith("http://") || url.startsWith("https://")) return url;
+  const baseUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5270/api").replace("/api", "");
+  return `${baseUrl}${url.startsWith("/") ? "" : "/"}${url}`;
+};
+
 export default function ProductPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -31,6 +40,11 @@ export default function ProductPage() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  // ✅ State mới để chứa mảng file ảnh phụ chuẩn bị upload
+  const [additionalFiles, setAdditionalFiles] = useState<File[]>([]);
+  // ✅ State mới để hiển thị các ảnh phụ đã có sẵn (khi bấm Sửa)
+  const [existingImages, setExistingImages] = useState<string[]>([]);
 
   const [searchKeyword, setSearchKeyword] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<number | "all">("all");
@@ -120,6 +134,8 @@ export default function ProductPage() {
       discount: 0,
       categoryId: categories[0]?.id || 0,
     });
+    setAdditionalFiles([]); 
+    setExistingImages([]);
     setModalOpen(true);
   };
 
@@ -134,12 +150,15 @@ export default function ProductPage() {
       discount: product.discount || 0,
       categoryId: product.categoryId || categories[0]?.id || 0,
     });
+    setAdditionalFiles([]);
+    setExistingImages(product.additionalImages || []);
     setModalOpen(true);
   };
 
   const closeModal = () => {
     setModalOpen(false);
     setEditingProduct(null);
+    setAdditionalFiles([]);
   };
 
   const handleChange = (
@@ -160,28 +179,34 @@ export default function ProductPage() {
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-
     try {
-      const payload = {
-        ...form,
-        discount: clampDiscount(form.discount),
-      };
+      const payload = { ...form, discount: clampDiscount(form.discount) };
+      let savedProductId = 0;
 
       if (editingProduct) {
-        const res = await updateProduct(editingProduct.id, payload);
-        setProducts((prev) =>
-          prev.map((p) => (p.id === editingProduct.id ? res.data : p))
-        );
-        toast.success("Cập nhật sản phẩm thành công");
+        await updateProduct(editingProduct.id, payload);
+        savedProductId = editingProduct.id;
+        toast.success("Cập nhật thông tin thành công");
       } else {
         const res = await createProduct(payload);
-        setProducts((prev) => [...prev, res.data]);
+        savedProductId = res.data.id; // Lấy ID sản phẩm vừa tạo
         toast.success("Thêm sản phẩm thành công");
       }
 
+      // Nếu có chọn ảnh phụ thì vác đi upload
+      if (additionalFiles.length > 0 && savedProductId > 0) {
+        const fd = new FormData();
+        additionalFiles.forEach((file) => fd.append("files", file));
+        
+        await uploadProductImages(savedProductId, fd);
+        toast.success("Tải ảnh phụ thành công");
+      }
+
       closeModal();
+      loadProducts(); // Load lại data cho mới
     } catch (error) {
       console.error("Lỗi khi lưu sản phẩm:", error);
       toast.error("Có lỗi xảy ra khi lưu sản phẩm");
@@ -198,6 +223,53 @@ export default function ProductPage() {
     } catch (error) {
       console.error("Lỗi khi xóa sản phẩm:", error);
       toast.error("Có lỗi xảy ra khi xóa sản phẩm");
+    }
+  };
+
+  const removeAdditionalFile = (index: number) => {
+    setAdditionalFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // ✅ 1. Hàm xóa ảnh phụ cũ (khi đang sửa sản phẩm)
+  const removeExistingImage = (index: number) => {
+    setExistingImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // ✅ 2. Hàm hoán đổi ảnh phụ (đã có sẵn) lên làm Ảnh bìa
+  const setExistingAsCover = (index: number) => {
+    const clickedUrl = existingImages[index];
+    const oldCover = form.imageUrl;
+    
+    setForm(prev => ({ ...prev, imageUrl: clickedUrl }));
+    setExistingImages(prev => {
+      const newArr = [...prev];
+      newArr.splice(index, 1); // Xóa khỏi danh sách phụ
+      if (oldCover) newArr.push(oldCover); // Nhét ảnh bìa cũ xuống làm ảnh phụ
+      return newArr;
+    });
+  };
+
+  // ✅ 3. Hàm hoán đổi ảnh phụ (vừa chọn từ máy) lên làm Ảnh bìa
+  const setNewAsCover = async (index: number) => {
+    const file = additionalFiles[index];
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("files", file);
+      const res = await uploadImage(fd);
+      const newUrl = res.data.imageUrls?.[0] || "";
+
+      if (newUrl) {
+        const oldCover = form.imageUrl;
+        setForm(prev => ({ ...prev, imageUrl: newUrl }));
+        setAdditionalFiles(prev => prev.filter((_, i) => i !== index));
+        if (oldCover) setExistingImages(prev => [...prev, oldCover]);
+        toast.success("Đã đổi ảnh bìa!");
+      }
+    } catch (err) {
+      toast.error("Lỗi khi tải ảnh lên");
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -375,7 +447,7 @@ export default function ProductPage() {
                             {product.imageUrl ? (
                               <img
                                 className="h-12 w-12 object-cover"
-                                src={product.imageUrl}
+                                src={resolveImgUrl(product.imageUrl)} 
                                 alt={product.name}
                               />
                             ) : (
@@ -592,63 +664,144 @@ export default function ProductPage() {
               </div>
             </div>
 
+            {/* ✅ KHU VỰC UPLOAD ẢNH GỘP CHUNG (1 Ô DUY NHẤT) */}
             <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">
+              <label className="mb-2 block text-sm font-bold text-gray-800">
                 Hình ảnh sản phẩm
               </label>
-
-              <div className="flex flex-col space-y-3">
+              <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
                 <input
                   type="file"
                   accept="image/*"
                   multiple
                   onChange={async (e) => {
                     if (!e.target.files?.length) return;
+                    const files = Array.from(e.target.files);
 
-                    setUploading(true);
-                    try {
-                      const fd = new FormData();
-                      Array.from(e.target.files).forEach((f) => fd.append("files", f));
+                    // Logic: Nếu chưa có ảnh chính, lấy file đầu tiên đem up làm ảnh chính, còn lại cho vào ảnh phụ
+                    if (!form.imageUrl && files.length > 0) {
+                      const firstFile = files[0];
+                      const restFiles = files.slice(1);
 
-                      const res = await uploadImage(fd);
-                      const first = res.data.imageUrls?.[0] || "";
-
-                      if (!first) {
-                        toast.error("Không nhận được ảnh");
-                        return;
+                      setUploading(true);
+                      try {
+                        const fd = new FormData();
+                        fd.append("files", firstFile);
+                        const res = await uploadImage(fd);
+                        const firstUrl = res.data.imageUrls?.[0] || "";
+                        if (firstUrl) {
+                          setForm((prev) => ({ ...prev, imageUrl: firstUrl }));
+                        }
+                        // Đẩy các file còn lại vào mảng chờ
+                        if (restFiles.length > 0) {
+                          setAdditionalFiles((prev) => [...prev, ...restFiles]);
+                        }
+                      } catch (err) {
+                        toast.error("Tải ảnh đại diện thất bại");
+                      } finally {
+                        setUploading(false);
                       }
-
-                      setForm((prev) => ({ ...prev, imageUrl: first }));
-                      toast.success("Tải ảnh lên thành công");
-                    } catch (err) {
-                      console.error("Upload failed", err);
-                      toast.error("Tải ảnh thất bại");
-                    } finally {
-                      setUploading(false);
+                    } else {
+                      // Nếu đã có ảnh chính rồi, thì tất cả file chọn thêm đều tống vào ảnh phụ
+                      setAdditionalFiles((prev) => [...prev, ...files]);
                     }
+                    
+                    // Reset input để chọn lại cùng file thoải mái
+                    e.target.value = '';
                   }}
-                  className="w-full rounded-lg border border-gray-300 p-3 file:mr-4 file:rounded-full file:border-0 file:bg-blue-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-blue-700 hover:file:bg-blue-100 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full rounded-lg border border-gray-300 bg-white p-2 text-sm file:mr-4 file:rounded-md file:border-0 file:bg-blue-100 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-blue-700 hover:file:bg-blue-200 focus:outline-none"
                 />
+                
+                {uploading && <div className="mt-2 text-sm font-medium text-blue-600 animate-pulse">⏳ Đang xử lý ảnh...</div>}
 
-                {uploading && (
-                  <div className="flex items-center text-blue-600">
-                    <span className="mr-2 animate-pulse">⏳</span>
-                    Đang tải ảnh lên...
-                  </div>
-                )}
+                {/* KHUNG HIỂN THỊ TẤT CẢ ẢNH THEO DẠNG GALLERY */}
+                <div className="mt-5 flex flex-wrap gap-5">
+                  
+                  {/* 1. Ảnh Bìa (Thumbnail) */}
+                  {form.imageUrl && (
+                    <div className="relative h-24 w-24 shrink-0 group">
+                      <span className="absolute -top-3 -left-3 z-10 rounded-md bg-yellow-400 px-2 py-1 text-[10px] font-bold uppercase text-white shadow-md">
+                        Ảnh bìa
+                      </span>
+                      <img
+                        src={resolveImgUrl(form.imageUrl)}
+                        alt="Thumbnail"
+                        className="h-full w-full rounded-xl border-2 border-yellow-400 object-cover shadow-sm"
+                      />
+                      {/* ✅ Đã bỏ opacity-0, hiện luôn nút xóa */}
+                      <button
+                        type="button"
+                        onClick={() => setForm(prev => ({...prev, imageUrl: ""}))}
+                        className="absolute -right-2 -top-2 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-xs text-white shadow-md hover:bg-red-600"
+                        title="Xóa ảnh bìa"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  )}
 
-                {form.imageUrl && (
-                  <div className="mt-2">
-                    <p className="mb-2 text-sm text-gray-600">Ảnh xem trước:</p>
-                    <img
-                      src={form.imageUrl}
-                      alt="Ảnh đại diện"
-                      className="h-32 w-32 rounded-lg border object-cover shadow-sm"
-                    />
-                  </div>
-                )}
+                  {/* 2. Ảnh phụ cũ từ Database (Khi bấm sửa) */}
+                  {existingImages.map((imgUrl, idx) => (
+                    <div key={`exist-${idx}`} className="relative h-24 w-24 shrink-0 group overflow-hidden rounded-xl border border-gray-300 shadow-sm">
+                      <img
+                        src={resolveImgUrl(imgUrl)}
+                        className="h-full w-full object-cover opacity-90"
+                        alt="preview"
+                      />
+                      {/* ✅ Đã bỏ opacity-0 */}
+                      <button
+                        type="button"
+                        onClick={() => removeExistingImage(idx)}
+                        className="absolute -right-2 -top-2 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-xs text-white shadow-md hover:bg-red-600"
+                        title="Xóa ảnh phụ"
+                      >
+                        ✕
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setExistingAsCover(idx)}
+                        className="absolute bottom-0 left-0 w-full bg-black/60 py-1 text-[10px] text-white opacity-0 transition-opacity hover:bg-blue-600 group-hover:opacity-100 font-medium"
+                      >
+                        Làm ảnh bìa
+                      </button>
+                    </div>
+                  ))}
+
+                  {/* 3. Ảnh phụ mới chuẩn bị tải lên */}
+                  {additionalFiles.map((file, idx) => (
+                    <div key={`new-${idx}`} className="relative h-24 w-24 shrink-0 group overflow-hidden rounded-xl border-2 border-dashed border-blue-400 shadow-sm">
+                      <span className="absolute top-1 left-1 z-10 rounded-md bg-blue-500 px-1.5 py-0.5 text-[10px] font-bold text-white shadow-md">
+                        Mới
+                      </span>
+                      <img
+                        src={URL.createObjectURL(file)}
+                        className="h-full w-full object-cover"
+                        alt="preview"
+                      />
+                      {/* ✅ Đã bỏ opacity-0 */}
+                      <button
+                        type="button"
+                        onClick={() => removeAdditionalFile(idx)}
+                        className="absolute -right-2 -top-2 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-xs text-white shadow-md hover:bg-red-600"
+                        title="Xóa ảnh phụ"
+                      >
+                        ✕
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setNewAsCover(idx)}
+                        className="absolute bottom-0 left-0 w-full bg-black/60 py-1 text-[10px] text-white opacity-0 transition-opacity hover:bg-blue-600 group-hover:opacity-100 font-medium"
+                      >
+                        Làm ảnh bìa
+                      </button>
+                    </div>
+                  ))}
+                  
+                </div>
               </div>
             </div>
+            {/* ✅ KẾT THÚC KHU VỰC UPLOAD GỘP CHUNG */}
+
 
             <div className="flex justify-end gap-3 pt-4">
               <button

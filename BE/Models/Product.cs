@@ -45,4 +45,7 @@ public partial class Product
 
     [InverseProperty("Product")]
     public virtual ProductAnalytics? ProductAnalytics { get; set; }
+
+    [InverseProperty("Product")]
+    public virtual ICollection<ProductImage> ProductImages { get; set; } = new List<ProductImage>();
 }

@@ -34,6 +34,14 @@ export default function HomePage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // THÊM HÀM NỐI LINK BACKEND
+  const resolveImgUrl = (url?: string) => {
+    if (!url) return "";
+    if (url.startsWith("http://") || url.startsWith("https://")) return url;
+    const baseUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5270/api").replace("/api", "");
+    return `${baseUrl}${url.startsWith("/") ? "" : "/"}${url}`;
+  };
+
   const loadHomeData = async () => {
     try {
       setLoading(true);
@@ -79,7 +87,7 @@ export default function HomePage() {
     <div className="bg-slate-50 text-slate-800 min-h-screen font-sans">
       {/* Hero Section - Đã lột xác sang giao diện Sáng, Hiện đại */}
       <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        <div className="relative overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-blue-50 via-white to-indigo-50 px-6 py-12 sm:px-12 lg:py-20 shadow-sm border border-blue-100">
+        <div className="relative overflow-hidden rounded-[2.5rem] bg-linear-to-br from-blue-50 via-white to-indigo-50 px-6 py-12 sm:px-12 lg:py-20 shadow-sm border border-blue-100">
           
           {/* Subtle background glow */}
           <div className="absolute top-0 right-0 -translate-y-12 translate-x-1/3 h-96 w-96 rounded-full bg-blue-200/40 blur-[80px]" />
@@ -94,8 +102,8 @@ export default function HomePage() {
               </div>
 
               <h1 className="text-4xl font-extrabold leading-[1.15] tracking-tight text-slate-900 sm:text-5xl lg:text-[3.5rem]">
-                Mua sắm <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">hiện đại</span>, <br className="hidden lg:block" /> 
-                trải nghiệm <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">mượt mà</span>.
+                Mua sắm <span className="text-transparent bg-clip-text bg-linear-to-r from-blue-600 to-indigo-600">hiện đại</span>, <br className="hidden lg:block" /> 
+                trải nghiệm <span className="text-transparent bg-clip-text bg-linear-to-r from-blue-600 to-indigo-600">mượt mà</span>.
               </h1>
 
               <p className="mt-6 max-w-lg text-lg leading-relaxed text-slate-600 font-medium">
@@ -136,36 +144,45 @@ export default function HomePage() {
 
             {/* Cột Hình ảnh */}
             <div className="grid gap-4 sm:grid-cols-2 relative">
-              <div className="overflow-hidden rounded-[2rem] border-8 border-white bg-white shadow-xl rotate-[-2deg] hover:rotate-0 transition-transform duration-500 z-10">
-                <img
-                  src={
-                    featuredProducts[0]?.imageUrl ||
-                    "https://images.unsplash.com/photo-1523381210434-271e8be1f52b?q=80&w=800&auto=format&fit=crop"
-                  }
-                  alt="Hero product"
-                  className="h-64 w-full object-cover sm:h-80"
-                />
+              
+              {/* 1. Ảnh sản phẩm Mới nhất (Ô to bên trái) */}
+              <div className="overflow-hidden rounded-4xl border-8 border-white bg-white shadow-xl -rotate-2 hover:rotate-0 transition-all duration-500 z-10 aspect-4/5 sm:aspect-auto">
+                {featuredProducts[0]?.imageUrl ? (
+                  <img
+                    src={resolveImgUrl(featuredProducts[0].imageUrl)}
+                    alt={featuredProducts[0].name}
+                    className="h-full w-full object-cover sm:h-80"
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center bg-slate-50 text-6xl text-slate-200">📦</div>
+                )}
               </div>
+
               <div className="grid gap-4 translate-y-6">
-                <div className="overflow-hidden rounded-[1.5rem] border-4 border-white bg-white shadow-lg rotate-[3deg] hover:rotate-0 transition-transform duration-500">
-                  <img
-                    src={
-                      featuredProducts[1]?.imageUrl ||
-                      "https://images.unsplash.com/photo-1542291026-7eec264c27ff?q=80&w=800&auto=format&fit=crop"
-                    }
-                    alt="Hero sub product 1"
-                    className="h-32 w-full object-cover sm:h-40"
-                  />
+                {/* 2. Ảnh sản phẩm thứ 2 (Ô nhỏ trên) */}
+                <div className="overflow-hidden rounded-3xl border-4 border-white bg-white shadow-lg rotate-3 hover:rotate-0 transition-all duration-500 aspect-square sm:aspect-auto">
+                  {featuredProducts[1]?.imageUrl ? (
+                    <img
+                      src={resolveImgUrl(featuredProducts[1].imageUrl)}
+                      alt={featuredProducts[1].name}
+                      className="h-full w-full object-cover sm:h-40"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center bg-slate-50 text-4xl text-slate-200">👕</div>
+                  )}
                 </div>
-                <div className="overflow-hidden rounded-[1.5rem] border-4 border-white bg-white shadow-lg rotate-[-1deg] hover:rotate-0 transition-transform duration-500">
-                  <img
-                    src={
-                      featuredProducts[2]?.imageUrl ||
-                      "https://images.unsplash.com/photo-1511499767150-a48a237f0083?q=80&w=800&auto=format&fit=crop"
-                    }
-                    alt="Hero sub product 2"
-                    className="h-32 w-full object-cover sm:h-36"
-                  />
+
+                {/* 3. Ảnh sản phẩm thứ 3 (Ô nhỏ dưới) */}
+                <div className="overflow-hidden rounded-3xl border-4 border-white bg-white shadow-lg -rotate-1 hover:rotate-0 transition-all duration-500 aspect-square sm:aspect-auto">
+                  {featuredProducts[2]?.imageUrl ? (
+                    <img
+                      src={resolveImgUrl(featuredProducts[2].imageUrl)}
+                      alt={featuredProducts[2].name}
+                      className="h-full w-full object-cover sm:h-36"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center bg-slate-50 text-4xl text-slate-200">👟</div>
+                  )}
                 </div>
               </div>
             </div>
@@ -292,7 +309,7 @@ export default function HomePage() {
       <section className="mx-auto max-w-7xl px-4 py-12 pb-20 sm:px-6 lg:px-8">
         <div className="grid gap-8 lg:grid-cols-2">
           {/* Promo */}
-          <div className="overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-blue-600 to-indigo-700 p-10 text-white shadow-xl sm:p-12 relative">
+          <div className="overflow-hidden rounded-[2.5rem] bg-linear-to-br from-blue-600 to-indigo-700 p-10 text-white shadow-xl sm:p-12 relative">
             <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
             <div className="relative z-10">
               <p className="text-sm font-black uppercase tracking-widest text-blue-200 mb-3">

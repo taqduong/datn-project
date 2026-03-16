@@ -14,6 +14,16 @@ export default function ProductDetailPage() {
 
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const [activeImage, setActiveImage] = useState<string>("");
+
+  const resolveImgUrl = (url?: string) => {
+    if (!url) return "";
+    if (url.startsWith("http://") || url.startsWith("https://")) return url;
+    const baseUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5270/api").replace("/api", "");
+    return `${baseUrl}${url.startsWith("/") ? "" : "/"}${url}`;
+  };
+
   const [quantity, setQuantity] = useState(1);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
@@ -28,6 +38,8 @@ export default function ProductDetailPage() {
       setLoading(true);
       const res = await fetchProductById(id);
       setProduct(res.data);
+
+      if (res.data?.imageUrl) setActiveImage(res.data.imageUrl);
 
       // ✅ GẮN CẢM BIẾN LƯỢT XEM Ở ĐÂY:
       // Gọi API chạy ngầm (không dùng await) để không làm chậm trải nghiệm của khách
@@ -234,17 +246,19 @@ export default function ProductDetailPage() {
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1.05fr_0.95fr]">
           {/* Cột ảnh */}
           <div className="space-y-4">
+            {/* 1. KHUNG HIỂN THỊ ẢNH TO */}
             <div className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
               {!imageLoaded && (
                 <div className="absolute inset-0 animate-pulse bg-slate-100" />
               )}
 
-              {product.imageUrl ? (
+              {/* ✅ PHẢI DÙNG activeImage VÀ resolveImgUrl Ở ĐÂY */}
+              {activeImage ? (
                 <img
-                  src={product.imageUrl}
+                  src={resolveImgUrl(activeImage)}
                   alt={product.name}
                   onLoad={() => setImageLoaded(true)}
-                  className="aspect-square w-full object-cover"
+                  className="aspect-square w-full object-cover transition-all duration-300"
                 />
               ) : (
                 <div className="flex aspect-square items-center justify-center bg-slate-100 text-7xl">
@@ -261,6 +275,48 @@ export default function ProductDetailPage() {
                   </span>
                 </div>
               )}
+            </div>
+
+            {/* ✅ 2. DẢI ẢNH NHỎ (THUMBNAILS) - SẾP ĐANG THIẾU NGUYÊN CỤM NÀY */}
+            <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+              {/* Thumbnail của Ảnh Bìa */}
+              {product.imageUrl && (
+                <button
+                  type="button"
+                  onClick={() => setActiveImage(product.imageUrl!)}
+                  className={`relative h-20 w-20 shrink-0 overflow-hidden rounded-xl border-2 transition-all ${
+                    activeImage === product.imageUrl 
+                      ? "border-blue-600 ring-2 ring-blue-100" 
+                      : "border-transparent opacity-60 hover:opacity-100"
+                  }`}
+                >
+                  <img 
+                    src={resolveImgUrl(product.imageUrl)} 
+                    className="h-full w-full object-cover" 
+                    alt="thumb-main" 
+                  />
+                </button>
+              )}
+
+              {/* Danh sách các Ảnh Phụ */}
+              {product.additionalImages?.map((imgUrl, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => setActiveImage(imgUrl)}
+                  className={`relative h-20 w-20 shrink-0 overflow-hidden rounded-xl border-2 transition-all ${
+                    activeImage === imgUrl 
+                      ? "border-blue-600 ring-2 ring-blue-100" 
+                      : "border-transparent opacity-60 hover:opacity-100"
+                  }`}
+                >
+                  <img 
+                    src={resolveImgUrl(imgUrl)} 
+                    className="h-full w-full object-cover" 
+                    alt={`thumb-sub-${idx}`} 
+                  />
+                </button>
+              ))}
             </div>
 
             <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
