@@ -6,7 +6,7 @@ import { fetchOrderById, cancelOrder, type OrderDto } from "@/services/api";
 import {
   ArrowLeft, Calendar, Package, MapPin, Phone, 
   User, CheckCircle2, Clock, Truck, XCircle, ShoppingBag, 
-  CreditCard, FileText, AlertCircle
+  CreditCard, FileText, AlertCircle, Star
 } from "lucide-react";
 
 export default function OrderDetailPage() {
@@ -111,10 +111,11 @@ export default function OrderDetailPage() {
 
   // ✅ Đã bổ sung thêm 'đang xử lý' và 'processing' để bắt đúng mọi thể loại ngôn ngữ
   const canCancel = 
-    order.status.toLowerCase() === 'pending' || 
-    order.status.toLowerCase() === 'chờ xử lý' || 
-    order.status.toLowerCase() === 'processing' || 
-    order.status.toLowerCase() === 'đang xử lý';
+    order.status.toLowerCase() === 'pending' ||
+    order.status.toLowerCase() === 'processing';
+
+  // LOGIC KIỂM TRA ĐƠN ĐÃ HOÀN THÀNH ĐỂ HIỆN NÚT ĐÁNH GIÁ
+  const isCompleted = order.status === 'Completed';
 
   return (
     <div className="min-h-screen bg-slate-50 py-10">
@@ -176,6 +177,20 @@ export default function OrderDetailPage() {
                           {formatVND(item.price * item.quantity)}
                         </p>
                       </div>
+
+                     {/* 🔽 CHÈN NÚT ĐÁNH GIÁ BẮT ĐẦU TỪ ĐÂY 🔽 */}
+                      {isCompleted && (
+                        <div className="mt-4 flex justify-end border-t border-slate-100 pt-4">
+                          <button
+                            onClick={() => router.push(`/review?productId=${item.productId}`)}
+                            className="flex items-center gap-2 rounded-xl border border-orange-500 text-orange-600 px-5 py-2.5 text-sm font-semibold hover:bg-orange-50 hover:text-orange-700 transition-colors"
+                          >
+                            <Star size={16} fill="currentColor" /> Đánh giá
+                          </button>
+                        </div>
+                      )}
+                      {/* 🔼 KẾT THÚC CHÈN 🔼 */}
+
                     </div>
                   </div>
                 ))}

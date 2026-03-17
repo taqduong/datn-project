@@ -1,3 +1,4 @@
+using System;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using BE.Models;
@@ -43,7 +44,10 @@ namespace BE.Controllers
                     // ✅ BƯỚC 2: CÔNG THỨC ĐẾM LƯỢT BÁN
                     SoldCount = p.OrderDetails
                         .Where(od => od.Order != null && (od.Order.Status == "Completed" || od.Order.Status == "Hoàn thành"))
-                        .Sum(od => (int?)od.Quantity) ?? 0
+                        .Sum(od => (int?)od.Quantity) ?? 0,
+                    TotalReviews = p.Reviews.Count(),
+                    AverageRating = p.Reviews.Any() ? Math.Round(p.Reviews.Average(r => (double)r.Rating), 1) : 0
+                    
                 })
                 .ToListAsync();
 
@@ -72,7 +76,9 @@ namespace BE.Controllers
                     ImageUrl = p.ImageUrl,
                     CreatedAt = p.CreatedAt,
                     AdditionalImages = p.ProductImages.Select(pi => pi.ImageUrl).ToList(),
-                    SoldCount = p.OrderDetails.Where(od => od.Order != null && (od.Order.Status == "Completed" || od.Order.Status == "Hoàn thành")).Sum(od => (int?)od.Quantity) ?? 0
+                    SoldCount = p.OrderDetails.Where(od => od.Order != null && (od.Order.Status == "Completed" || od.Order.Status == "Hoàn thành")).Sum(od => (int?)od.Quantity) ?? 0,
+                    TotalReviews = p.Reviews.Count(),
+                    AverageRating = p.Reviews.Any() ? Math.Round(p.Reviews.Average(r => (double)r.Rating), 1) : 0
                     
                 })
                 .FirstOrDefaultAsync();
@@ -125,7 +131,9 @@ namespace BE.Controllers
                     CreatedAt = p.CreatedAt,
                     // ✅ THÊM DÒNG NÀY (Vì tạo mới nên mảng rỗng):
                     AdditionalImages = new List<string>(),
-                    SoldCount = 0
+                    SoldCount = 0,
+                    TotalReviews = 0,
+                    AverageRating = 0
                 })
                 .FirstAsync();
 
@@ -190,7 +198,9 @@ namespace BE.Controllers
                     ImageUrl = p.ImageUrl,
                     CreatedAt = p.CreatedAt,
                     AdditionalImages = p.ProductImages.Select(pi => pi.ImageUrl).ToList(),
-                    SoldCount = p.OrderDetails.Where(od => od.Order != null && (od.Order.Status == "Completed" || od.Order.Status == "Hoàn thành")).Sum(od => (int?)od.Quantity) ?? 0
+                    SoldCount = p.OrderDetails.Where(od => od.Order != null && (od.Order.Status == "Completed" || od.Order.Status == "Hoàn thành")).Sum(od => (int?)od.Quantity) ?? 0,
+                    TotalReviews = p.Reviews.Count(),
+                    AverageRating = p.Reviews.Any() ? Math.Round(p.Reviews.Average(r => (double)r.Rating), 1) : 0
                 })
                 .AsNoTracking()
                 .FirstAsync();
@@ -281,7 +291,9 @@ namespace BE.Controllers
                     ImageUrl = p.ImageUrl,
                     CreatedAt = p.CreatedAt,
                     AdditionalImages = p.ProductImages.Select(pi => pi.ImageUrl).ToList(),
-                    SoldCount = p.OrderDetails.Where(od => od.Order != null && (od.Order.Status == "Completed" || od.Order.Status == "Hoàn thành")).Sum(od => (int?)od.Quantity) ?? 0
+                    SoldCount = p.OrderDetails.Where(od => od.Order != null && (od.Order.Status == "Completed" || od.Order.Status == "Hoàn thành")).Sum(od => (int?)od.Quantity) ?? 0,
+                    TotalReviews = p.Reviews.Count(),
+                    AverageRating = p.Reviews.Any() ? Math.Round(p.Reviews.Average(r => (double)r.Rating), 1) : 0
                 })
                 .ToListAsync();
 
@@ -314,7 +326,9 @@ namespace BE.Controllers
                     ImageUrl = p.ImageUrl,
                     CreatedAt = p.CreatedAt,
                     AdditionalImages = p.ProductImages.Select(pi => pi.ImageUrl).ToList(),
-                    SoldCount = p.OrderDetails.Where(od => od.Order != null && (od.Order.Status == "Completed" || od.Order.Status == "Hoàn thành")).Sum(od => (int?)od.Quantity) ?? 0
+                    SoldCount = p.OrderDetails.Where(od => od.Order != null && (od.Order.Status == "Completed" || od.Order.Status == "Hoàn thành")).Sum(od => (int?)od.Quantity) ?? 0,
+                    TotalReviews = p.Reviews.Count(),
+                    AverageRating = p.Reviews.Any() ? Math.Round(p.Reviews.Average(r => (double)r.Rating), 1) : 0
                 })
                 .ToListAsync();
 
@@ -337,6 +351,8 @@ namespace BE.Controllers
             // ✅ THÊM DÒNG NÀY ĐỂ HỨNG MẢNG ẢNH TRẢ VỀ:
             public List<string> AdditionalImages { get; set; } = new List<string>();
             public int SoldCount { get; set; }
+            public int TotalReviews { get; set; }
+            public double AverageRating { get; set; }
         }
 
         public class ProductCreateDto

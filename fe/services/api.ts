@@ -194,6 +194,34 @@ export interface AnalyticsSummary {
   purchaseCount: number;
   lastUpdated: string;
 }
+
+export interface ReviewDto {
+  id: number;
+  productId: number;
+  userId: number;
+  userName: string;
+  rating: number;
+  comment: string;
+  createdAt: string;
+  isVerifiedPurchase: boolean;
+}
+
+export interface CreateReviewPayload {
+  productId: number;
+  rating: number;
+  comment: string;
+}
+
+export interface ReviewResponse {
+  totalReviews: number;
+  averageRating: number;
+  reviews: ReviewDto[];
+}
+
+export interface CanReviewResponse {
+  canReview: boolean;
+  reason?: string;
+}
 // ================= Categories API =================
 export const categoriesAPI = {
   getAll: () => api.get<Category[]>("/categories"),
@@ -373,6 +401,21 @@ export const analyticsAPI = {
     api.get<AnalyticsSummary[]>("/analytics/summary"),
 };
 
+// ================= Reviews API =================
+export const reviewsAPI = {
+  // 1. Lấy danh sách đánh giá của 1 sản phẩm
+  getByProduct: (productId: number | string) =>
+    api.get<ReviewResponse>(`/reviews/product/${productId}`),
+
+  // 2. Gửi đánh giá mới
+  add: (data: CreateReviewPayload) =>
+    api.post<{ message: string; isVerifiedPurchase: boolean }>("/reviews", data),
+
+  // 3. Kiểm tra xem user có được phép đánh giá không
+  checkCanReview: (productId: number | string) =>
+    api.get<CanReviewResponse>(`/reviews/can-review/${productId}`),
+};
+
 
 // ================= Helper Exports =================
 export const fetchCategories = categoriesAPI.getAll;
@@ -417,6 +460,10 @@ export const fetchAnalyticsSummary = analyticsAPI.getSummary;
 export const trackProductView = analyticsAPI.trackView;
 export const trackProductAddToCart = analyticsAPI.trackAddToCart;
 export const trackProductPurchase = analyticsAPI.trackPurchase;
+
+export const fetchReviewsByProduct = reviewsAPI.getByProduct;
+export const addReview = reviewsAPI.add;
+export const checkCanReview = reviewsAPI.checkCanReview;
 
 export default api;
 

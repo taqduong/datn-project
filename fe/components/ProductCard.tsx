@@ -1,7 +1,7 @@
 'use client'
 
 import Link from "next/link";
-import { ShoppingCart, Heart } from "lucide-react";
+import { ShoppingCart, Heart, Star } from "lucide-react";
 import { useState } from "react";
 import { addToCart, addToWishlist, trackProductAddToCart } from "@/services/api";
 
@@ -15,6 +15,8 @@ export interface Product {
   categoryName?: string;
   stock: number;
   soldCount?: number;
+  averageRating?: number; 
+  totalReviews?: number;
 }
 
 export default function ProductCard({ product }: { product: Product }) {
@@ -175,9 +177,29 @@ export default function ProductCard({ product }: { product: Product }) {
         </h3>
 
         <div className="mt-auto pt-4">
-          {/* ✅ HÀNG NGANG BỌC LẤY GIÁ TIỀN VÀ SỐ LƯỢNG BÁN */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
+            {/* ========================================== */}
+          {/* ✅ KHU VỰC RATING & SỐ LƯỢNG BÁN (CHUẨN SHOPEE) */}
+          {/* ========================================== */}
+          <div className="mt-2 flex items-center gap-2 text-xs font-medium">
+            {product.averageRating && product.averageRating > 0 ? (
+              <div className="flex items-center gap-1 border border-yellow-300 bg-yellow-50 px-1.5 py-0.5 rounded text-yellow-600">
+                <Star size={11} fill="currentColor" stroke="none" />
+                <span>{product.averageRating.toFixed(1)}</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1 border border-slate-200 bg-slate-50 px-1.5 py-0.5 rounded text-slate-400">
+                <Star size={11} className="text-slate-300" />
+                <span className="text-[10px]">Chưa đánh giá</span>
+              </div>
+            )}
+            
+            <span className="text-slate-200">|</span>
+            <span className="text-slate-500">Đã bán {formatSoldCount(product.soldCount)}</span>
+          </div>
+
+          {/* Giá tiền đẩy xuống dưới cùng */}
+          <div className="mt-auto pt-3">
+            <div className="flex flex-wrap items-baseline gap-2">
               <span className="text-lg font-bold text-red-600">
                 {formatVND(displayPrice)}
               </span>
@@ -186,11 +208,6 @@ export default function ProductCard({ product }: { product: Product }) {
                   {formatVND(product.price)}
                 </span>
               )}
-            </div>
-            
-            {/* ✅ HIỂN THỊ SỐ LƯỢNG ĐÃ BÁN */}
-            <div className="text-xs text-slate-500 font-medium">
-              Đã bán {formatSoldCount(product.soldCount)}
             </div>
           </div>
 
