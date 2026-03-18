@@ -105,7 +105,7 @@ export default function Footer() {
               </li>
               <li className="flex items-center gap-2">
                 <Phone size={18} />
-                <span>1900 xxxx</span>
+                <span>1900 1080</span>
               </li>
               <li className="flex items-center gap-2">
                 <Mail size={18} />

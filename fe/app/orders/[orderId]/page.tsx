@@ -6,7 +6,7 @@ import { fetchOrderById, cancelOrder, type OrderDto } from "@/services/api";
 import {
   ArrowLeft, Calendar, Package, MapPin, Phone, 
   User, CheckCircle2, Clock, Truck, XCircle, ShoppingBag, 
-  CreditCard, FileText, AlertCircle, Star
+  CreditCard, FileText, AlertCircle, Star, Download
 } from "lucide-react";
 
 export default function OrderDetailPage() {
@@ -17,6 +17,45 @@ export default function OrderDetailPage() {
   const [order, setOrder] = useState<OrderDto | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // ✅ STATE LƯU ĐƠN HÀNG ĐỂ XUẤT HÓA ĐƠN
+  const [printOrder, setPrintOrder] = useState<OrderDto | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
+
+  // ==================== BẮT ĐẦU CODE XUẤT PDF ====================
+  const handleExportPDF = async () => {
+    if (!order) return;
+    setIsExporting(true);
+    setPrintOrder(order);
+    
+    // Đợi DOM render khuôn Hóa đơn ẩn
+    setTimeout(async () => {
+      try {
+        const element = document.getElementById("invoice-template");
+        if (!element) throw new Error("Không tìm thấy template hóa đơn");
+        
+        // Dynamic import để tránh lỗi SSR của Next.js
+        const html2pdf = (await import("html2pdf.js")).default;
+        
+        const opt: any = {
+          margin:       0.3, 
+          filename:     `HoaDon_HomeMart_${order.orderId}.pdf`,
+          image:        { type: 'jpeg', quality: 1 },
+          html2canvas:  { scale: 2, useCORS: true, windowWidth: 1050 }, 
+          jsPDF:        { unit: 'in', format: 'a4', orientation: 'landscape' } 
+        };
+
+        await html2pdf().set(opt).from(element).save();
+      } catch (err) {
+        console.error("Lỗi khi xuất PDF:", err);
+        alert("Có lỗi xảy ra khi tạo hóa đơn PDF.");
+      } finally {
+        setPrintOrder(null);
+        setIsExporting(false);
+      }
+    }, 100);
+  };
+  // ==================== KẾT THÚC CODE XUẤT PDF ====================
 
   // ✅ Tách hàm load dữ liệu ra để gọi lại sau khi Hủy đơn
   const loadOrderDetail = useCallback(async () => {
@@ -115,7 +154,7 @@ export default function OrderDetailPage() {
     order.status.toLowerCase() === 'processing';
 
   // LOGIC KIỂM TRA ĐƠN ĐÃ HOÀN THÀNH ĐỂ HIỆN NÚT ĐÁNH GIÁ
-  const isCompleted = order.status === 'Completed';
+  const isCompleted = order.status.toLowerCase() === 'completed';
 
   return (
     <div className="min-h-screen bg-slate-50 py-10">
@@ -138,10 +177,29 @@ export default function OrderDetailPage() {
             </p>
           </div>
           
-          <div className="flex flex-col items-end gap-3">
-            <div className={`flex items-center gap-2 px-4 py-2 rounded-xl border font-bold text-sm ${statusConfig.color}`}>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+            <div className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border font-bold text-sm ${statusConfig.color}`}>
               {statusConfig.icon} {statusConfig.text}
             </div>
+            
+            {/* ✅ NÚT XUẤT HÓA ĐƠN PDF */}
+            {/* ✅ CHỈ XUẤT HÓA ĐƠN KHI ĐƠN ĐÃ HOÀN THÀNH */}
+            {isCompleted && (
+              <button
+                onClick={handleExportPDF}
+                disabled={isExporting}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-white font-semibold text-sm transition-all shadow-sm ${
+                  isExporting ? "bg-slate-400 cursor-not-allowed" : "bg-orange-500 hover:bg-orange-600 shadow-orange-500/20"
+                }`}
+              >
+                {isExporting ? (
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Download size={18} />
+                )}
+                {isExporting ? "Đang xuất..." : "Xuất Hóa Đơn PDF"}
+              </button>
+            )}
           </div>
         </div>
 
@@ -295,6 +353,119 @@ export default function OrderDetailPage() {
           </div>
         </div>
       </div>
+      {/* ========================================================================= */}
+      {/* KHU VỰC ẨN: GIAO DIỆN HÓA ĐƠN A4 (KHỔ NGANG - LANDSCAPE) */}
+      {/* ========================================================================= */}
+      {printOrder && (
+        <div className="fixed top-0 left-0" style={{ opacity: 0, zIndex: -1000, pointerEvents: 'none' }}>
+          <div id="invoice-template" style={{ width: '1050px', padding: '40px', backgroundColor: '#ffffff', color: '#1e293b', fontFamily: 'Arial, sans-serif' }}>
+            
+            {/* Header */}
+            <table style={{ width: '100%', borderBottom: '2px solid #e2e8f0', paddingBottom: '20px', marginBottom: '30px' }}>
+              <tbody>
+                <tr>
+                  <td style={{ verticalAlign: 'top', width: '60%' }}>
+                    <h1 style={{ fontSize: '32px', fontWeight: 'bold', color: '#2563eb', margin: '0 0 5px 0' }}>HOMEMART</h1>
+                    <p style={{ margin: '0 0 5px 0', fontSize: '14px', color: '#64748b' }}>Hệ thống phân phối hàng đầu Việt Nam</p>
+                    <p style={{ margin: '0', fontSize: '14px', color: '#64748b' }}>SĐT: 1900 1080 | Email: support@hmstore.com</p>
+                  </td>
+                  <td style={{ verticalAlign: 'top', textAlign: 'right', width: '40%' }}>
+                    <h2 style={{ fontSize: '24px', fontWeight: 'bold', margin: '0 0 10px 0', textTransform: 'uppercase' }}>HÓA ĐƠN BÁN HÀNG</h2>
+                    <p style={{ margin: '0 0 5px 0', fontSize: '14px' }}>Mã HĐ: <strong style={{ color: '#2563eb' }}>#{printOrder.orderId}</strong></p>
+                    <p style={{ margin: '0', fontSize: '14px', color: '#64748b' }}>Ngày in: {new Date().toLocaleDateString("vi-VN")}</p>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            {/* Thông tin khách */}
+            <div style={{ backgroundColor: '#f8fafc', padding: '20px', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '30px' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: 'bold', margin: '0 0 15px 0', borderBottom: '1px solid #cbd5e1', paddingBottom: '10px', textTransform: 'uppercase' }}>Thông tin khách hàng</h3>
+              <table style={{ width: '100%', fontSize: '14px', lineHeight: '1.6' }}>
+                <tbody>
+                  <tr>
+                    <td style={{ width: '15%', color: '#64748b', fontWeight: 'bold' }}>Khách hàng:</td>
+                    <td style={{ width: '35%', fontWeight: 'bold' }}>{printOrder.fullName}</td>
+                    <td style={{ width: '15%', color: '#64748b', fontWeight: 'bold' }}>Ngày đặt:</td>
+                    <td style={{ width: '35%' }}>{new Date(printOrder.orderDate).toLocaleString("vi-VN")}</td>
+                  </tr>
+                  <tr>
+                    <td style={{ color: '#64748b', fontWeight: 'bold' }}>Điện thoại:</td>
+                    <td>{printOrder.phone}</td>
+                    <td style={{ color: '#64748b', fontWeight: 'bold' }}>Địa chỉ:</td>
+                    <td>{printOrder.address}, {printOrder.ward}, {printOrder.district}, {printOrder.city}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            {/* Bảng sản phẩm */}
+            <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '40px' }}>
+              <thead>
+                <tr style={{ backgroundColor: '#1e293b', color: '#ffffff', fontSize: '14px' }}>
+                  <th style={{ padding: '12px', textAlign: 'left', borderTopLeftRadius: '8px' }}>STT</th>
+                  <th style={{ padding: '12px', textAlign: 'left' }}>Tên sản phẩm</th>
+                  <th style={{ padding: '12px', textAlign: 'center' }}>SL</th>
+                  <th style={{ padding: '12px', textAlign: 'right' }}>Đơn giá</th>
+                  <th style={{ padding: '12px', textAlign: 'right', borderTopRightRadius: '8px' }}>Thành tiền</th>
+                </tr>
+              </thead>
+              <tbody style={{ fontSize: '14px' }}>
+                {printOrder.orderDetails.map((item, index) => (
+                  <tr key={index} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                    <td style={{ padding: '15px 12px', color: '#64748b' }}>{index + 1}</td>
+                    <td style={{ padding: '15px 12px', fontWeight: 'bold' }}>{item.productName}</td>
+                    <td style={{ padding: '15px 12px', textAlign: 'center' }}>{item.quantity}</td>
+                    <td style={{ padding: '15px 12px', textAlign: 'right', color: '#475569' }}>{formatVND(item.price)}</td>
+                    <td style={{ padding: '15px 12px', textAlign: 'right', fontWeight: 'bold', color: '#2563eb' }}>{formatVND(item.price * item.quantity)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {/* Tổng tiền */}
+            <table style={{ width: '100%', marginBottom: '40px' }}>
+              <tbody>
+                <tr>
+                  <td style={{ width: '60%' }}></td>
+                  <td style={{ width: '40%' }}>
+                    <div style={{ backgroundColor: '#f8fafc', padding: '20px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px', paddingBottom: '15px', borderBottom: '1px solid #cbd5e1', fontSize: '14px' }}>
+                        <span style={{ color: '#64748b', fontWeight: 'bold' }}>Tạm tính:</span>
+                        <span>{formatVND(printOrder.totalAmount)}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '18px', fontWeight: 'bold', color: '#dc2626' }}>
+                        <span>Tổng thanh toán:</span>
+                        <span>{formatVND(printOrder.totalAmount)}</span>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            {/* Chữ ký (Đã chống cắt chữ và thêm khoảng trống) */}
+            <div style={{ marginTop: '100px', pageBreakInside: 'avoid' }}>
+              <table style={{ width: '100%', textAlign: 'center' }}>
+                <tbody>
+                  <tr>
+                    <td style={{ width: '50%', verticalAlign: 'top' }}>
+                      <p style={{ fontWeight: 'bold', fontSize: '16px', margin: '0' }}>Khách hàng</p>
+                      <p style={{ fontSize: '12px', color: '#94a3b8', margin: '5px 0 0 0', fontStyle: 'italic' }}>(Ký, ghi rõ họ tên)</p>
+                    </td>
+                    <td style={{ width: '50%', verticalAlign: 'top' }}>
+                      <p style={{ fontWeight: 'bold', fontSize: '16px', margin: '0' }}>Đại diện HomeMart</p>
+                      <p style={{ fontSize: '12px', color: '#94a3b8', margin: '5px 0 0 0', fontStyle: 'italic' }}>(Ký, đóng dấu)</p>
+                      <p style={{ fontWeight: 'bold', fontSize: '18px', color: '#2563eb', margin: '80px 0 0 0' }}>Tạ Quý Dương</p>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+          </div>
+        </div>
+      )}
     </div>
   );
 }
