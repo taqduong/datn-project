@@ -21,15 +21,36 @@ function PaymentResultContent() {
   const isSuccess = vnp_ResponseCode === "00";
 
   useEffect(() => {
-    // Giả lập thời gian xử lý dữ liệu 1.5 giây cho nó ngầu
-    const timer = setTimeout(() => {
-      setIsProcessing(false);
-      
-      // 💡 CHỖ NÀY DÀNH CHO BƯỚC TIẾP THEO:
-      // Nếu isSuccess == true, mình sẽ gọi API gọi BE update trạng thái đơn hàng thành "Đã thanh toán"
-      
-    }, 1500);
-    return () => clearTimeout(timer);
+    const confirmPaymentWithBackend = async () => {
+      // Nếu VNPAY báo lỗi từ đầu (quẹt xịt, hủy giao dịch) thì không gọi Backend
+      if (!isSuccess) {
+        setIsProcessing(false);
+        return;
+      }
+
+      try {
+        const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5270/api";
+        
+        // Chộp lấy chuỗi mã hóa dài ngoằng trên URL
+        const queryString = window.location.search; 
+
+        // Gọi Backend C# để nó kiểm tra chữ ký và ĐỔI TRẠNG THÁI DB
+        const res = await fetch(`${baseUrl.replace('/api', '')}/api/Payment/payment-callback${queryString}`);
+        const data = await res.json();
+
+        if (res.ok && data.success) {
+          console.log("Tuyệt vời! Backend đã cập nhật trạng thái đơn hàng thành Paid!");
+        } else {
+          console.error("Backend báo lỗi xác thực:", data.message);
+        }
+      } catch (error) {
+        console.error("Lỗi khi kết nối với Backend:", error);
+      } finally {
+        setIsProcessing(false); // Tắt vòng xoay loading
+      }
+    };
+
+    confirmPaymentWithBackend();
   }, [isSuccess]);
 
   const formatVND = (val: string | null) => {

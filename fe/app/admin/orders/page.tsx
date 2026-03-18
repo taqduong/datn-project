@@ -169,26 +169,47 @@ export default function AdminOrdersPage() {
                         <div className="flex items-center gap-3 mb-1">
                           <h3 className="text-lg font-bold text-slate-900">{order.fullName}</h3>
                           
-                          {/* Dropdown Duyệt đơn */}
-                            <select
-                                value={order.status}
-                                onChange={(e) => handleStatusChange(e, order.orderId)}
-                                onClick={(e) => e.stopPropagation()}
-                                className={`px-3 py-1.5 rounded-lg text-sm font-semibold border outline-none cursor-pointer hover:shadow-sm transition-all appearance-none ${
-                                    order.status.toLowerCase() === 'pending' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' : 
-                                    order.status.toLowerCase() === 'processing' ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                                    order.status.toLowerCase() === 'shipped' ? 'bg-purple-50 text-purple-700 border-purple-200' :
-                                    ['completed', 'delivered'].includes(order.status.toLowerCase()) ? 'bg-green-50 text-green-700 border-green-200' :
-                                    'bg-red-50 text-red-700 border-red-200'
-                                }`}
-                                style={{ textAlignLast: 'left' }}
-                                >
-                                <option value="Pending">Chờ duyệt</option>
-                                <option value="Processing">Đang xử lý</option>
-                                <option value="Shipped">Đang giao hàng</option>
-                                <option value="Completed">Hoàn thành</option>
-                                <option value="Cancelled">Đã hủy đơn</option>
-                            </select>
+                          {/* Dropdown Duyệt đơn (Đã thêm Khóa bảo vệ) */}
+                          <select
+                            value={order.status}
+                            onChange={(e) => handleStatusChange(e, order.orderId)}
+                            onClick={(e) => e.stopPropagation()}
+                            className={`px-3 py-1.5 rounded-lg text-sm font-semibold border outline-none cursor-pointer hover:shadow-sm transition-all appearance-none ${
+                              order.status.toLowerCase() === 'pending' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' : 
+                              order.status.toLowerCase() === 'processing' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                              order.status.toLowerCase() === 'shipped' ? 'bg-purple-50 text-purple-700 border-purple-200' :
+                              ['completed', 'delivered'].includes(order.status.toLowerCase()) ? 'bg-green-50 text-green-700 border-green-200' :
+                              'bg-red-50 text-red-700 border-red-200'
+                            }`}
+                            style={{ textAlignLast: 'left' }}
+                          >
+                            <option value="Pending">Chờ xác nhận</option>
+                            
+                            {/* 🔒 CẤM CHỌN NẾU LÀ ĐƠN VNPAY CHƯA THANH TOÁN (Trạng thái đang là Pending) */}
+                            <option 
+                              value="Processing"
+                              disabled={order.paymentMethod?.toLowerCase() === 'vnpay' && order.status.toLowerCase() === 'pending'}
+                            >
+                              Chờ lấy hàng
+                            </option>
+                            
+                            <option 
+                              value="Shipped"
+                              disabled={order.paymentMethod?.toLowerCase() === 'vnpay' && order.status.toLowerCase() === 'pending'}
+                            >
+                              Đang giao hàng
+                            </option>
+                            
+                            <option 
+                              value="Completed"
+                              disabled={order.paymentMethod?.toLowerCase() === 'vnpay' && order.status.toLowerCase() === 'pending'}
+                            >
+                              Đã giao
+                            </option>
+                            
+                            {/* Riêng Hủy đơn thì lúc nào Admin cũng được phép */}
+                            <option value="Cancelled">Đã hủy đơn</option>
+                          </select>
                         </div>
                         <div className="flex items-center gap-4 text-sm text-slate-500">
                           <span className="flex items-center gap-1"><Phone size={14}/> {order.phone}</span>

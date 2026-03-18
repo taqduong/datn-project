@@ -44,13 +44,13 @@ export default function OrdersPage() {
     switch (status.toLowerCase()) {
       case 'completed':
       case 'delivered':
-        return { icon: <CheckCircle2 className="w-5 h-5" />, color: "bg-emerald-100 text-emerald-700 border-emerald-200", text: "Hoàn thành" };
+        return { icon: <CheckCircle2 className="w-5 h-5" />, color: "bg-emerald-100 text-emerald-700 border-emerald-200", text: "Đã giao" };
       case 'pending':
-        return { icon: <Clock className="w-5 h-5" />, color: "bg-amber-100 text-amber-700 border-amber-200", text: "Chờ xử lý" };
+        return { icon: <Clock className="w-5 h-5" />, color: "bg-amber-100 text-amber-700 border-amber-200", text: "Chờ xác nhận" };
       case 'processing':
-        return { icon: <Package className="w-5 h-5" />, color: "bg-blue-100 text-blue-700 border-blue-200", text: "Đang xử lý" };
+        return { icon: <Package className="w-5 h-5" />, color: "bg-blue-100 text-blue-700 border-blue-200", text: "Chờ lấy hàng" };
       case 'shipped':
-        return { icon: <Truck className="w-5 h-5" />, color: "bg-purple-100 text-purple-700 border-purple-200", text: "Đang giao hàng" };
+        return { icon: <Truck className="w-5 h-5" />, color: "bg-purple-100 text-purple-700 border-purple-200", text: "Đang giao" };
       case 'cancelled':
         return { icon: <XCircle className="w-5 h-5" />, color: "bg-red-100 text-red-700 border-red-200", text: "Đã hủy" };
       default:
@@ -132,10 +132,10 @@ export default function OrdersPage() {
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-8">
           {[
             { label: 'Tất cả', count: stats.all, color: 'text-slate-900', bg: 'bg-white' },
-            { label: 'Chờ xử lý', count: stats.pending, color: 'text-amber-600', bg: 'bg-amber-50' },
-            { label: 'Đang xử lý', count: stats.processing, color: 'text-blue-600', bg: 'bg-blue-50' },
+            { label: 'Chờ xác nhận', count: stats.pending, color: 'text-amber-600', bg: 'bg-amber-50' },
+            { label: 'Chờ lấy hàng', count: stats.processing, color: 'text-blue-600', bg: 'bg-blue-50' },
             { label: 'Đang giao', count: stats.shipped, color: 'text-purple-600', bg: 'bg-purple-50' },
-            { label: 'Hoàn thành', count: stats.completed, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+            { label: 'Đã giao', count: stats.completed, color: 'text-emerald-600', bg: 'bg-emerald-50' },
             { label: 'Đã hủy', count: stats.cancelled, color: 'text-red-600', bg: 'bg-red-50' },
           ].map((stat, idx) => (
             <div key={idx} className={`${stat.bg} rounded-2xl p-4 border border-slate-100 shadow-sm transition-transform hover:-translate-y-1`}>
@@ -163,10 +163,10 @@ export default function OrdersPage() {
             className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-700 focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer"
           >
             <option value="all">Tất cả trạng thái</option>
-            <option value="pending">Chờ xử lý</option>
-            <option value="processing">Đang xử lý</option>
+            <option value="pending">Chờ xác nhận</option>
+            <option value="processing">Chờ lấy hàng</option>
             <option value="shipped">Đang giao</option>
-            <option value="completed">Hoàn thành</option>
+            <option value="completed">Đã giao</option>
             <option value="cancelled">Đã hủy</option>
           </select>
         </div>
@@ -195,10 +195,31 @@ export default function OrdersPage() {
                   
                   {/* Header Đơn hàng */}
                   <div className="p-5 sm:p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-50/50">
-                    <div className="flex items-center gap-4">
-                      <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border font-semibold text-sm ${statusConfig.color}`}>
-                        {statusConfig.icon} {statusConfig.text}
+                    <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+                      
+                      {/* 🚀 BOX CHỨA CÁC TAG TRẠNG THÁI */}
+                      <div className="flex items-center gap-2">
+                        {/* TAG 1: TRẠNG THÁI VẬN CHUYỂN */}
+                        <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border font-semibold text-sm ${statusConfig.color}`}>
+                          {statusConfig.icon} 
+                          {['pending', 'chờ xác nhận'].includes(order.status.toLowerCase()) ? "Chờ xác nhận" : statusConfig.text}
+                        </div>
+
+                        {/* TAG 2: ĐÃ THANH TOÁN (Màu xanh) */}
+                        {order.paymentMethod === 'VNPay_Paid' && (
+                          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border font-semibold text-sm bg-emerald-100 text-emerald-700 border-emerald-200 shadow-sm">
+                            <CheckCircle2 className="w-4 h-4" /> Đã thanh toán
+                          </div>
+                        )}
+
+                        {/* TAG 3: CHƯA THANH TOÁN (Màu cam nhấp nháy - Dành cho đơn VNPay xịt) */}
+                        {order.paymentMethod?.toLowerCase() === 'vnpay' && ['pending', 'chờ xác nhận'].includes(order.status.toLowerCase()) && (
+                          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border font-semibold text-sm bg-red-50 text-red-700 border-red-200 shadow-sm">
+                            <AlertCircle className="w-4 h-4" /> Chưa thanh toán
+                          </div>
+                        )}
                       </div>
+
                       <span className="text-sm font-bold text-slate-400">
                         ĐƠN #{order.orderId}
                       </span>

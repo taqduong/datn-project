@@ -102,14 +102,14 @@ export default function OrderDetailPage() {
     switch (status.toLowerCase()) {
       case 'completed':
       case 'delivered':
-        return { icon: <CheckCircle2 className="w-5 h-5" />, color: "bg-emerald-100 text-emerald-700 border-emerald-200", text: "Hoàn thành" };
+        return { icon: <CheckCircle2 className="w-5 h-5" />, color: "bg-emerald-100 text-emerald-700 border-emerald-200", text: "Đã giao" };
       case 'pending':
-      case 'chờ xử lý': // ✅ Map thêm tiếng Việt nếu DB trả về tiếng Việt
-        return { icon: <Clock className="w-5 h-5" />, color: "bg-amber-100 text-amber-700 border-amber-200", text: "Chờ xử lý" };
+      case 'chờ xác nhận': // ✅ Map thêm tiếng Việt nếu DB trả về tiếng Việt
+        return { icon: <Clock className="w-5 h-5" />, color: "bg-amber-100 text-amber-700 border-amber-200", text: "Chờ xác nhận" };
       case 'processing':
-        return { icon: <Package className="w-5 h-5" />, color: "bg-blue-100 text-blue-700 border-blue-200", text: "Đang xử lý" };
+        return { icon: <Package className="w-5 h-5" />, color: "bg-blue-100 text-blue-700 border-blue-200", text: "Chờ lấy hàng" };
       case 'shipped':
-        return { icon: <Truck className="w-5 h-5" />, color: "bg-purple-100 text-purple-700 border-purple-200", text: "Đang giao hàng" };
+        return { icon: <Truck className="w-5 h-5" />, color: "bg-purple-100 text-purple-700 border-purple-200", text: "Đang giao" };
       case 'cancelled':
       case 'đã hủy': // ✅ Map thêm tiếng Việt
         return { icon: <XCircle className="w-5 h-5" />, color: "bg-red-100 text-red-700 border-red-200", text: "Đã hủy" };
@@ -178,9 +178,26 @@ export default function OrderDetailPage() {
           </div>
           
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+            
+            {/* 🚀 TAG 1: TRẠNG THÁI VẬN CHUYỂN */}
             <div className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border font-bold text-sm ${statusConfig.color}`}>
-              {statusConfig.icon} {statusConfig.text}
+              {statusConfig.icon} 
+              {['pending', 'chờ xác nhận'].includes(order.status.toLowerCase()) ? "Chờ xác nhận" : statusConfig.text}
             </div>
+
+            {/* 🚀 TAG 2: ĐÃ THANH TOÁN */}
+            {order.paymentMethod === 'VNPay_Paid' && (
+              <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl border font-bold text-sm bg-emerald-100 text-emerald-700 border-emerald-200">
+                <CheckCircle2 className="w-5 h-5" /> Đã thanh toán
+              </div>
+            )}
+
+            {/* 🚀 TAG 3: CHƯA THANH TOÁN */}
+            {order.paymentMethod?.toLowerCase() === 'vnpay' && ['pending', 'chờ xử lý'].includes(order.status.toLowerCase()) && (
+              <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl border font-bold text-sm bg-orange-100 text-orange-700 border-orange-200 animate-pulse">
+                <AlertCircle className="w-5 h-5" /> Chưa thanh toán
+              </div>
+            )}
             
             {/* ✅ NÚT XUẤT HÓA ĐƠN PDF */}
             {/* ✅ CHỈ XUẤT HÓA ĐƠN KHI ĐƠN ĐÃ HOÀN THÀNH */}
@@ -322,20 +339,61 @@ export default function OrderDetailPage() {
               </div>
             </div>
               
-              {/* Box: Phương thức thanh toán (Đã sửa lỗi lặp và nhận diện VNPay) */}
+              {/* Box: Phương thức thanh toán */}
             <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6">
               <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2 border-b border-slate-100 pb-4">
                 <CreditCard className="text-blue-600" /> Phương thức thanh toán
               </h3>
               
-              {order?.paymentMethod?.toLowerCase() === 'vnpay' ? (
-                <div className="flex items-center gap-4 animate-in fade-in duration-500">
-                  <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center border border-blue-100 p-2">
+              {/* 🚀 DÙNG INCLUDES ĐỂ BẮT CẢ 'vnpay' LẪN 'VNPay_Paid' */}
+              {order?.paymentMethod?.toLowerCase().includes('vnpay') ? (
+                <div className="flex flex-col sm:flex-row sm:items-start gap-4 p-4 rounded-2xl bg-blue-50/50 border border-blue-100 animate-in fade-in duration-500">
+                  <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center border border-blue-100 p-2 shrink-0 shadow-inner">
                     <img src="/vnpay.png" alt="VNPAY" className="w-full h-full object-contain" />
                   </div>
-                  <div>
-                    <p className="font-bold text-slate-900">Thanh toán qua VNPAY</p>
-                    <p className="text-sm text-slate-500 italic">Giao dịch đã được xác nhận</p>
+                  <div className="flex-1">
+                    <p className="font-bold text-slate-900 text-lg mb-1">Thanh toán qua VNPAY</p>
+                    
+                    {/* 🚀 LOGIC RẼ NHÁNH MỚI: DỰA VÀO PAYMENT METHOD ĐỂ KIỂM TRA ĐÃ THANH TOÁN HAY CHƯA */}
+                    {order.paymentMethod.toLowerCase() === 'vnpay' && (order.status.toLowerCase() === 'pending' || order.status.toLowerCase() === 'chờ xác nhận') ? (
+                      <div className="mt-3 space-y-3">
+                        <p className="text-sm text-red-600 font-bold animate-pulse flex items-center gap-1.5">
+                          <AlertCircle size={16} /> Giao dịch thất bại hoặc chưa thanh toán!
+                        </p>
+                        
+                        {/* 🔘 NÚT THANH TOÁN LẠI */}
+                        <button 
+                          onClick={async () => {
+                            try {
+                              const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5270/api";
+                              const token = localStorage.getItem("token");
+                              
+                              const res = await fetch(`${baseUrl}/Payment/retry-payment/${order.orderId}`, {
+                                headers: {
+                                  'Authorization': `Bearer ${token}`
+                                }
+                              });
+                              
+                              if (!res.ok) throw new Error("Cấp lại link thất bại.");
+                              
+                              const data = await res.json();
+                              if (data.success && data.paymentUrl) {
+                                window.location.href = data.paymentUrl;
+                              }
+                            } catch (err) {
+                              console.error(err);
+                              alert("Có lỗi xảy ra, không thể lấy lại link thanh toán lúc này. Vui lòng thử lại sau!");
+                            }
+                          }}
+                          className="w-fit px-6 py-2.5 bg-orange-500 text-white rounded-xl text-sm font-bold transition-all shadow-md hover:bg-orange-600 active:scale-95 flex items-center gap-2"
+                        >
+                          <CreditCard size={18} /> Thanh toán lại 
+                        </button>
+                      </div>
+                    ) : (
+                      // NẾU CÓ CHỮ _PAID THÌ SẼ RƠI VÀO ĐÂY
+                      <p className="text-sm text-emerald-600 font-bold italic mt-2">✓ Giao dịch đã thanh toán thành công</p>
+                    )}
                   </div>
                 </div>
               ) : (
