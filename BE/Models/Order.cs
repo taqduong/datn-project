@@ -24,6 +24,9 @@ public partial class Order
     [StringLength(50)]
     public string Status { get; set; } = "Pending";
 
+    [StringLength(50)]
+    public string PaymentMethod { get; set; } = "COD"; // Mặc định là COD
+
     // ===== Thông tin giao hàng =====
     // Mình để Required cho Tên, SĐT, Địa chỉ vì giao hàng thì bắt buộc phải có những cái này
     [Required]

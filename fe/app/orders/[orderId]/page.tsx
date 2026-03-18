@@ -321,22 +321,34 @@ export default function OrderDetailPage() {
                 )}
               </div>
             </div>
-
-            {/* Box: Phương thức thanh toán */}
+              
+              {/* Box: Phương thức thanh toán (Đã sửa lỗi lặp và nhận diện VNPay) */}
             <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6">
               <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2 border-b border-slate-100 pb-4">
                 <CreditCard className="text-blue-600" /> Phương thức thanh toán
               </h3>
               
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center border border-blue-100">
-                  <CreditCard className="text-blue-600" />
+              {order?.paymentMethod?.toLowerCase() === 'vnpay' ? (
+                <div className="flex items-center gap-4 animate-in fade-in duration-500">
+                  <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center border border-blue-100 p-2">
+                    <img src="/vnpay.png" alt="VNPAY" className="w-full h-full object-contain" />
+                  </div>
+                  <div>
+                    <p className="font-bold text-slate-900">Thanh toán qua VNPAY</p>
+                    <p className="text-sm text-slate-500 italic">Giao dịch đã được xác nhận</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="font-bold text-slate-900">Thanh toán khi nhận hàng</p>
-                  <p className="text-sm text-slate-500">COD (Cash on Delivery)</p>
+              ) : (
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center border border-slate-100">
+                    <CreditCard className="text-slate-600" />
+                  </div>
+                  <div>
+                    <p className="font-bold text-slate-900">Thanh toán khi nhận hàng</p>
+                    <p className="text-sm text-slate-500">COD (Cash on Delivery)</p>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* ✅ NÚT HỦY ĐƠN ĐẶT Ở ĐÂY (CHỈ HIỂN THỊ KHI ĐƠN CHƯA DUYỆT) */}
@@ -357,7 +369,7 @@ export default function OrderDetailPage() {
       {/* KHU VỰC ẨN: GIAO DIỆN HÓA ĐƠN A4 (KHỔ NGANG - LANDSCAPE) */}
       {/* ========================================================================= */}
       {printOrder && (
-        <div className="fixed top-0 left-0" style={{ opacity: 0, zIndex: -1000, pointerEvents: 'none' }}>
+        <div className="fixed -left-2499.75 top-0" style={{ zIndex: -1000 }}>
           <div id="invoice-template" style={{ width: '1050px', padding: '40px', backgroundColor: '#ffffff', color: '#1e293b', fontFamily: 'Arial, sans-serif' }}>
             
             {/* Header */}

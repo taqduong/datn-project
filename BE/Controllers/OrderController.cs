@@ -117,6 +117,7 @@ namespace BE.Controllers
                 OrderDate = DateTime.Now,
                 TotalAmount = totalAmount,
                 Status = "Pending", 
+                PaymentMethod = request.PaymentMethod, // Lưu phương thức thanh toán vào đơn hàng
                 FullName = request.FullName,
                 Phone = request.Phone,
                 Address = request.Address,
@@ -149,6 +150,7 @@ namespace BE.Controllers
                     OrderDate = o.OrderDate,
                     TotalAmount = o.TotalAmount,
                     Status = o.Status ?? "",
+                    PaymentMethod = o.PaymentMethod,
                     FullName = o.FullName ?? "",
                     Phone = o.Phone ?? "",
                     Email = o.Email ?? "",
@@ -196,6 +198,7 @@ namespace BE.Controllers
                     OrderDate = o.OrderDate,
                     TotalAmount = o.TotalAmount,
                     Status = o.Status ?? "",
+                    PaymentMethod = o.PaymentMethod,
                     FullName = o.FullName ?? "",
                     Phone = o.Phone ?? "",
                     Email = o.Email ?? "",
@@ -246,6 +249,7 @@ namespace BE.Controllers
                 OrderDate = order.OrderDate,
                 TotalAmount = order.TotalAmount,
                 Status = order.Status ?? "",
+                PaymentMethod = order.PaymentMethod,
                 FullName = order.FullName ?? "",
                 Email = order.Email ?? "",
                 Phone = order.Phone ?? "",
@@ -391,6 +395,7 @@ namespace BE.Controllers
         public string? City { get; set; }
         public string? Ward { get; set; }
         public string? Note { get; set; }
+        public string PaymentMethod { get; set; } = "COD";
         public int? BuyNowProductId { get; set; }
         public int? BuyNowQuantity { get; set; }
     }
@@ -426,6 +431,7 @@ namespace BE.Controllers
         public decimal TotalAmount { get; set; }
         public string Status { get; set; } = "";
         public List<OrderDetailDto> OrderDetails { get; set; } = new();
+        public string PaymentMethod { get; set; } = "";
         public string FullName { get; set; } = "";
         public string Email { get; set; } = "";
         public string Phone { get; set; } = "";

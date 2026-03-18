@@ -160,6 +160,7 @@ export interface CheckoutPayload {
   district?: string;
   ward?: string;
   note?: string;
+  paymentMethod: string;
 }
 
 export interface OrderDetailDto {
@@ -184,6 +185,7 @@ export interface OrderDto {
   ward?: string;
   note?: string;
   orderDetails: OrderDetailDto[];
+  paymentMethod: string;
 }
 
 export interface AnalyticsSummary {

@@ -101,41 +101,81 @@ export default function CheckoutPage() {
       router.push("/products");
       return;
     }
-      try {
+    
+    try {
       setIsSubmitting(true);
       
-      // ✅ 3. THAY LỆNH GỌI API CŨ BẰNG CỤC NÀY ĐỂ GỬI KÈM DỮ LIỆU MUA NGAY:
       const payload: any = { ...formData };
       if (buyNowId && qty) {
         payload.buyNowProductId = Number(buyNowId);
         payload.buyNowQuantity = Number(qty);
       }
       
-      await checkoutOrder(payload);
-
-      // =======================================================
-
-      // =======================================================
-      // ✅ GẮN CẢM BIẾN LƯỢT MUA Ở ĐÂY (Vừa chốt đơn xong)
-      // Lặp qua từng món trong giỏ hàng để báo cáo số lượng đã bán
-      // =======================================================
+      // 1. TẠO ĐƠN HÀNG VÀO DATABASE TRƯỚC
+      const orderRes = await checkoutOrder(payload);
+      
+      // ✅ Cảm biến Tracking
       cartItems.forEach(item => {
         trackProductPurchase(item.product.id, item.quantity)
           .catch(err => console.error("Lỗi tracking mua hàng:", err));
       });
-      
+
+      // Lấy ID đơn hàng vừa tạo (Tuỳ vào cấu trúc BE của sếp trả về, thường là orderRes.data.orderId hoặc orderRes.data.id)
+      const newOrderId = orderRes?.data?.orderId || orderRes?.data?.id || Math.floor(Date.now() / 1000); 
+
+      // ==========================================
+      // ✅ 2. BỌC THÉP API KIỂM TRA PHƯƠNG THỨC THANH TOÁN
+      // ==========================================
+      if (formData.paymentMethod === 'vnpay') {
+        const token = localStorage.getItem("token");
+        const vnpayPayload = {
+          orderId: Number(newOrderId), // ÉP KIỂU NUMBER ĐỂ CHẮC CHẮN C# KHÔNG BÁO LỖI
+          amount: subtotal,
+          orderDescription: `Thanh toan don hang ${newOrderId}`,
+          name: formData.fullName || "Khach hang" // CHỐNG LỖI TÊN NULL
+        };
+
+        const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5270/api";
+        const vnpRes = await fetch(`${baseUrl.replace('/api', '')}/api/Payment/create-payment-url`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {}) // NẾU CÓ TOKEN THÌ GỬI, TRÁNH LỖI BEARER NULL
+          },
+          body: JSON.stringify(vnpayPayload)
+        });
+
+        // BẮT LỖI TỪ BACKEND TRẢ VỀ TRƯỚC KHI .json()
+        if (!vnpRes.ok) {
+           throw new Error(`Cổng VNPay tạm thời không phản hồi (Lỗi ${vnpRes.status}). Vui lòng chọn COD hoặc thử lại sau.`);
+        }
+
+        const vnpData = await vnpRes.json();
+        
+        if (vnpData.success && vnpData.paymentUrl) {
+          // Báo reset giỏ hàng trước khi bay sang VNPay
+          window.dispatchEvent(new Event("cartUpdated")); 
+          
+          // ĐÁ KHÁCH HÀNG SANG TRANG VNPAY
+          window.location.href = vnpData.paymentUrl;
+          return; 
+        } else {
+          alert("Có lỗi khi tạo link VNPay. Vui lòng thử lại!");
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
+      // 3. NẾU LÀ COD (THANH TOÁN TIỀN MẶT)
       setIsSuccess(true);
-      // Báo cho Navbar reset số đếm giỏ hàng
       window.dispatchEvent(new Event("cartUpdated")); 
-      
-      // Chuyển hướng về trang Lịch sử đơn hàng sau 2.5 giây
       setTimeout(() => {
         router.push("/orders");
       }, 2500);
       
     } catch (error: any) {
       console.error("Lỗi đặt hàng:", error);
-      alert("Có lỗi xảy ra khi thanh toán. Vui lòng kiểm tra lại kết nối!");
+      alert(error?.response?.data?.message || "Có lỗi xảy ra khi thanh toán. Vui lòng kiểm tra lại kết nối!");
       setIsSubmitting(false);
     }
   };
@@ -288,17 +328,17 @@ export default function CheckoutPage() {
                   </div>
                 </label>
 
-                {/* Option 2: Chuyển khoản */}
+                {/* Option 2: VNPay */}
                 <label className={`flex items-start p-5 rounded-2xl border-2 cursor-pointer transition-all ${
-                  formData.paymentMethod === 'banking' ? 'border-blue-600 bg-blue-50/50' : 'border-slate-100 hover:border-blue-300 bg-white'
+                  formData.paymentMethod === 'vnpay' ? 'border-blue-600 bg-blue-50/50' : 'border-slate-100 hover:border-blue-300 bg-white'
                 }`}>
-                  <input type="radio" name="paymentMethod" value="banking" checked={formData.paymentMethod === 'banking'} onChange={() => handlePaymentMethodChange('banking')} className="mt-1 mr-4 w-5 h-5 accent-blue-600" />
-                  <div>
+                  <input type="radio" name="paymentMethod" value="vnpay" checked={formData.paymentMethod === 'vnpay'} onChange={() => handlePaymentMethodChange('vnpay')} className="mt-1 mr-4 w-5 h-5 accent-blue-600" />
+                  <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
-                      <Building2 size={20} className={formData.paymentMethod === 'banking' ? 'text-blue-600' : 'text-slate-500'} />
-                      <span className="font-bold text-slate-900">Chuyển khoản ngân hàng</span>
+                      <img src="/vnpay.png" alt="VNPAY" className="h-6 object-contain" />
+                      <span className="font-bold text-slate-900 ml-1">Thanh toán qua VNPAY</span>
                     </div>
-                    <p className="text-sm text-slate-500 ml-7">Chuyển khoản trực tiếp vào tài khoản của cửa hàng.</p>
+                    <p className="text-sm text-slate-500 ml-0">Thanh toán an toàn qua ví điện tử, thẻ ATM nội địa hoặc thẻ quốc tế (Visa, MasterCard).</p>
                   </div>
                 </label>
 

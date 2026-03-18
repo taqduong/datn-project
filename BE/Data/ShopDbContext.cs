@@ -30,6 +30,7 @@ public partial class ShopDbContext : DbContext
 
     public virtual DbSet<Review> Reviews { get; set; }
 
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Product>(entity =>
