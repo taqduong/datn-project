@@ -319,7 +319,22 @@ export default function ChatBox() {
           text: m.text,
         }));
 
-      const response = (await fetchChatbotAnswer(newText, chatHistory)) as ChatbotApiResponse;
+      // 🚀 1. LẤY ID NGƯỜI DÙNG TỪ LOCALSTORAGE
+      let currentUserId = undefined;
+      if (typeof window !== "undefined") {
+        const userStr = localStorage.getItem("user");
+        if (userStr) {
+          try {
+            const userObj = JSON.parse(userStr);
+            currentUserId = userObj.id; 
+          } catch (e) {
+             console.error("Lỗi parse thông tin user", e);
+          }
+        }
+      }
+
+      // 🚀 2. TRUYỀN ID XUỐNG API (THÊM currentUserId VÀO CUỐI)
+      const response = (await fetchChatbotAnswer(newText, chatHistory, currentUserId)) as ChatbotApiResponse;
       const normalized = normalizeApiResponse(response);
 
       await typeIntoMessage(
@@ -442,12 +457,12 @@ export default function ChatBox() {
           >
             <div className="flex flex-col gap-4">
               {showQuickPrompts && (
-                <div className="flex flex-wrap gap-2">
+                <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 scrollbar-none">
                   {QUICK_PROMPTS.map((prompt) => (
                     <button
                       key={prompt}
                       onClick={() => handleQuickPrompt(prompt)}
-                      className="rounded-full border border-blue-200 bg-white px-3 py-2 text-xs text-blue-700 transition hover:bg-blue-50"
+                      className="shrink-0 rounded-full border border-blue-200 bg-white px-4 py-2.5 text-sm font-medium text-blue-700 transition hover:bg-blue-50 hover:shadow-sm"
                     >
                       {prompt}
                     </button>

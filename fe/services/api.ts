@@ -477,11 +477,12 @@ export const resolveImgUrl = (url?: string) => {
 };
 
 // ================= Chatbot API =================
-export const fetchChatbotAnswer = async (message: string, history: any[] = []) => { 
+export const fetchChatbotAnswer = async (message: string, history: any[] = [], userId?: number) => { 
   try {
     const res = await api.post("/chatbot", { 
       question: message,
-      history: history 
+      history: history,
+      userId: userId
     });
     
     // res.data sẽ chứa { success: true, answer: "..." } từ C# trả về

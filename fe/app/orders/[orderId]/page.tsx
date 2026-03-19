@@ -322,7 +322,9 @@ export default function OrderDetailPage() {
                   <div>
                     <p className="text-slate-500 mb-0.5">Địa chỉ</p>
                     <p className="font-medium text-slate-900 leading-relaxed">
-                      {order.address}, {order.ward}, {order.district}, {order.city}
+                      {[order.address, order.ward, order.city]
+                        .filter(Boolean)
+                        .join(", ")}     
                     </p>
                   </div>
                 </div>
