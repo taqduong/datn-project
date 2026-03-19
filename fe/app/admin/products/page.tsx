@@ -183,20 +183,25 @@ export default function ProductPage() {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const payload = { ...form, discount: clampDiscount(form.discount) };
+      const basePayload = { ...form, discount: clampDiscount(form.discount) };
       let savedProductId = 0;
 
       if (editingProduct) {
-        await updateProduct(editingProduct.id, payload);
+        const updatePayload = {
+          ...basePayload,
+          retainedAdditionalImages: existingImages // Báo cho Backend biết
+        };
+        
+        await updateProduct(editingProduct.id, updatePayload);
         savedProductId = editingProduct.id;
         toast.success("Cập nhật thông tin thành công");
       } else {
-        const res = await createProduct(payload);
+        const res = await createProduct(basePayload);
         savedProductId = res.data.id; // Lấy ID sản phẩm vừa tạo
         toast.success("Thêm sản phẩm thành công");
       }
 
-      // Nếu có chọn ảnh phụ thì vác đi upload
+      // Nếu có chọn ảnh phụ mới thì vác đi upload
       if (additionalFiles.length > 0 && savedProductId > 0) {
         const fd = new FormData();
         additionalFiles.forEach((file) => fd.append("files", file));

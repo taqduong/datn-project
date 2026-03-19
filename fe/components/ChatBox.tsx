@@ -8,6 +8,8 @@ import {
   SendHorizontal,
   Trash2,
   X,
+  Maximize2, 
+  Minimize2, 
 } from "lucide-react";
 import { fetchChatbotAnswer } from "@/services/api";
 
@@ -121,6 +123,7 @@ const DEFAULT_BOT_MESSAGE =
 
 export default function ChatBox() {
   const [isOpen, setIsOpen] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [messages, setMessages] = useState<ChatMsg[]>([
     {
       id: createMessageId(),
@@ -308,7 +311,15 @@ export default function ChatBox() {
     try {
       const botId = appendBotShell();
 
-      const response = (await fetchChatbotAnswer(newText)) as ChatbotApiResponse;
+      const chatHistory = messages
+        .filter((m) => !m.typing && m.text !== DEFAULT_BOT_MESSAGE && m.id !== botId)
+        .slice(-6)
+        .map((m) => ({
+          sender: m.sender,
+          text: m.text,
+        }));
+
+      const response = (await fetchChatbotAnswer(newText, chatHistory)) as ChatbotApiResponse;
       const normalized = normalizeApiResponse(response);
 
       await typeIntoMessage(
@@ -371,9 +382,12 @@ export default function ChatBox() {
       )}
 
       {isOpen && (
-        <div className="flex h-140 w-90 max-w-[calc(100vw-24px)] flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl sm:w-100">
-          <div className="flex items-center justify-between bg-linear-to-r from-blue-600 to-blue-500 px-4 py-4 text-white">
-            <div className="flex items-center gap-3">
+        <div className={`flex flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl transition-all duration-300 will-change-transform ${
+          isExpanded 
+            ? "h-[60vh] w-[88vw] sm:w-[446px] sm:h-[576px]" // 🚀 Kích thước khi phóng to
+            : "h-[520px] w-[335px] max-w-[calc(100vw-24px)] sm:w-[372px]" // Kích thước bình thường
+        }`}>
+            <div className="shrink-0 flex items-center justify-between bg-linear-to-r from-blue-600 to-blue-500 px-4 py-4 text-white">            <div className="flex items-center gap-3">
               <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-linear-to-tr from-blue-500 to-indigo-500 shadow-md shadow-blue-900/20">
                 <Store className="h-5 w-5 text-white" strokeWidth={2} />
               </div>
@@ -402,6 +416,14 @@ export default function ChatBox() {
               >
                 <Trash2 className="h-4 w-4" />
               </button>
+              
+              <button
+                onClick={() => setIsExpanded(!isExpanded)}
+                aria-label="Phóng to/Thu nhỏ"
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 transition hover:bg-white/20"
+              >
+                {isExpanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+              </button>
 
               <button
                 onClick={() => setIsOpen(false)}
@@ -414,7 +436,7 @@ export default function ChatBox() {
           </div>
 
           <div
-            className="flex-1 overflow-y-auto bg-slate-50 px-4 py-4"
+            className="flex-1 min-h-0 overflow-y-auto bg-slate-50 px-4 py-4 overscroll-contain scroll-smooth"
             role="log"
             aria-live="polite"
           >
@@ -457,7 +479,7 @@ export default function ChatBox() {
             </div>
           </div>
 
-          <div className="border-t border-slate-200 bg-white p-4">
+          <div className="shrink-0 border-t border-slate-200 bg-white p-4">
             <form onSubmit={handleSubmit} className="flex items-end gap-2">
               <div className="relative flex-1">
                 <textarea
@@ -514,10 +536,10 @@ function MessageItem({ message }: { message: ChatMsg }) {
         </div>
       )}
 
-      <div className="max-w-[88%]">
+      <div className="max-w-[85%] sm:max-w-[82%]">
         <div
           className={[
-            "rounded-2xl px-4 py-3 text-sm leading-6 shadow-sm whitespace-pre-wrap wrap-break-word",
+            "rounded-2xl px-4 py-3 text-[15px] leading-6 shadow-sm whitespace-pre-wrap break-words",
             isUser
               ? "rounded-br-md bg-blue-600 text-white"
               : "rounded-bl-md border border-slate-100 bg-white text-slate-800",
@@ -540,7 +562,7 @@ function MessageItem({ message }: { message: ChatMsg }) {
               <a
                 key={String(product.id)}
                 href={getProductHref(product)}
-                className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm transition hover:border-blue-300 hover:shadow"
+                className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm transition hover:border-blue-300 hover:shadow min-w-0"
               >
                 <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-slate-100">
                   {product.imageUrl ? (

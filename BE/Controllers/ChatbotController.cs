@@ -107,19 +107,31 @@ Quy tắc trả lời:
 
                 var url = $"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={apiKey}";
 
-                var payload = new
+                // BẮT ĐẦU ĐOẠN MỚI: Xử lý lịch sử chat
+                var contentsList = new List<object>();
+
+                // 1. Nhồi lịch sử chat cũ vào (nếu có)
+                if (request.history != null && request.history.Any())
                 {
-                    contents = new[]
+                    foreach (var msg in request.history)
                     {
-                        new
+                        // Thằng Gemini quy định: bot là "model", user là "user"
+                        contentsList.Add(new
                         {
-                            parts = new[]
-                            {
-                                new { text = prompt }
-                            }
-                        }
+                            role = msg.sender == "bot" ? "model" : "user",
+                            parts = new[] { new { text = msg.text } }
+                        });
                     }
-                };
+                }
+
+                // 2. Nhồi câu hỏi hiện tại kèm theo Prompt (Luôn ở cuối cùng)
+                contentsList.Add(new
+                {
+                    role = "user",
+                    parts = new[] { new { text = prompt } }
+                });
+
+                var payload = new { contents = contentsList };
 
                 var json = JsonSerializer.Serialize(payload);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
@@ -218,5 +230,12 @@ Quy tắc trả lời:
     public class ChatRequest
     {
         public string? question { get; set; }
+        public List<ChatHistory>? history { get; set; }
+    }
+
+    public class ChatHistory
+    {
+        public string? sender { get; set; }
+        public string? text { get; set; }
     }
 }

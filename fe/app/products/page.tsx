@@ -27,6 +27,7 @@ export default function ProductsPage() {
 
   const searchParams = useSearchParams();
   const keyword = searchParams.get("keyword");
+  const categoryIdFromUrl = searchParams.get("category");
 
   const loadData = async () => {
     try {
@@ -53,6 +54,20 @@ export default function ProductsPage() {
       setLoading(false);
     }
   };
+
+  // 🚀 THÊM ĐOẠN NÀY ĐỂ TỰ ĐỘNG CHỌN DANH MỤC NẾU CÓ URL
+  useEffect(() => {
+    if (categoryIdFromUrl) {
+      setSelectedCategory(Number(categoryIdFromUrl)); // Ép kiểu string sang number
+    } else {
+      setSelectedCategory("all"); // Nếu xóa tham số thì trả về "all"
+    }
+  }, [categoryIdFromUrl]);
+
+  // Vẫn giữ nguyên đoạn useEffect loadData cũ
+  useEffect(() => {
+    loadData();
+  }, [keyword]);
 
   // ✅ QUAN TRỌNG: Phải thêm [keyword] vào đây để khi sếp gõ từ mới, trang tự tải lại
   useEffect(() => {

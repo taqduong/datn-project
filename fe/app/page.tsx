@@ -242,7 +242,7 @@ export default function HomePage() {
               const icons = ["👕", "🎧", "🪑", "⌚", "💄", "📱"];
               return (
                 <Link
-                  href="/products"
+                  href={`/products?category=${category.id}`}
                   key={category.id}
                   className="group rounded-3xl border border-slate-100 bg-white p-6 shadow-sm transition duration-300 hover:-translate-y-1.5 hover:border-blue-200 hover:shadow-xl hover:shadow-blue-100"
                 >

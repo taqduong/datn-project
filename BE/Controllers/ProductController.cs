@@ -147,7 +147,11 @@ namespace BE.Controllers
             if (!ModelState.IsValid)
                 return ValidationProblem(ModelState);
 
-            var product = await _context.Products.FindAsync(id);
+            // 🚀 Bổ sung Include(p => p.ProductImages) để lấy cả ảnh phụ
+            var product = await _context.Products
+                .Include(p => p.ProductImages) 
+                .FirstOrDefaultAsync(p => p.Id == id);
+
             if (product == null)
                 return NotFound();
 
@@ -177,6 +181,22 @@ namespace BE.Controllers
 
             if (!string.IsNullOrWhiteSpace(dto.ImageUrl))
                 product.ImageUrl = dto.ImageUrl;
+
+            // =========================================================
+            // 🚀 LOGIC XÓA ẢNH PHỤ CŨ (NẾU REACT GỬI YÊU CẦU XÓA)
+            // =========================================================
+            if (dto.RetainedAdditionalImages != null)
+            {
+                // Lọc ra những ảnh ĐANG CÓ TRONG DB nhưng KHÔNG CÓ trong danh sách React gửi lên (tức là bị xóa)
+                var imagesToDelete = product.ProductImages
+                    .Where(img => !dto.RetainedAdditionalImages.Contains(img.ImageUrl))
+                    .ToList();
+
+                if (imagesToDelete.Any())
+                {
+                    _context.ProductImages.RemoveRange(imagesToDelete);
+                }
+            }
 
             await _context.SaveChangesAsync();
 
@@ -375,6 +395,7 @@ namespace BE.Controllers
             public int? Stock { get; set; }
             public int? Discount { get; set; }
             public int? CategoryId { get; set; }
+            public List<string>? RetainedAdditionalImages { get; set; }
         }
     }
 }

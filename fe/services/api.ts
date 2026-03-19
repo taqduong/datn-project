@@ -477,11 +477,12 @@ export const resolveImgUrl = (url?: string) => {
 };
 
 // ================= Chatbot API =================
-export const fetchChatbotAnswer = async (message: string) => {
+export const fetchChatbotAnswer = async (message: string, history: any[] = []) => { 
   try {
-    // Gọi sang endpoint C#: POST /api/chatbot
-    // Backend đang hứng biến tên là "question"
-    const res = await api.post("/chatbot", { question: message });
+    const res = await api.post("/chatbot", { 
+      question: message,
+      history: history 
+    });
     
     // res.data sẽ chứa { success: true, answer: "..." } từ C# trả về
     return res.data; 
