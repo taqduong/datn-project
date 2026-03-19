@@ -476,9 +476,18 @@ export const resolveImgUrl = (url?: string) => {
   return `${baseUrl}${url.startsWith("/") ? "" : "/"}${url}`;
 };
 
-// ================= Chatbot API (demo) =================
-export const fetchChatbotAnswer = async (message: string): Promise<string> => {
-  await new Promise((resolve) => setTimeout(resolve, 800));
-
-  return `Bạn vừa hỏi: "${message}". Đây là câu trả lời demo từ chatbot.`;
+// ================= Chatbot API =================
+export const fetchChatbotAnswer = async (message: string) => {
+  try {
+    // Gọi sang endpoint C#: POST /api/chatbot
+    // Backend đang hứng biến tên là "question"
+    const res = await api.post("/chatbot", { question: message });
+    
+    // res.data sẽ chứa { success: true, answer: "..." } từ C# trả về
+    return res.data; 
+  } catch (error) {
+    console.error("Lỗi gọi Chatbot API:", error);
+    // Quăng lỗi ra để catch() bên component ChatBox hiển thị câu "đang gặp sự cố kết nối..."
+    throw error; 
+  }
 };
