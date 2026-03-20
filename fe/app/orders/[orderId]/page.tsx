@@ -85,7 +85,7 @@ export default function OrderDetailPage() {
     try {
       if (orderId) {
         await cancelOrder(orderId);
-        alert("Hủy đơn hàng thành công! Số lượng đã được hoàn lại vào kho.");
+        alert("Hủy đơn hàng thành công! ");
         // Load lại dữ liệu để cập nhật trạng thái "Đã hủy"
         await loadOrderDetail(); 
       }

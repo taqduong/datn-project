@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { fetchCart, updateCartItem, removeCartItem } from "@/services/api" 
+import { fetchCart, updateCartItem, removeCartItem, resolveImgUrl } from "@/services/api" 
 import { ShoppingCart, Plus, Minus, Trash2, ArrowLeft, ShoppingBag } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -204,7 +204,7 @@ export default function CartPage() {
                     {/* Ảnh sản phẩm */}
                     <div className="w-full sm:w-28 h-28 shrink-0 bg-gray-50 rounded-xl overflow-hidden border border-gray-100">
                       <img
-                        src={item.product.imageUrl || '/placeholder.png'}
+                        src={resolveImgUrl(item.product.imageUrl)} // 👈 Chỉ cần thay đúng chỗ này
                         alt={item.product.name}
                         className="w-full h-full object-cover"
                       />

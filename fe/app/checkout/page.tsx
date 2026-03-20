@@ -2,7 +2,7 @@
 
 import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { fetchCart, checkoutOrder, type CartItem, trackProductPurchase, fetchProductById } from "@/services/api";
+import { fetchCart, checkoutOrder, type CartItem, trackProductPurchase, fetchProductById, resolveImgUrl } from "@/services/api";
 import { 
   MapPin, Phone, User, FileText, ShoppingBag, 
   ArrowRight, CheckCircle2, CreditCard, Mail, Wallet, Building2
@@ -364,7 +364,7 @@ function CheckoutContent() {
                   return (
                     <div key={item.cartItemId || item.productId} className="flex gap-4">
                       <img 
-                        src={item.product.imageUrl || "https://placehold.co/100x100?text=No+Image"} 
+                        src={resolveImgUrl(item.product.imageUrl)}
                         alt={item.product.name} 
                         className="w-16 h-16 object-cover rounded-xl border border-slate-200 bg-white"
                       />
