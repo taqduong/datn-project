@@ -36,7 +36,7 @@ namespace BE.Controllers
                 if (string.IsNullOrWhiteSpace(apiKey)) return StatusCode(500, new { success = false, answer = "Chưa cấu hình API Key." });
 
                 var model = _configuration["GeminiAI:Model"]?.Trim();
-                if (string.IsNullOrWhiteSpace(model)) model = "gemini-2.5-flash-lite";
+                if (string.IsNullOrWhiteSpace(model)) model = "gemini-2.5-flash";
 
                 // ==========================================
                 // 🚀 1. TỐI ƯU HÓA: LỌC SẢN PHẨM THEO TỪ KHÓA CỦA KHÁCH
@@ -87,47 +87,48 @@ namespace BE.Controllers
                 // ==========================================
                 // 🚀 3. CHẶN TỪ BACKEND NẾU CHƯA ĐĂNG NHẬP
                 // ==========================================
-                // Dùng hàm IsPurchaseIntent xịn xò ở bên dưới để kiểm tra
                 if (secureUserId == null && IsPurchaseIntent(request.question))
                 {
                     return Ok(new { success = true, answer = "Dạ, để HomeMart có thể lên đơn hàng cho bạn, bạn vui lòng **Đăng nhập** tài khoản ở góc trên màn hình giúp mình nhé! 😊" });
                 }
 
                 // ==========================================
-                // 🚀 4. XỬ LÝ PROMPT THÔNG MINH
+                // 🚀 4. XỬ LÝ PROMPT (ĐÃ VÁ LỖI NÃO CÁ VÀNG + BẢO MẬT THÉP)
                 // ==========================================
-                string userInfoContext = "";
-                string saleRules = "";
+                var currentUser = secureUserId.HasValue ? await _context.Users.FindAsync(secureUserId.Value) : null;
 
-                if (secureUserId.HasValue)
-                {
-                    var currentUser = await _context.Users.FindAsync(secureUserId.Value);
-                    userInfoContext = $"THÔNG TIN KHÁCH HÀNG: Tên '{currentUser?.FullName}', SĐT '{currentUser?.Phone}'. Không cần hỏi lại thông tin này.";
-                    
-                    saleRules = @"
-- Bạn có quyền chủ động hỏi số lượng và địa chỉ để chốt đơn.
-- NẾU KHÁCH ĐÃ CHỐT MUA (Cần ĐỦ Sản phẩm, Số lượng > 0, và Địa chỉ), BẮT BUỘC chèn đoạn mã JSON sau ở cuối:
-[ORDER_INFO: { ""productId"": 1, ""quantity"": 1, ""customerName"": ""Nguyễn Văn A"", ""phone"": ""0912345678"", ""address"": ""Hà Nội"" }]";
-                }
-                else
-                {
-                    userInfoContext = "TÌNH TRẠNG: KHÁCH CHƯA ĐĂNG NHẬP.";
-                    saleRules = "- BẠN CHỈ TƯ VẤN SẢN PHẨM. TUYỆT ĐỐI KHÔNG hỏi địa chỉ, không tạo mã [ORDER_INFO].";
-                }
+                string userInfoContext = currentUser != null 
+                    ? $"THÔNG TIN KHÁCH HÀNG ĐÃ ĐĂNG NHẬP: Tên là '{currentUser.FullName}', SĐT là '{currentUser.Phone}'. BẠN TUYỆT ĐỐI KHÔNG HỎI LẠI TÊN VÀ SĐT NỮA. ĐỂ LÊN ĐƠN, CHỈ CẦN HỎI: Số lượng (nếu chưa nói) và Địa chỉ nhận hàng."
+                    : "TÌNH TRẠNG HIỆN TẠI: KHÁCH CHƯA ĐĂNG NHẬP. NẾU KHÁCH MUỐN MUA HÀNG (CHỐT ĐƠN), BẠN KHÔNG ĐƯỢC PHÉP HỎI THÔNG TIN. BẮT BUỘC PHẢI TRẢ LỜI LÀ: 'Dạ, để HomeMart có thể lên đơn hàng cho bạn, bạn vui lòng **Đăng nhập** tài khoản ở góc trên màn hình giúp mình nhé! 😊' và TUYỆT ĐỐI KHÔNG TẠO mã [ORDER_INFO].";
 
                 var prompt = $@"
-Bạn là nhân viên tư vấn bán hàng của HomeMart.
+Bạn là nhân viên tư vấn bán hàng xuất sắc và nhiệt tình của HomeMart.
+Nhiệm vụ của bạn là trả lời khách hàng bằng tiếng Việt, ngắn gọn, thân thiện, tự nhiên như người thật.
 
-Danh sách sản phẩm gợi ý:
+Câu hỏi của khách:
+{request.question}
+
+Danh sách sản phẩm hiện có trong shop:
 {productContext}
 
 {userInfoContext}
 
-QUY TẮC CỦA BẠN:
-- Nếu khách dùng các từ 'cái đó', 'sản phẩm đấy', 'loại kia'... hãy hiểu là họ đang nói đến sản phẩm được nhắc đến gần nhất trong lịch sử hội thoại.
-{saleRules}
-".Trim();
+QUY TẮC TƯ VẤN & CHỐT SALE:
+- Bạn ĐƯỢC PHÉP trả lời mọi câu hỏi kiến thức chung, tâm sự... của khách hàng.
+- Khi khách hỏi về HÀNG HÓA: CHỈ tư vấn dựa trên danh sách sản phẩm ở trên. Tuyệt đối không bịa thêm sản phẩm.
+- Ưu tiên nêu tên sản phẩm (in đậm) và giá bán.
+- 🚀 KỸ NĂNG SALE (RẤT QUAN TRỌNG): Nếu khách hỏi thăm sản phẩm và shop có hàng, BẮT BUỘC chủ động hỏi mồi khách để chốt đơn (Ví dụ: Bạn muốn mua bao nhiêu cái để shop lên đơn? Ship về địa chỉ nào ạ?).
 
+QUY TẮC TỰ ĐỘNG LÊN ĐƠN HÀNG (QUAN TRỌNG NHẤT):
+Nếu khách hàng đã chốt mua và cung cấp đủ thông tin bao gồm: Sản phẩm, Số lượng, và Địa chỉ (Tên và SĐT lấy từ THÔNG TIN KHÁCH HÀNG ở trên nếu có).
+Hãy trả lời xác nhận lịch sự với khách, và BẮT BUỘC chèn thêm một đoạn mã JSON chứa thông tin đơn hàng ở cuối cùng của câu trả lời theo đúng định dạng sau:
+[ORDER_INFO: {{ ""productId"": 1, ""quantity"": 1, ""customerName"": ""Nguyễn Văn A"", ""phone"": ""0912345678"", ""address"": ""Hà Nội"" }}]
+
+Lưu ý: 
+- Khách đã đăng nhập thì tự động điền customerName và phone của họ vào JSON, không cần hỏi lại.
+- Tự động lấy 'productId' tương ứng với sản phẩm khách chọn trong danh sách.
+- CHỈ tạo mã [ORDER_INFO] khi đã có ĐỦ ĐỊA CHỈ. Nếu thiếu địa chỉ, hãy lịch sự xin thêm.
+".Trim();
                 // GỌI API GEMINI
                 var url = $"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={apiKey}";
                 var contentsList = new List<object>();
