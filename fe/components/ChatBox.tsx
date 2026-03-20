@@ -176,8 +176,8 @@ export default function ChatBox() {
   }, [messages]);
 
   useEffect(() => {
-    scrollToBottom("smooth");
-  }, [messages, isOpen]);
+  scrollToBottom("smooth");
+}, [messages, isOpen]);
 
   useEffect(() => {
     if (isOpen) focusInput();
@@ -397,19 +397,19 @@ export default function ChatBox() {
       )}
 
       {isOpen && (
-        <div className={`flex flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl transition-all duration-300 will-change-transform ${
+        <div className={`flex flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl transition-[width,height] duration-300 ${
           isExpanded 
             ? "h-[60vh] w-[88vw] sm:w-[446px] sm:h-[576px]" // 🚀 Kích thước khi phóng to
             : "h-[520px] w-[335px] max-w-[calc(100vw-24px)] sm:w-[372px]" // Kích thước bình thường
         }`}>
-            <div className="shrink-0 flex items-center justify-between bg-linear-to-r from-blue-600 to-blue-500 px-4 py-4 text-white">            <div className="flex items-center gap-3">
+            <div className="relative z-10 shrink-0 flex items-center justify-between bg-linear-to-r from-blue-600 to-blue-500 px-4 py-4 text-white">            <div className="flex items-center gap-3">
               <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-linear-to-tr from-blue-500 to-indigo-500 shadow-md shadow-blue-900/20">
                 <Store className="h-5 w-5 text-white" strokeWidth={2} />
               </div>
               <div>
                 <h3 className="text-sm font-semibold sm:text-base">HomeMart AI</h3>
                 <p className="text-xs text-blue-100">
-                  Hỗ trợ tìm kiếm nhanh 24/7
+                  Hỗ trợ tìm kiếm & đặt đơn hàng 24/7
                 </p>
               </div>
             </div>
