@@ -27,10 +27,17 @@ type ProductForm = {
 
 // Hàm xử lý link ảnh (nếu backend trả về link tương đối /uploads/...)
 const resolveImgUrl = (url?: string) => {
-  if (!url) return "";
-  if (url.startsWith("http://") || url.startsWith("https://")) return url;
+  if (!url) return "https://placehold.co/400x400?text=No+Image";
+  
+  // 1. Nếu link đã có http (link ngoại hoặc ảnh cũ) thì trả về luôn
+  if (url.startsWith("http")) return url;
+  
+  // 2. Lấy domain backend (Mặc định 5270)
   const baseUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5270/api").replace("/api", "");
-  return `${baseUrl}${url.startsWith("/") ? "" : "/"}${url}`;
+  
+  // 3. Đảm bảo nối đúng chuẩn: http://localhost:5270/uploads/products/abc.jpg
+  const cleanUrl = url.startsWith("/") ? url : `/${url}`;
+  return `${baseUrl}${cleanUrl}`;
 };
 
 export default function ProductPage() {
@@ -452,7 +459,7 @@ export default function ProductPage() {
                             {product.imageUrl ? (
                               <img
                                 className="h-12 w-12 object-cover"
-                                src={resolveImgUrl(product.imageUrl)} 
+                                src={resolveImgUrl(product.imageUrl)} // Dùng hàm mới ở trên
                                 alt={product.name}
                               />
                             ) : (
@@ -729,7 +736,7 @@ export default function ProductPage() {
                         Ảnh bìa
                       </span>
                       <img
-                        src={resolveImgUrl(form.imageUrl)}
+                        src={resolveImgUrl(form.imageUrl)} 
                         alt="Thumbnail"
                         className="h-full w-full rounded-xl border-2 border-yellow-400 object-cover shadow-sm"
                       />
@@ -749,7 +756,7 @@ export default function ProductPage() {
                   {existingImages.map((imgUrl, idx) => (
                     <div key={`exist-${idx}`} className="relative h-24 w-24 shrink-0 group overflow-hidden rounded-xl border border-gray-300 shadow-sm">
                       <img
-                        src={resolveImgUrl(imgUrl)}
+                        src={resolveImgUrl(imgUrl)} 
                         className="h-full w-full object-cover opacity-90"
                         alt="preview"
                       />

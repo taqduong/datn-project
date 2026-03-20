@@ -63,7 +63,7 @@ public class FileController : ControllerBase
             return BadRequest(new { message = "Không có tệp nào được tải lên." });
 
         var webRootPath = _env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
-        var uploadPath = Path.Combine(webRootPath, "uploads");
+        var uploadPath = Path.Combine(webRootPath, "uploads", "products");
 
         if (!Directory.Exists(uploadPath)) Directory.CreateDirectory(uploadPath);
 
@@ -86,7 +86,7 @@ public class FileController : ControllerBase
                 await file.CopyToAsync(stream);
             }
 
-            var fileUrl = $"{Request.Scheme}://{Request.Host}/uploads/{fileName}";
+            var fileUrl = $"/uploads/products/{fileName}";
             uploadedFiles.Add(fileUrl);
         }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { fetchCart, checkoutOrder, type CartItem, trackProductPurchase, fetchProductById } from "@/services/api";
 import { 
@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
-export default function CheckoutPage() {
+function CheckoutContent() {
   const router = useRouter();
 
   // ✅ 1. LẤY DỮ LIỆU TỪ URL (NẾU CÓ)
@@ -430,5 +430,19 @@ export default function CheckoutPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// 🚀 BƯỚC 2: TẠO MỘT HÀM MỚI LÀM VỎ BỌC SUSPENSE CHO TRANG CHECKOUT
+export default function CheckoutPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-[70vh] flex flex-col items-center justify-center gap-4 bg-slate-50">
+        <div className="w-12 h-12 border-4 border-slate-200 border-t-blue-600 rounded-full animate-spin"></div>
+        <p className="text-slate-500 font-medium">Đang chuẩn bị trang thanh toán...</p>
+      </div>
+    }>
+      <CheckoutContent />
+    </Suspense>
   );
 }

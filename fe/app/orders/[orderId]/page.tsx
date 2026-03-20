@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { fetchOrderById, cancelOrder, type OrderDto } from "@/services/api"; 
+import { fetchOrderById, cancelOrder, type OrderDto, resolveImgUrl } from "@/services/api"; 
 import {
   ArrowLeft, Calendar, Package, MapPin, Phone, 
   User, CheckCircle2, Clock, Truck, XCircle, ShoppingBag, 
@@ -235,10 +235,10 @@ export default function OrderDetailPage() {
                 {order.orderDetails.map((item, idx) => (
                   <div key={idx} className="p-6 flex gap-5 hover:bg-slate-50 transition-colors">
                     <img
-                      src={item.imageUrl || "/default-image.png"}
+                      src={resolveImgUrl(item.imageUrl)} // 👈 Gọi hàm "vạn năng" vào đây
                       alt={item.productName}
                       className="w-20 h-20 object-cover rounded-2xl border border-slate-200 bg-white"
-                      onError={(e) => (e.currentTarget.src = "/default-image.png")}
+                      onError={(e) => (e.currentTarget.src = "https://placehold.co/400x400?text=No+Image")}
                     />
                     <div className="flex-1 flex flex-col justify-center">
                       <h3 className="font-bold text-slate-900 text-lg mb-1">{item.productName}</h3>

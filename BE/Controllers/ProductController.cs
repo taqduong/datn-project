@@ -180,7 +180,12 @@ namespace BE.Controllers
                 product.Discount = dto.Discount.Value;
 
             if (!string.IsNullOrWhiteSpace(dto.ImageUrl))
-                product.ImageUrl = dto.ImageUrl;
+            {
+                // ✅ Dọn dẹp: Nếu link có http://... thì chỉ lấy phần /uploads/...
+                product.ImageUrl = dto.ImageUrl.Contains("/uploads/") 
+                                ? "/uploads/" + dto.ImageUrl.Split("/uploads/")[1] 
+                                : dto.ImageUrl;
+            }
 
             // =========================================================
             // 🚀 LOGIC XÓA ẢNH PHỤ CŨ (NẾU REACT GỬI YÊU CẦU XÓA)
@@ -275,7 +280,7 @@ namespace BE.Controllers
                         await file.CopyToAsync(stream);
                     }
 
-                    var dbUrl = $"/uploads/products/{fileName}";
+                    var dbUrl = $"/uploads/products/{fileName}"; 
                     uploadedUrls.Add(dbUrl);
 
                     _context.ProductImages.Add(new ProductImage

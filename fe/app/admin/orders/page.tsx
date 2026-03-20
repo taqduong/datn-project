@@ -12,9 +12,16 @@ import * as XLSX from "xlsx";
 // Hàm xử lý link ảnh sản phẩm
 const resolveImgUrl = (url?: string) => {
   if (!url) return "https://placehold.co/100x100?text=No+Image";
-  if (url.startsWith("http://") || url.startsWith("https://")) return url;
+  
+  // 1. Nếu link đã đầy đủ http thì trả về luôn
+  if (url.startsWith("http")) return url;
+  
+  // 2. Nếu link thiếu localhost (dạng /uploads/...)
   const baseUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5270/api").replace("/api", "");
-  return `${baseUrl}${url.startsWith("/") ? "" : "/"}${url}`;
+  
+  // Đảm bảo có dấu gạch chéo chuẩn
+  const cleanUrl = url.startsWith("/") ? url : `/${url}`;
+  return `${baseUrl}${cleanUrl}`;
 };
 
 export default function AdminOrdersPage() {
@@ -114,6 +121,8 @@ export default function AdminOrdersPage() {
       hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit", year: "numeric",
     });
   };
+
+  
 
   return (
     <div className="min-h-screen bg-slate-50 py-10">

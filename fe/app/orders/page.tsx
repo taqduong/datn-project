@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { fetchUserOrders, type OrderDto } from "@/services/api";
+import { fetchUserOrders, resolveImgUrl, type OrderDto } from "@/services/api";
 import { 
   Clock, CheckCircle2, XCircle, ShoppingBag, ArrowRight, Truck, Package, 
   Search, Calendar, PackageOpen, AlertCircle
@@ -38,6 +38,15 @@ export default function OrdersPage() {
 
   const formatVND = (val: number) =>
     new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(val);
+
+  const getStepIndex = (status: string) => {
+    const s = status.toLowerCase();
+    if (['pending', 'chờ xác nhận'].includes(s)) return 0;
+    if (['processing', 'chờ lấy hàng'].includes(s)) return 1;
+    if (['shipped', 'đang giao'].includes(s)) return 2;
+    if (['completed', 'delivered', 'đã giao'].includes(s)) return 3;
+    return -1;
+  };
 
   // Helper xử lý trạng thái hiển thị
   const getStatusConfig = (status: string) => {
@@ -230,13 +239,44 @@ export default function OrdersPage() {
                     </div>
                   </div>
 
+                  {order.status.toLowerCase() !== 'cancelled' && order.status.toLowerCase() !== 'đã hủy' && (
+                    <div className="px-5 sm:px-8 py-10 border-b border-slate-100 bg-white">
+                      <div className="relative flex items-center justify-between w-full max-w-2xl mx-auto">
+                        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 bg-slate-100 rounded-full z-0"></div>
+                        <div
+                          className="absolute left-0 top-1/2 -translate-y-1/2 h-1 bg-blue-600 rounded-full z-0 transition-all duration-700 ease-in-out"
+                          style={{ width: `${(getStepIndex(order.status) / 3) * 100}%` }}
+                        ></div>
+                        {['Đặt hàng', 'Đóng gói', 'Đang giao', 'Hoàn thành'].map((step, index) => {
+                          const currentStep = getStepIndex(order.status);
+                          const isCompleted = index <= currentStep;
+                          const isActive = index === currentStep;
+                          return (
+                            <div key={index} className="relative z-10 flex flex-col items-center gap-2 bg-white px-2">
+                              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs border-2 transition-all duration-500 ${
+                                isCompleted ? 'bg-blue-600 border-blue-600 text-white shadow-md' : 'bg-white border-slate-200 text-slate-400'
+                              }`}>
+                                {isCompleted ? <CheckCircle2 className="w-4 h-4" /> : index + 1}
+                              </div>
+                              <span className={`text-[9px] sm:text-[10px] font-bold uppercase tracking-tight absolute -bottom-6 w-max ${
+                                isActive ? 'text-blue-700' : isCompleted ? 'text-slate-700' : 'text-slate-400'
+                              }`}>
+                                {step}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Body: Danh sách SP preview */}
                   <div className="p-5 sm:p-6">
                     <div className="space-y-4">
                       {order.orderDetails.slice(0, 2).map((item, idx) => (
                         <div key={idx} className="flex gap-4 items-center">
                           <img
-                            src={item.imageUrl || 'https://placehold.co/100x100?text=No+Image'}
+                            src={resolveImgUrl(item.imageUrl)} // 👈 Gọi hàm này ở đây là xong!
                             alt={item.productName}
                             className="w-16 h-16 object-cover rounded-xl border border-slate-200 bg-white"
                           />

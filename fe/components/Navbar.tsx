@@ -160,7 +160,7 @@ export default function Navbar() {
   const displayName = user?.fullName || user?.username || "Người dùng";
 
   return (
-    <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/90 backdrop-blur-md">
+    <header className="sticky top-0 z-50 border-b border-slate-200 bg-white">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center gap-4">
           <Link href="/" className="shrink-0 flex items-center gap-2 group">
