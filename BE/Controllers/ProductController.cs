@@ -24,6 +24,7 @@ namespace BE.Controllers
         public async Task<ActionResult<IEnumerable<ProductDto>>> GetProducts()
         {
             var result = await _context.Products
+                .Include(p => p.ProductVariants)
                 .Select(p => new ProductDto
                 {
                     Id = p.Id,
@@ -40,6 +41,12 @@ namespace BE.Controllers
                     CategoryName = p.Category != null ? p.Category.Name : null,
                     CreatedAt = p.CreatedAt,
                     AdditionalImages = p.ProductImages.Select(pi => pi.ImageUrl).ToList(),
+
+                    Variants = p.ProductVariants.Select(v => new ProductVariantDto
+                    {
+                        Id = v.Id, VariantName = v.VariantName, Color = v.Color,
+                        Price = v.Price, Stock = v.Stock, ImageUrl = v.ImageUrl
+                    }).ToList(),
                     
                     // ✅ BƯỚC 2: CÔNG THỨC ĐẾM LƯỢT BÁN
                     SoldCount = p.OrderDetails
@@ -59,6 +66,7 @@ namespace BE.Controllers
         public async Task<IActionResult> GetById(int id)
         {
             var dto = await _context.Products
+                .Include(p => p.ProductVariants)
                 .Where(p => p.Id == id)
                 .Select(p => new ProductDto
                 {
@@ -76,6 +84,13 @@ namespace BE.Controllers
                     ImageUrl = p.ImageUrl,
                     CreatedAt = p.CreatedAt,
                     AdditionalImages = p.ProductImages.Select(pi => pi.ImageUrl).ToList(),
+
+                    Variants = p.ProductVariants.Select(v => new ProductVariantDto
+                    {
+                        Id = v.Id, VariantName = v.VariantName, Color = v.Color,
+                        Price = v.Price, Stock = v.Stock, ImageUrl = v.ImageUrl
+                    }).ToList(),
+
                     SoldCount = p.OrderDetails.Where(od => od.Order != null && od.Order.Status == "Completed").Sum(od => (int?)od.Quantity) ?? 0,
                     TotalReviews = p.Reviews.Count(),
                     AverageRating = p.Reviews.Any() ? Math.Round(p.Reviews.Average(r => (double)r.Rating), 1) : 0
@@ -112,7 +127,25 @@ namespace BE.Controllers
             _context.Products.Add(product);
             await _context.SaveChangesAsync();
 
+            if (dto.Variants != null && dto.Variants.Any())
+            {
+                foreach (var v in dto.Variants)
+                {
+                    _context.ProductVariants.Add(new ProductVariant
+                    {
+                        ProductId = product.Id, // Nối ID Mẹ vào
+                        VariantName = v.VariantName,
+                        Color = v.Color,
+                        Price = v.Price,
+                        Stock = v.Stock,
+                        ImageUrl = v.ImageUrl
+                    });
+                }
+                await _context.SaveChangesAsync(); 
+            }
+
             var result = await _context.Products
+                .Include(p => p.ProductVariants)
                 .Where(p => p.Id == product.Id)
                 .Select(p => new ProductDto
                 {
@@ -131,6 +164,17 @@ namespace BE.Controllers
                     CreatedAt = p.CreatedAt,
                     // ✅ THÊM DÒNG NÀY (Vì tạo mới nên mảng rỗng):
                     AdditionalImages = new List<string>(),
+
+                    Variants = p.ProductVariants.Select(v => new ProductVariantDto
+                    {
+                        Id = v.Id,
+                        VariantName = v.VariantName,
+                        Color = v.Color,
+                        Price = v.Price,
+                        Stock = v.Stock,
+                        ImageUrl = v.ImageUrl
+                    }).ToList(),
+
                     SoldCount = 0,
                     TotalReviews = 0,
                     AverageRating = 0
@@ -205,7 +249,31 @@ namespace BE.Controllers
 
             await _context.SaveChangesAsync();
 
+            // ✅ LOGIC CẬP NHẬT BIẾN THỂ (DÁN VÀO SAU KHI LƯU PRODUCT MẸ)
+            if (dto.Variants != null)
+            {
+                // 1. Xóa sạch biến thể cũ của sản phẩm này để ghi đè cái mới (Cách đơn giản nhất)
+                var oldVariants = _context.ProductVariants.Where(v => v.ProductId == id);
+                _context.ProductVariants.RemoveRange(oldVariants);
+
+                // 2. Thêm lại danh sách biến thể mới từ React gửi lên
+                foreach (var v in dto.Variants)
+                {
+                    _context.ProductVariants.Add(new ProductVariant
+                    {
+                        ProductId = id,
+                        VariantName = v.VariantName,
+                        Color = v.Color,
+                        Price = v.Price,
+                        Stock = v.Stock,
+                        ImageUrl = v.ImageUrl
+                    });
+                }
+                await _context.SaveChangesAsync();
+            }
+
             var result = await _context.Products
+                .Include(p => p.ProductVariants)
                 .Where(p => p.Id == id)
                 .Select(p => new ProductDto
                 {
@@ -223,6 +291,17 @@ namespace BE.Controllers
                     ImageUrl = p.ImageUrl,
                     CreatedAt = p.CreatedAt,
                     AdditionalImages = p.ProductImages.Select(pi => pi.ImageUrl).ToList(),
+
+                    Variants = p.ProductVariants.Select(v => new ProductVariantDto
+                    {
+                        Id = v.Id,
+                        VariantName = v.VariantName,
+                        Color = v.Color,
+                        Price = v.Price,
+                        Stock = v.Stock,
+                        ImageUrl = v.ImageUrl
+                    }).ToList(),
+
                     SoldCount = p.OrderDetails.Where(od => od.Order != null && od.Order.Status == "Completed").Sum(od => (int?)od.Quantity) ?? 0,
                     TotalReviews = p.Reviews.Count(),
                     AverageRating = p.Reviews.Any() ? Math.Round(p.Reviews.Average(r => (double)r.Rating), 1) : 0
@@ -299,6 +378,7 @@ namespace BE.Controllers
         {
             var products = await _context.Products
                 .Include(p => p.ProductImages)
+                .Include(p => p.ProductVariants)
                 .Where(p => p.CategoryId == id)
                 .Select(p => new ProductDto
                 {
@@ -316,6 +396,13 @@ namespace BE.Controllers
                     ImageUrl = p.ImageUrl,
                     CreatedAt = p.CreatedAt,
                     AdditionalImages = p.ProductImages.Select(pi => pi.ImageUrl).ToList(),
+
+                    Variants = p.ProductVariants.Select(v => new ProductVariantDto
+                    {
+                        Id = v.Id, VariantName = v.VariantName, Color = v.Color,
+                        Price = v.Price, Stock = v.Stock, ImageUrl = v.ImageUrl
+                    }).ToList(),
+                    
                     SoldCount = p.OrderDetails.Where(od => od.Order != null && od.Order.Status == "Completed").Sum(od => (int?)od.Quantity) ?? 0,
                     TotalReviews = p.Reviews.Count(),
                     AverageRating = p.Reviews.Any() ? Math.Round(p.Reviews.Average(r => (double)r.Rating), 1) : 0
@@ -334,6 +421,7 @@ namespace BE.Controllers
 
             var results = await _context.Products
                 .Include(p => p.ProductImages)
+                .Include(p => p.ProductVariants)
                 .Where(p => p.Name.Contains(keyword))
                 .Select(p => new ProductDto
                 {
@@ -351,6 +439,13 @@ namespace BE.Controllers
                     ImageUrl = p.ImageUrl,
                     CreatedAt = p.CreatedAt,
                     AdditionalImages = p.ProductImages.Select(pi => pi.ImageUrl).ToList(),
+
+                    Variants = p.ProductVariants.Select(v => new ProductVariantDto
+                    {
+                        Id = v.Id, VariantName = v.VariantName, Color = v.Color,
+                        Price = v.Price, Stock = v.Stock, ImageUrl = v.ImageUrl
+                    }).ToList(),
+
                     SoldCount = p.OrderDetails.Where(od => od.Order != null && od.Order.Status == "Completed").Sum(od => (int?)od.Quantity) ?? 0,
                     TotalReviews = p.Reviews.Count(),
                     AverageRating = p.Reviews.Any() ? Math.Round(p.Reviews.Average(r => (double)r.Rating), 1) : 0
@@ -378,6 +473,7 @@ namespace BE.Controllers
             public int SoldCount { get; set; }
             public int TotalReviews { get; set; }
             public double AverageRating { get; set; }
+            public List<ProductVariantDto> Variants { get; set; } = new List<ProductVariantDto>();
         }
 
         public class ProductCreateDto
@@ -389,6 +485,7 @@ namespace BE.Controllers
             public int Stock { get; set; }
             public int? Discount { get; set; }
             public int CategoryId { get; set; }
+            public List<ProductVariantCreateDto> Variants { get; set; } = new List<ProductVariantCreateDto>();
         }
 
         public class ProductUpdateDto
@@ -400,7 +497,28 @@ namespace BE.Controllers
             public int? Stock { get; set; }
             public int? Discount { get; set; }
             public int? CategoryId { get; set; }
+            public List<ProductVariantCreateDto>? Variants { get; set; }
             public List<string>? RetainedAdditionalImages { get; set; }
+        }
+
+        public class ProductVariantDto
+        {
+            public int Id { get; set; }
+            public string VariantName { get; set; } = string.Empty;
+            public string? Color { get; set; }
+            public decimal Price { get; set; }
+            public int Stock { get; set; }
+            public string? ImageUrl { get; set; }
+        }
+
+        public class ProductVariantCreateDto
+        {
+            public int? Id { get; set; }
+            public string VariantName { get; set; } = string.Empty;
+            public string? Color { get; set; }
+            public decimal Price { get; set; }
+            public int Stock { get; set; }
+            public string? ImageUrl { get; set; }
         }
     }
 }

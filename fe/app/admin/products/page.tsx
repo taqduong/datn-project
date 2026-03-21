@@ -53,6 +53,33 @@ export default function ProductPage() {
   // ✅ State mới để hiển thị các ảnh phụ đã có sẵn (khi bấm Sửa)
   const [existingImages, setExistingImages] = useState<string[]>([]);
 
+  // ✅ THÊM TYPE & STATE CHO BIẾN THỂ (VARIANTS)
+  type VariantForm = {
+    id?: number;
+    variantName: string;
+    color: string;
+    price: number;
+    stock: number;
+    imageUrl: string;
+  };
+  const [hasVariants, setHasVariants] = useState(false);
+  const [variants, setVariants] = useState<VariantForm[]>([]);
+
+  // ✅ HÀM XỬ LÝ BIẾN THỂ
+  const handleAddVariant = () => {
+    setVariants([...variants, { variantName: "", color: "", price: 0, stock: 0, imageUrl: "" }]);
+  };
+
+  const handleRemoveVariant = (indexToRemove: number) => {
+    setVariants(variants.filter((_, index) => index !== indexToRemove));
+  };
+
+  const handleVariantChange = (index: number, field: keyof VariantForm, value: string | number) => {
+    const updatedVariants = [...variants];
+    updatedVariants[index] = { ...updatedVariants[index], [field]: value };
+    setVariants(updatedVariants);
+  };
+
   const [searchKeyword, setSearchKeyword] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<number | "all">("all");
 
@@ -143,6 +170,8 @@ export default function ProductPage() {
     });
     setAdditionalFiles([]); 
     setExistingImages([]);
+    setHasVariants(false);
+    setVariants([]);
     setModalOpen(true);
   };
 
@@ -159,6 +188,14 @@ export default function ProductPage() {
     });
     setAdditionalFiles([]);
     setExistingImages(product.additionalImages || []);
+    
+    // ✅ Ép kiểu (product as any) để lấy variants
+    const productVariants = product.variants || [];
+    const productHasVariants = productVariants.length > 0;
+    
+    setHasVariants(productHasVariants);
+    setVariants(productHasVariants ? productVariants : []);
+
     setModalOpen(true);
   };
 
@@ -186,17 +223,28 @@ export default function ProductPage() {
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
-
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const basePayload = { ...form, discount: clampDiscount(form.discount) };
+      const basePayload = { 
+        ...form, 
+        discount: clampDiscount(form.discount),
+        // Logic: Bật biến thể thì giá gốc/tồn kho bằng 0. Gửi kèm mảng variants
+        price: hasVariants ? 0 : form.price,
+        stock: hasVariants ? 0 : form.stock,
+        variants: hasVariants ? variants : []
+      };
+      
       let savedProductId = 0;
 
       if (editingProduct) {
         const updatePayload = {
-          ...basePayload,
-          retainedAdditionalImages: existingImages // Báo cho Backend biết
+          ...form, // Lấy thông tin form mới nhất
+          discount: clampDiscount(form.discount),
+          price: hasVariants ? 0 : form.price,
+          stock: hasVariants ? 0 : form.stock,
+          variants: hasVariants ? variants : [], // ✅PHẢI GỬI MẢNG NÀY LÊN
+          retainedAdditionalImages: existingImages
         };
         
         await updateProduct(editingProduct.id, updatePayload);
@@ -204,11 +252,10 @@ export default function ProductPage() {
         toast.success("Cập nhật thông tin thành công");
       } else {
         const res = await createProduct(basePayload);
-        savedProductId = res.data.id; // Lấy ID sản phẩm vừa tạo
+        savedProductId = res.data.id; 
         toast.success("Thêm sản phẩm thành công");
       }
 
-      // Nếu có chọn ảnh phụ mới thì vác đi upload
       if (additionalFiles.length > 0 && savedProductId > 0) {
         const fd = new FormData();
         additionalFiles.forEach((file) => fd.append("files", file));
@@ -218,7 +265,7 @@ export default function ProductPage() {
       }
 
       closeModal();
-      loadProducts(); // Load lại data cho mới
+      loadProducts(); 
     } catch (error) {
       console.error("Lỗi khi lưu sản phẩm:", error);
       toast.error("Có lỗi xảy ra khi lưu sản phẩm");
@@ -261,28 +308,40 @@ export default function ProductPage() {
     });
   };
 
-  // ✅ 3. Hàm hoán đổi ảnh phụ (vừa chọn từ máy) lên làm Ảnh bìa
-  const setNewAsCover = async (index: number) => {
-    const file = additionalFiles[index];
-    setUploading(true);
+  // ✅ HÀM UPLOAD ẢNH RIÊNG CHO TỪNG BIẾN THỂ (VÁ LẠI CHO CHUẨN)
+  const handleVariantImageUpload = async (index: number, file: File) => {
+    const toastId = toast.loading("Đang tải ảnh biến thể...");
     try {
       const fd = new FormData();
-      fd.append("files", file);
+      fd.append("files", file); // Chú ý: Backend yêu cầu field "files"
       const res = await uploadImage(fd);
-      const newUrl = res.data.imageUrls?.[0] || "";
-
+      const newUrl = res.data.imageUrls?.[0] || ""; // Backend trả về imageUrls
       if (newUrl) {
-        const oldCover = form.imageUrl;
-        setForm(prev => ({ ...prev, imageUrl: newUrl }));
-        setAdditionalFiles(prev => prev.filter((_, i) => i !== index));
-        if (oldCover) setExistingImages(prev => [...prev, oldCover]);
-        toast.success("Đã đổi ảnh bìa!");
+        handleVariantChange(index, "imageUrl", newUrl);
+        toast.success("Tải ảnh biến thể thành công!", { id: toastId });
       }
     } catch (err) {
-      toast.error("Lỗi khi tải ảnh lên");
-    } finally {
-      setUploading(false);
+      console.error("Lỗi up ảnh biến thể:", err);
+      toast.error("Lỗi khi tải ảnh biến thể", { id: toastId });
     }
+  };
+
+  // ✅ HÀM CHUYỂN ĐỔI ẢNH BIẾN THỂ (ĐÃ CÓ SẴN) LÊN LÀM ẢNH BÌA SẢN PHẨM
+  const setVariantAsCover = (index: number) => {
+    const clickedUrl = variants[index].imageUrl;
+    const oldCover = form.imageUrl;
+    
+    if (!clickedUrl) {
+      toast.error("Biến thể này chưa có ảnh!");
+      return;
+    }
+    
+    setForm(prev => ({ ...prev, imageUrl: clickedUrl }));
+    if (oldCover) {
+      // Nếu có ảnh bìa cũ, cho nó xuống làm ảnh phụ, khỏi mất
+      setExistingImages(prev => [...prev, oldCover]);
+    }
+    toast.success("Đã đổi ảnh bìa!");
   };
 
   return (
@@ -362,40 +421,15 @@ export default function ProductPage() {
         </div>
       </div>
 
+      {/* KHU VỰC TÌM KIẾM & LỌC */}
       <div className="mb-6 rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <input
-            type="text"
-            placeholder="Tìm theo tên hoặc mô tả sản phẩm..."
-            value={searchKeyword}
-            onChange={(e) => setSearchKeyword(e.target.value)}
-            className="rounded-lg border border-gray-300 p-3 placeholder-black focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-
-          <select
-            value={selectedCategory}
-            onChange={(e) =>
-              setSelectedCategory(
-                e.target.value === "all" ? "all" : Number(e.target.value)
-              )
-            }
-            className="rounded-lg border border-gray-300 p-3 text-black focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
+          <input type="text" placeholder="Tìm theo tên hoặc mô tả sản phẩm..." value={searchKeyword} onChange={(e) => setSearchKeyword(e.target.value)} className="rounded-lg border border-gray-300 p-3 placeholder-black focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          <select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value === "all" ? "all" : Number(e.target.value))} className="rounded-lg border border-gray-300 p-3 text-black focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500">
             <option value="all" style={{ color: "black" }}>Tất cả danh mục</option>
-            {categories.map((c) => (
-              <option value={c.id} key={c.id} style={{ color: "black" }}>
-                {c.name}
-              </option>
-            ))}
+            {categories.map((c) => (<option value={c.id} key={c.id} style={{ color: "black" }}>{c.name}</option>))}
           </select>
-
-          <button
-            onClick={() => {
-              setSearchKeyword("");
-              setSelectedCategory("all");
-            }}
-            className="rounded-lg border border-gray-300 px-4 py-3 font-medium text-gray-700 transition hover:bg-gray-50"
-          >
+          <button onClick={() => { setSearchKeyword(""); setSelectedCategory("all"); }} className="rounded-lg border border-gray-300 px-4 py-3 font-medium text-gray-700 transition hover:bg-gray-50">
             Xóa bộ lọc
           </button>
         </div>
@@ -459,7 +493,7 @@ export default function ProductPage() {
                             {product.imageUrl ? (
                               <img
                                 className="h-12 w-12 object-cover"
-                                src={resolveImgUrl(product.imageUrl)} // Dùng hàm mới ở trên
+                                src={resolveImgUrl(product.imageUrl)} 
                                 alt={product.name}
                               />
                             ) : (
@@ -624,62 +658,121 @@ export default function ProductPage() {
               />
             </div>
 
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">
-                  Giá gốc *
-                </label>
-                <input
-                  type="number"
-                  name="price"
-                  value={form.price}
-                  onChange={handleChange}
-                  min={0}
-                  step="0.01"
-                  className="w-full rounded-lg border border-gray-300 p-3 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-                <p className="mt-1 text-sm text-gray-600">
-                  Giá sau giảm:{" "}
-                  <b>{formatVND(finalPrice(form.price, form.discount ?? 0))}</b>
-                </p>
-              </div>
-
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">
-                  Tồn kho *
-                </label>
-                <input
-                  type="number"
-                  name="stock"
-                  value={form.stock}
-                  onChange={handleChange}
-                  min={0}
-                  className="w-full rounded-lg border border-gray-300 p-3 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">
-                  Giảm giá (%)
-                </label>
-                <input
-                  type="number"
-                  name="discount"
-                  value={form.discount}
-                  onChange={handleChange}
-                  min={0}
-                  max={99}
-                  className="w-full rounded-lg border border-gray-300 p-3 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
+            {/* ✅ KHU VỰC CÔNG TẮC BẬT BIẾN THỂ */}
+            <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 mt-2">
+              <label className="flex cursor-pointer items-center text-sm font-semibold text-blue-800">
+                <input type="checkbox" className="mr-3 h-5 w-5 accent-blue-600" checked={hasVariants} onChange={(e) => { setHasVariants(e.target.checked); if (e.target.checked && variants.length === 0) handleAddVariant(); }} />
+                Sản phẩm này có nhiều phân loại (Màu sắc, Dung lượng, Kích thước...)
+              </label>
             </div>
 
-            {/* ✅ KHU VỰC UPLOAD ẢNH GỘP CHUNG (1 Ô DUY NHẤT) */}
+            {/* ✅ NẾU KHÔNG CÓ BIẾN THỂ -> HIỆN THÔNG SỐ CƠ BẢN */}
+            {!hasVariants && (
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-3 mt-4">
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">Giá gốc *</label>
+                  <input type="number" name="price" value={form.price} onChange={handleChange} min={0} className="w-full rounded-lg border border-gray-300 p-3 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500" required={!hasVariants} />
+                  <p className="mt-1 text-xs text-gray-500">Sau giảm: <b className="text-green-600">{formatVND(finalPrice(form.price, form.discount ?? 0))}</b></p>
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">Tồn kho *</label>
+                  <input type="number" name="stock" value={form.stock} onChange={handleChange} min={0} className="w-full rounded-lg border border-gray-300 p-3 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500" required={!hasVariants} />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">Giảm giá (%)</label>
+                  <input type="number" name="discount" value={form.discount} onChange={handleChange} min={0} max={99} className="w-full rounded-lg border border-gray-300 p-3 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+              </div>
+            )}
+
+            {/* ✅ NẾU BẬT BIẾN THỂ -> BẢNG NÀY SẼ HIỆN LÊN */}
+            {hasVariants && (
+              <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm mt-4">
+                <div className="mb-3 flex items-center justify-between">
+                  <h3 className="font-bold text-gray-800">Danh sách phân loại sản phẩm</h3>
+                  {/* ✅ Fix màu chữ "Giảm giá chung" ở đây */}
+                  <div className="flex items-center gap-2 text-sm text-black font-medium">
+                    <span>Giảm giá chung (%):</span>
+                    <input 
+                      type="number" 
+                      name="discount" 
+                      value={form.discount} 
+                      onChange={handleChange} 
+                      min={0} 
+                      max={99} 
+                      className="w-16 rounded border border-gray-300 p-1 text-black focus:border-blue-500 focus:outline-none" 
+                    />
+                  </div>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-100 text-gray-600">
+                      <tr>
+                        {/* ✅ THÊM CỘT ẢNH CHO BIẾN THỂ Ở ĐÂY */}
+                        <th className="border p-2 text-center w-20">Ảnh</th> 
+                        <th className="border p-2 text-left">Tên Phân Loại (VD: Đỏ) *</th>
+                        <th className="border p-2 text-left w-24">Màu sắc</th>
+                        <th className="border p-2 text-left w-32">Giá (VNĐ) *</th>
+                        <th className="border p-2 text-left w-24">Kho *</th>
+                        <th className="border p-2 text-center w-12">Xóa</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {variants.map((variant, index) => (
+                        <tr key={index} className="border-b hover:bg-gray-50">
+                          {/* ✅ THÊM Ô UPLOAD ẢNH CHO TỪNG DÒNG (DÒNG 730 LÀ CHỖ NÀY ĐÂY) */}
+                          <td className="p-2 text-center">
+                            <div className="relative mx-auto flex h-14 w-14 items-center justify-center overflow-hidden rounded border border-gray-200 bg-gray-50 group">
+                              {variant.imageUrl ? (
+                                <>
+                                  <img src={resolveImgUrl(variant.imageUrl)} alt="variant" className="h-full w-full object-cover" />
+                                  <div className="absolute inset-0 hidden cursor-pointer items-center justify-center bg-black/50 text-white group-hover:flex">
+                                    <label className="cursor-pointer text-xs p-1" title="Sửa ảnh">
+                                      Sửa
+                                      <input type="file" className="hidden" accept="image/*" onChange={(e) => { if (e.target.files?.[0]) handleVariantImageUpload(index, e.target.files[0]); }} />
+                                    </label>
+                                    <button type="button" onClick={() => setVariantAsCover(index)} className="text-xs p-1 text-yellow-300" title="Làm ảnh bìa">Bìa</button>
+                                  </div>
+                                </>
+                              ) : (
+                                <label className="flex h-full w-full cursor-pointer items-center justify-center text-gray-400 hover:text-blue-500">
+                                  <span className="text-2xl">+</span>
+                                  <input type="file" className="hidden" accept="image/*" onChange={(e) => { if (e.target.files?.[0]) handleVariantImageUpload(index, e.target.files[0]); }} />
+                                </label>
+                              )}
+                            </div>
+                          </td>
+
+                          <td className="p-2">
+                            <input type="text" value={variant.variantName} onChange={(e) => handleVariantChange(index, "variantName", e.target.value)} placeholder="Tên phân loại..." className="w-full rounded border p-2" required />
+                          </td>
+                          <td className="p-2">
+                            <input type="text" value={variant.color} onChange={(e) => handleVariantChange(index, "color", e.target.value)} placeholder="Màu..." className="w-full rounded border p-2" />
+                          </td>
+                          <td className="p-2">
+                            <input type="number" value={variant.price} onChange={(e) => handleVariantChange(index, "price", Number(e.target.value))} min={0} className="w-full rounded border p-2" required />
+                          </td>
+                          <td className="p-2">
+                            <input type="number" value={variant.stock} onChange={(e) => handleVariantChange(index, "stock", Number(e.target.value))} min={0} className="w-full rounded border p-2" required />
+                          </td>
+                          <td className="p-2 text-center">
+                            <button type="button" onClick={() => handleRemoveVariant(index)} className="rounded p-1 text-red-500 hover:bg-red-50">🗑️</button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <button type="button" onClick={handleAddVariant} className="mt-3 w-full border border-dashed border-blue-400 bg-blue-50 py-2 font-medium text-blue-600 hover:bg-blue-100 rounded-lg">
+                  + Thêm phân loại
+                </button>
+              </div>
+            )}
+
+            {/* ✅ KHU VỰC UPLOAD ẢNH PHỤ (RETAIN) - GIỮ NGUYÊN NHƯ FILE GỐC CỦA SẾP */}
             <div>
               <label className="mb-2 block text-sm font-bold text-gray-800">
-                Hình ảnh sản phẩm
+                Hình ảnh sản phẩm (Ảnh bìa và ảnh phụ)
               </label>
               <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
                 <input
@@ -690,7 +783,6 @@ export default function ProductPage() {
                     if (!e.target.files?.length) return;
                     const files = Array.from(e.target.files);
 
-                    // Logic: Nếu chưa có ảnh chính, lấy file đầu tiên đem up làm ảnh chính, còn lại cho vào ảnh phụ
                     if (!form.imageUrl && files.length > 0) {
                       const firstFile = files[0];
                       const restFiles = files.slice(1);
@@ -704,21 +796,17 @@ export default function ProductPage() {
                         if (firstUrl) {
                           setForm((prev) => ({ ...prev, imageUrl: firstUrl }));
                         }
-                        // Đẩy các file còn lại vào mảng chờ
                         if (restFiles.length > 0) {
                           setAdditionalFiles((prev) => [...prev, ...restFiles]);
                         }
                       } catch (err) {
-                        toast.error("Tải ảnh đại diện thất bại");
+                        toast.error("Tải ảnh bìa thất bại");
                       } finally {
                         setUploading(false);
                       }
                     } else {
-                      // Nếu đã có ảnh chính rồi, thì tất cả file chọn thêm đều tống vào ảnh phụ
                       setAdditionalFiles((prev) => [...prev, ...files]);
                     }
-                    
-                    // Reset input để chọn lại cùng file thoải mái
                     e.target.value = '';
                   }}
                   className="w-full rounded-lg border border-gray-300 bg-white p-2 text-sm file:mr-4 file:rounded-md file:border-0 file:bg-blue-100 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-blue-700 hover:file:bg-blue-200 focus:outline-none"
@@ -726,110 +814,39 @@ export default function ProductPage() {
                 
                 {uploading && <div className="mt-2 text-sm font-medium text-blue-600 animate-pulse">⏳ Đang xử lý ảnh...</div>}
 
-                {/* KHUNG HIỂN THỊ TẤT CẢ ẢNH THEO DẠNG GALLERY */}
                 <div className="mt-5 flex flex-wrap gap-5">
-                  
-                  {/* 1. Ảnh Bìa (Thumbnail) */}
                   {form.imageUrl && (
                     <div className="relative h-24 w-24 shrink-0 group">
                       <span className="absolute -top-3 -left-3 z-10 rounded-md bg-yellow-400 px-2 py-1 text-[10px] font-bold uppercase text-white shadow-md">
                         Ảnh bìa
                       </span>
-                      <img
-                        src={resolveImgUrl(form.imageUrl)} 
-                        alt="Thumbnail"
-                        className="h-full w-full rounded-xl border-2 border-yellow-400 object-cover shadow-sm"
-                      />
-                      {/* ✅ Đã bỏ opacity-0, hiện luôn nút xóa */}
-                      <button
-                        type="button"
-                        onClick={() => setForm(prev => ({...prev, imageUrl: ""}))}
-                        className="absolute -right-2 -top-2 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-xs text-white shadow-md hover:bg-red-600"
-                        title="Xóa ảnh bìa"
-                      >
-                        ✕
-                      </button>
+                      <img src={resolveImgUrl(form.imageUrl)} alt="Cover" className="h-full w-full rounded-xl border-2 border-yellow-400 object-cover shadow-sm" />
+                      <button type="button" onClick={() => setForm(prev => ({...prev, imageUrl: ""}))} className="absolute -right-2 -top-2 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-xs text-white shadow-md hover:bg-red-600">✕</button>
                     </div>
                   )}
 
-                  {/* 2. Ảnh phụ cũ từ Database (Khi bấm sửa) */}
                   {existingImages.map((imgUrl, idx) => (
                     <div key={`exist-${idx}`} className="relative h-24 w-24 shrink-0 group overflow-hidden rounded-xl border border-gray-300 shadow-sm">
-                      <img
-                        src={resolveImgUrl(imgUrl)} 
-                        className="h-full w-full object-cover opacity-90"
-                        alt="preview"
-                      />
-                      {/* ✅ Đã bỏ opacity-0 */}
-                      <button
-                        type="button"
-                        onClick={() => removeExistingImage(idx)}
-                        className="absolute -right-2 -top-2 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-xs text-white shadow-md hover:bg-red-600"
-                        title="Xóa ảnh phụ"
-                      >
-                        ✕
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setExistingAsCover(idx)}
-                        className="absolute bottom-0 left-0 w-full bg-black/60 py-1 text-[10px] text-white opacity-0 transition-opacity hover:bg-blue-600 group-hover:opacity-100 font-medium"
-                      >
-                        Làm ảnh bìa
-                      </button>
+                      <img src={resolveImgUrl(imgUrl)} className="h-full w-full object-cover opacity-90" alt="additional" />
+                      <button type="button" onClick={() => removeExistingImage(idx)} className="absolute -right-2 -top-2 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-xs text-white shadow-md hover:bg-red-600">✕</button>
+                      <button type="button" onClick={() => setExistingAsCover(idx)} className="absolute bottom-0 left-0 w-full bg-black/60 py-1 text-[10px] text-white font-medium opacity-0 transition-opacity hover:bg-blue-600 group-hover:opacity-100">Làm ảnh bìa</button>
                     </div>
                   ))}
 
-                  {/* 3. Ảnh phụ mới chuẩn bị tải lên */}
                   {additionalFiles.map((file, idx) => (
                     <div key={`new-${idx}`} className="relative h-24 w-24 shrink-0 group overflow-hidden rounded-xl border-2 border-dashed border-blue-400 shadow-sm">
-                      <span className="absolute top-1 left-1 z-10 rounded-md bg-blue-500 px-1.5 py-0.5 text-[10px] font-bold text-white shadow-md">
-                        Mới
-                      </span>
-                      <img
-                        src={URL.createObjectURL(file)}
-                        className="h-full w-full object-cover"
-                        alt="preview"
-                      />
-                      {/* ✅ Đã bỏ opacity-0 */}
-                      <button
-                        type="button"
-                        onClick={() => removeAdditionalFile(idx)}
-                        className="absolute -right-2 -top-2 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-xs text-white shadow-md hover:bg-red-600"
-                        title="Xóa ảnh phụ"
-                      >
-                        ✕
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setNewAsCover(idx)}
-                        className="absolute bottom-0 left-0 w-full bg-black/60 py-1 text-[10px] text-white opacity-0 transition-opacity hover:bg-blue-600 group-hover:opacity-100 font-medium"
-                      >
-                        Làm ảnh bìa
-                      </button>
+                      <span className="absolute top-1 left-1 z-10 rounded-md bg-blue-500 px-1.5 py-0.5 text-[10px] font-bold text-white shadow-md">Mới</span>
+                      <img src={URL.createObjectURL(file)} className="h-full w-full object-cover" alt="new-preview" />
+                      <button type="button" onClick={() => removeAdditionalFile(idx)} className="absolute -right-2 -top-2 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-xs text-white shadow-md hover:bg-red-600">✕</button>
                     </div>
                   ))}
-                  
                 </div>
               </div>
             </div>
-            {/* ✅ KẾT THÚC KHU VỰC UPLOAD GỘP CHUNG */}
-
 
             <div className="flex justify-end gap-3 pt-4">
-              <button
-                type="button"
-                onClick={closeModal}
-                className="rounded-lg border border-gray-300 px-5 py-2.5 font-medium text-gray-700 transition-colors duration-150 hover:bg-gray-50"
-              >
-                Hủy
-              </button>
-
-              <button
-                type="submit"
-                className="flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 font-medium text-white shadow transition-colors duration-150 hover:bg-blue-700"
-              >
-                {editingProduct ? "Cập nhật sản phẩm" : "Thêm sản phẩm"}
-              </button>
+              <button type="button" onClick={closeModal} className="rounded-lg border border-gray-300 px-5 py-2.5 font-medium text-gray-700 transition-colors duration-150 hover:bg-gray-50">Hủy</button>
+              <button type="submit" className="flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 font-medium text-white shadow transition-colors duration-150 hover:bg-blue-700">{editingProduct ? "Cập nhật sản phẩm" : "Thêm sản phẩm"}</button>
             </div>
           </form>
         </div>
