@@ -186,8 +186,8 @@ export default function AdminOrdersPage() {
                             className={`px-3 py-1.5 rounded-lg text-sm font-semibold border outline-none cursor-pointer hover:shadow-sm transition-all appearance-none ${
                               order.status.toLowerCase() === 'pending' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' : 
                               order.status.toLowerCase() === 'processing' ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                              order.status.toLowerCase() === 'shipped' ? 'bg-purple-50 text-purple-700 border-purple-200' :
-                              ['completed', 'delivered'].includes(order.status.toLowerCase()) ? 'bg-green-50 text-green-700 border-green-200' :
+                              order.status.toLowerCase() === 'shipping' ? 'bg-purple-50 text-purple-700 border-purple-200' :
+                              order.status.toLowerCase() === 'completed'? 'bg-green-50 text-green-700 border-green-200' :
                               'bg-red-50 text-red-700 border-red-200'
                             }`}
                             style={{ textAlignLast: 'left' }}
@@ -203,7 +203,7 @@ export default function AdminOrdersPage() {
                             </option>
                             
                             <option 
-                              value="Shipped"
+                              value="shipping"
                               disabled={order.paymentMethod?.toLowerCase() === 'vnpay' && order.status.toLowerCase() === 'pending'}
                             >
                               Đang giao hàng

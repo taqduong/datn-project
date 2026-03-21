@@ -101,17 +101,14 @@ export default function OrderDetailPage() {
   const getStatusConfig = (status: string) => {
     switch (status.toLowerCase()) {
       case 'completed':
-      case 'delivered':
         return { icon: <CheckCircle2 className="w-5 h-5" />, color: "bg-emerald-100 text-emerald-700 border-emerald-200", text: "Đã giao" };
       case 'pending':
-      case 'chờ xác nhận': // ✅ Map thêm tiếng Việt nếu DB trả về tiếng Việt
         return { icon: <Clock className="w-5 h-5" />, color: "bg-amber-100 text-amber-700 border-amber-200", text: "Chờ xác nhận" };
       case 'processing':
         return { icon: <Package className="w-5 h-5" />, color: "bg-blue-100 text-blue-700 border-blue-200", text: "Chờ lấy hàng" };
-      case 'shipped':
+      case 'shipping':
         return { icon: <Truck className="w-5 h-5" />, color: "bg-purple-100 text-purple-700 border-purple-200", text: "Đang giao" };
       case 'cancelled':
-      case 'đã hủy': // ✅ Map thêm tiếng Việt
         return { icon: <XCircle className="w-5 h-5" />, color: "bg-red-100 text-red-700 border-red-200", text: "Đã hủy" };
       default:
         return { icon: <Clock className="w-5 h-5" />, color: "bg-slate-100 text-slate-700 border-slate-200", text: status };
@@ -148,7 +145,7 @@ export default function OrderDetailPage() {
   const statusConfig = getStatusConfig(order.status);
   const subTotal = order.totalAmount; 
 
-  // ✅ Đã bổ sung thêm 'đang xử lý' và 'processing' để bắt đúng mọi thể loại ngôn ngữ
+  // Chỉ cho phép hủy khi đơn Pending hoặc Processing
   const canCancel = 
     order.status.toLowerCase() === 'pending' ||
     order.status.toLowerCase() === 'processing';
@@ -182,7 +179,7 @@ export default function OrderDetailPage() {
             {/* 🚀 TAG 1: TRẠNG THÁI VẬN CHUYỂN */}
             <div className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border font-bold text-sm ${statusConfig.color}`}>
               {statusConfig.icon} 
-              {['pending', 'chờ xác nhận'].includes(order.status.toLowerCase()) ? "Chờ xác nhận" : statusConfig.text}
+              {statusConfig.text}
             </div>
 
             {/* 🚀 TAG 2: ĐÃ THANH TOÁN */}
@@ -193,7 +190,7 @@ export default function OrderDetailPage() {
             )}
 
             {/* 🚀 TAG 3: CHƯA THANH TOÁN */}
-            {order.paymentMethod?.toLowerCase() === 'vnpay' && ['pending', 'chờ xử lý'].includes(order.status.toLowerCase()) && (
+            {order.paymentMethod?.toLowerCase() === 'vnpay' && order.status.toLowerCase() === 'pending' && (
               <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl border font-bold text-sm bg-orange-100 text-orange-700 border-orange-200 animate-pulse">
                 <AlertCircle className="w-5 h-5" /> Chưa thanh toán
               </div>
@@ -357,7 +354,7 @@ export default function OrderDetailPage() {
                     <p className="font-bold text-slate-900 text-lg mb-1">Thanh toán qua VNPAY</p>
                     
                     {/* 🚀 LOGIC RẼ NHÁNH MỚI: DỰA VÀO PAYMENT METHOD ĐỂ KIỂM TRA ĐÃ THANH TOÁN HAY CHƯA */}
-                    {order.paymentMethod.toLowerCase() === 'vnpay' && (order.status.toLowerCase() === 'pending' || order.status.toLowerCase() === 'chờ xác nhận') ? (
+                    {order.paymentMethod.toLowerCase() === 'vnpay' && order.status.toLowerCase() === 'pending' ? (
                       <div className="mt-3 space-y-3">
                         <p className="text-sm text-red-600 font-bold animate-pulse flex items-center gap-1.5">
                           <AlertCircle size={16} /> Giao dịch thất bại hoặc chưa thanh toán!

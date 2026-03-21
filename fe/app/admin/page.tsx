@@ -60,7 +60,7 @@ export default function AdminDashboardPage() {
           ordersCount = ordersList.length;
           // Tính tổng tiền của những đơn hàng ĐÃ HOÀN THÀNH
           totalRevenue = ordersList.reduce((sum: number, order: any) => {
-            if (order.status?.toLowerCase() === 'completed' || order.status?.toLowerCase() === 'delivered') {
+            if (order.status?.toLowerCase() === 'completed') {
               return sum + (order.totalAmount || 0);
             }
             return sum;

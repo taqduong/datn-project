@@ -43,7 +43,7 @@ namespace BE.Controllers
                     
                     // ✅ BƯỚC 2: CÔNG THỨC ĐẾM LƯỢT BÁN
                     SoldCount = p.OrderDetails
-                        .Where(od => od.Order != null && (od.Order.Status == "Completed" || od.Order.Status == "Hoàn thành"))
+                        .Where(od => od.Order != null && od.Order.Status == "Completed")
                         .Sum(od => (int?)od.Quantity) ?? 0,
                     TotalReviews = p.Reviews.Count(),
                     AverageRating = p.Reviews.Any() ? Math.Round(p.Reviews.Average(r => (double)r.Rating), 1) : 0
@@ -76,7 +76,7 @@ namespace BE.Controllers
                     ImageUrl = p.ImageUrl,
                     CreatedAt = p.CreatedAt,
                     AdditionalImages = p.ProductImages.Select(pi => pi.ImageUrl).ToList(),
-                    SoldCount = p.OrderDetails.Where(od => od.Order != null && (od.Order.Status == "Completed" || od.Order.Status == "Hoàn thành")).Sum(od => (int?)od.Quantity) ?? 0,
+                    SoldCount = p.OrderDetails.Where(od => od.Order != null && od.Order.Status == "Completed").Sum(od => (int?)od.Quantity) ?? 0,
                     TotalReviews = p.Reviews.Count(),
                     AverageRating = p.Reviews.Any() ? Math.Round(p.Reviews.Average(r => (double)r.Rating), 1) : 0
                     
@@ -223,7 +223,7 @@ namespace BE.Controllers
                     ImageUrl = p.ImageUrl,
                     CreatedAt = p.CreatedAt,
                     AdditionalImages = p.ProductImages.Select(pi => pi.ImageUrl).ToList(),
-                    SoldCount = p.OrderDetails.Where(od => od.Order != null && (od.Order.Status == "Completed" || od.Order.Status == "Hoàn thành")).Sum(od => (int?)od.Quantity) ?? 0,
+                    SoldCount = p.OrderDetails.Where(od => od.Order != null && od.Order.Status == "Completed").Sum(od => (int?)od.Quantity) ?? 0,
                     TotalReviews = p.Reviews.Count(),
                     AverageRating = p.Reviews.Any() ? Math.Round(p.Reviews.Average(r => (double)r.Rating), 1) : 0
                 })
@@ -316,7 +316,7 @@ namespace BE.Controllers
                     ImageUrl = p.ImageUrl,
                     CreatedAt = p.CreatedAt,
                     AdditionalImages = p.ProductImages.Select(pi => pi.ImageUrl).ToList(),
-                    SoldCount = p.OrderDetails.Where(od => od.Order != null && (od.Order.Status == "Completed" || od.Order.Status == "Hoàn thành")).Sum(od => (int?)od.Quantity) ?? 0,
+                    SoldCount = p.OrderDetails.Where(od => od.Order != null && od.Order.Status == "Completed").Sum(od => (int?)od.Quantity) ?? 0,
                     TotalReviews = p.Reviews.Count(),
                     AverageRating = p.Reviews.Any() ? Math.Round(p.Reviews.Average(r => (double)r.Rating), 1) : 0
                 })
@@ -351,7 +351,7 @@ namespace BE.Controllers
                     ImageUrl = p.ImageUrl,
                     CreatedAt = p.CreatedAt,
                     AdditionalImages = p.ProductImages.Select(pi => pi.ImageUrl).ToList(),
-                    SoldCount = p.OrderDetails.Where(od => od.Order != null && (od.Order.Status == "Completed" || od.Order.Status == "Hoàn thành")).Sum(od => (int?)od.Quantity) ?? 0,
+                    SoldCount = p.OrderDetails.Where(od => od.Order != null && od.Order.Status == "Completed").Sum(od => (int?)od.Quantity) ?? 0,
                     TotalReviews = p.Reviews.Count(),
                     AverageRating = p.Reviews.Any() ? Math.Round(p.Reviews.Average(r => (double)r.Rating), 1) : 0
                 })

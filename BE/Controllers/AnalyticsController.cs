@@ -88,7 +88,7 @@ namespace BE.Controllers
                     // ✅ THAY THẾ SỐ LIỆU CŨ BẰNG CÔNG THỨC ĐẾM ĐỘNG (KHỚP 100% VỚI PRODUCT CARD)
                     PurchaseCount = a.Product != null 
                         ? a.Product.OrderDetails
-                            .Where(od => od.Order != null && (od.Order.Status == "Completed" || od.Order.Status == "Hoàn thành"))
+                            .Where(od => od.Order != null && od.Order.Status == "Completed")
                             .Sum(od => (int?)od.Quantity) ?? 0 
                         : 0,
                         

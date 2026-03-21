@@ -41,10 +41,10 @@ export default function OrdersPage() {
 
   const getStepIndex = (status: string) => {
     const s = status.toLowerCase();
-    if (['pending', 'chờ xác nhận'].includes(s)) return 0;
-    if (['processing', 'chờ lấy hàng'].includes(s)) return 1;
-    if (['shipped', 'đang giao'].includes(s)) return 2;
-    if (['completed', 'delivered', 'đã giao'].includes(s)) return 3;
+    if (s === 'pending') return 0;
+    if (s === 'processing') return 1;
+    if (s === 'shipping') return 2;
+    if (s === 'completed') return 3;
     return -1;
   };
 
@@ -52,13 +52,12 @@ export default function OrdersPage() {
   const getStatusConfig = (status: string) => {
     switch (status.toLowerCase()) {
       case 'completed':
-      case 'delivered':
         return { icon: <CheckCircle2 className="w-5 h-5" />, color: "bg-emerald-100 text-emerald-700 border-emerald-200", text: "Đã giao" };
       case 'pending':
         return { icon: <Clock className="w-5 h-5" />, color: "bg-amber-100 text-amber-700 border-amber-200", text: "Chờ xác nhận" };
       case 'processing':
         return { icon: <Package className="w-5 h-5" />, color: "bg-blue-100 text-blue-700 border-blue-200", text: "Chờ lấy hàng" };
-      case 'shipped':
+      case 'shipping':
         return { icon: <Truck className="w-5 h-5" />, color: "bg-purple-100 text-purple-700 border-purple-200", text: "Đang giao" };
       case 'cancelled':
         return { icon: <XCircle className="w-5 h-5" />, color: "bg-red-100 text-red-700 border-red-200", text: "Đã hủy" };
@@ -82,8 +81,8 @@ export default function OrdersPage() {
     all: orders.length,
     pending: orders.filter(o => o.status.toLowerCase() === 'pending').length,
     processing: orders.filter(o => o.status.toLowerCase() === 'processing').length,
-    shipped: orders.filter(o => o.status.toLowerCase() === 'shipped').length,
-    completed: orders.filter(o => ['completed', 'delivered'].includes(o.status.toLowerCase())).length,
+    shipping: orders.filter(o => o.status.toLowerCase() === 'shipping').length,
+    completed: orders.filter(o => o.status.toLowerCase() === 'completed').length,
     cancelled: orders.filter(o => o.status.toLowerCase() === 'cancelled').length,
   };
 
@@ -143,7 +142,7 @@ export default function OrdersPage() {
             { label: 'Tất cả', count: stats.all, color: 'text-slate-900', bg: 'bg-white' },
             { label: 'Chờ xác nhận', count: stats.pending, color: 'text-amber-600', bg: 'bg-amber-50' },
             { label: 'Chờ lấy hàng', count: stats.processing, color: 'text-blue-600', bg: 'bg-blue-50' },
-            { label: 'Đang giao', count: stats.shipped, color: 'text-purple-600', bg: 'bg-purple-50' },
+            { label: 'Đang giao', count: stats.shipping, color: 'text-purple-600', bg: 'bg-purple-50' },
             { label: 'Đã giao', count: stats.completed, color: 'text-emerald-600', bg: 'bg-emerald-50' },
             { label: 'Đã hủy', count: stats.cancelled, color: 'text-red-600', bg: 'bg-red-50' },
           ].map((stat, idx) => (
@@ -174,7 +173,7 @@ export default function OrdersPage() {
             <option value="all">Tất cả trạng thái</option>
             <option value="pending">Chờ xác nhận</option>
             <option value="processing">Chờ lấy hàng</option>
-            <option value="shipped">Đang giao</option>
+            <option value="shipping">Đang giao</option>
             <option value="completed">Đã giao</option>
             <option value="cancelled">Đã hủy</option>
           </select>
@@ -211,7 +210,7 @@ export default function OrdersPage() {
                         {/* TAG 1: TRẠNG THÁI VẬN CHUYỂN */}
                         <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border font-semibold text-sm ${statusConfig.color}`}>
                           {statusConfig.icon} 
-                          {['pending', 'chờ xác nhận'].includes(order.status.toLowerCase()) ? "Chờ xác nhận" : statusConfig.text}
+                          {order.status.toLowerCase() === 'pending' ? "Chờ xác nhận" : statusConfig.text}
                         </div>
 
                         {/* TAG 2: ĐÃ THANH TOÁN (Màu xanh) */}
@@ -222,7 +221,7 @@ export default function OrdersPage() {
                         )}
 
                         {/* TAG 3: CHƯA THANH TOÁN (Màu cam nhấp nháy - Dành cho đơn VNPay xịt) */}
-                        {order.paymentMethod?.toLowerCase() === 'vnpay' && ['pending', 'chờ xác nhận'].includes(order.status.toLowerCase()) && (
+                        {order.paymentMethod?.toLowerCase() === 'vnpay' && order.status.toLowerCase() === 'pending' && (
                           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border font-semibold text-sm bg-red-50 text-red-700 border-red-200 shadow-sm">
                             <AlertCircle className="w-4 h-4" /> Chưa thanh toán
                           </div>
@@ -239,7 +238,7 @@ export default function OrdersPage() {
                     </div>
                   </div>
 
-                  {order.status.toLowerCase() !== 'cancelled' && order.status.toLowerCase() !== 'đã hủy' && (
+                  {order.status.toLowerCase() !== 'cancelled' && (
                     <div className="px-5 sm:px-8 py-10 border-b border-slate-100 bg-white">
                       <div className="relative flex items-center justify-between w-full max-w-2xl mx-auto">
                         <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 bg-slate-100 rounded-full z-0"></div>
@@ -247,7 +246,7 @@ export default function OrdersPage() {
                           className="absolute left-0 top-1/2 -translate-y-1/2 h-1 bg-blue-600 rounded-full z-0 transition-all duration-700 ease-in-out"
                           style={{ width: `${(getStepIndex(order.status) / 3) * 100}%` }}
                         ></div>
-                        {['Đặt hàng', 'Đóng gói', 'Đang giao', 'Hoàn thành'].map((step, index) => {
+                        {['Chờ xác nhận', 'Chờ lấy hàng', 'Đang giao', 'Đã giao'].map((step, index) => {
                           const currentStep = getStepIndex(order.status);
                           const isCompleted = index <= currentStep;
                           const isActive = index === currentStep;

@@ -81,7 +81,7 @@ namespace BE.Controllers
                     od.Order != null && 
                     od.Order.UserId == userId && 
                     od.ProductId == dto.ProductId && 
-                    (od.Order.Status == "Completed" || od.Order.Status == "Hoàn thành")
+                    od.Order.Status == "Completed"
                 );
 
             // NẾU CHƯA MUA -> ĐÁNH BẬT RA LUÔN (Bảo vệ API khỏi tool Postman/Swagger spam)

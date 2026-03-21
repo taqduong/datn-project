@@ -698,7 +698,7 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
                                 order.status?.toLowerCase() === 'completed' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
                                 'bg-blue-50 text-blue-600 border-blue-100'
                               }`}>
-                                {order.status === 'Pending' ? 'Chờ duyệt' : order.status}
+                                {order.status === 'Pending' ? 'Chờ xác nhận' : order.status}
                               </span>
                               <p className="text-lg font-black text-blue-600">
                                 {new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(order.totalAmount)}

@@ -289,12 +289,11 @@ namespace BE.Controllers
 
             // Chỉ cho phép hủy khi đơn còn đang "Pending" hoặc "Chờ xử lý" (check cả Anh lẫn Việt)
             var currentStatus = order.Status?.ToLower();
-            if (currentStatus != "pending" && currentStatus != "chờ xử lý" && currentStatus != "processing" && currentStatus != "đang xử lý")
+            if (currentStatus != "pending" && currentStatus != "processing")
             {
                 return BadRequest(new { message = "Không thể hủy đơn hàng đã được xử lý hoặc giao hàng." });
             }
 
-            // ✅ GHI CHỮ "Cancelled" (Tiếng Anh) ĐỂ BÊN ADMIN ĐỌC ĐƯỢC CHUẨN MÀU VÀ HIỂN THỊ ĐÚNG DROPDOWN
             order.Status = "Cancelled";
 
             // ♻️ HOÀN LẠI TỒN KHO BẰNG FindAsync (Khắc phục lỗi EF không lưu)
@@ -324,19 +323,15 @@ namespace BE.Controllers
                 
             if (order == null) return NotFound(new { message = "Không tìm thấy đơn hàng." });
 
-            // ♻️ NẾU ADMIN ĐỔI THÀNH "Đã hủy" HOẶC "Cancelled" -> HOÀN KHO
-            if ((request.Status == "Đã hủy" || request.Status == "Cancelled") && order.Status != request.Status)
+            if (request.Status == "Cancelled" && order.Status != "Cancelled")
             {
                 foreach (var detail in order.OrderDetails)
                 {
-                    if (detail.Product != null) 
+                    // ✅ PHẢI TÌM LẠI PRODUCT TRONG DB RỒI MỚI CỘNG LẠI KHO
+                    var productToUpdate = await _context.Products.FindAsync(detail.ProductId);
+                    if (productToUpdate != null)
                     {
-                        // ✅ PHẢI TÌM LẠI PRODUCT TRONG DB RỒI MỚI TRỪ
-                        var productToUpdate = await _context.Products.FindAsync(detail.ProductId);
-                        if (productToUpdate != null)
-                        {
-                            productToUpdate.Stock += detail.Quantity;
-                        }
+                        productToUpdate.Stock += detail.Quantity;
                     }
                 }
             }
@@ -361,7 +356,7 @@ namespace BE.Controllers
                 return NotFound(new { message = "Không tìm thấy đơn hàng." });
 
             // ♻️ TRƯỚC KHI XÓA: NẾU ĐƠN CHƯA BỊ HỦY -> HOÀN LẠI KHO ĐÃ RỒI MỚI XÓA
-            if (order.Status != "Đã hủy" && order.Status != "Cancelled")
+            if (order.Status != "Cancelled")
             {
                 foreach (var detail in order.OrderDetails)
                 {
