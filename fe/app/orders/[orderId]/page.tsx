@@ -239,6 +239,13 @@ export default function OrderDetailPage() {
                     />
                     <div className="flex-1 flex flex-col justify-center">
                       <h3 className="font-bold text-slate-900 text-lg mb-1">{item.productName}</h3>
+                      {item.variantName && (
+                        <div className="mt-1 mb-2">
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-bold bg-blue-50 text-blue-600 border border-blue-100 uppercase tracking-wider">
+                            Phân loại: {item.variantName}
+                          </span>
+                        </div>
+                      )}
                       <p className="text-sm text-slate-500 mb-2">Mã SP: #{item.productId}</p>
                       
                       <div className="flex items-center justify-between mt-auto">
@@ -254,7 +261,7 @@ export default function OrderDetailPage() {
                       {isCompleted && (
                         <div className="mt-4 flex justify-end border-t border-slate-100 pt-4">
                           <button
-                            onClick={() => router.push(`/review?productId=${item.productId}`)}
+                            onClick={() => router.push(`/review?productId=${item.productId}&orderId=${order.orderId}`)}
                             className="flex items-center gap-2 rounded-xl border border-orange-500 text-orange-600 px-5 py-2.5 text-sm font-semibold hover:bg-orange-50 hover:text-orange-700 transition-colors"
                           >
                             <Star size={16} fill="currentColor" /> Đánh giá
@@ -483,7 +490,13 @@ export default function OrderDetailPage() {
                 {printOrder.orderDetails.map((item, index) => (
                   <tr key={index} style={{ borderBottom: '1px solid #e2e8f0' }}>
                     <td style={{ padding: '15px 12px', color: '#64748b' }}>{index + 1}</td>
-                    <td style={{ padding: '15px 12px', fontWeight: 'bold' }}>{item.productName}</td>
+                    <td style={{ padding: '15px 12px', fontWeight: 'bold' }}>{item.productName}
+                        {item.variantName && (
+                            <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 'normal', marginTop: '4px' }}>
+                              Phân loại: {item.variantName}
+                            </div>
+                        )}
+                    </td>
                     <td style={{ padding: '15px 12px', textAlign: 'center' }}>{item.quantity}</td>
                     <td style={{ padding: '15px 12px', textAlign: 'right', color: '#475569' }}>{formatVND(item.price)}</td>
                     <td style={{ padding: '15px 12px', textAlign: 'right', fontWeight: 'bold', color: '#2563eb' }}>{formatVND(item.price * item.quantity)}</td>

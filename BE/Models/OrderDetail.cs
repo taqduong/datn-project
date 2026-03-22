@@ -19,6 +19,8 @@ public partial class OrderDetail
 
     public int Quantity { get; set; }
 
+    public int? VariantId { get; set; }
+
     // Lưu giá của sản phẩm ngay tại thời điểm khách bấm "Đặt hàng"
     [Column(TypeName = "decimal(18, 2)")]
     public decimal UnitPrice { get; set; }
@@ -32,4 +34,8 @@ public partial class OrderDetail
     [ForeignKey("ProductId")]
     [InverseProperty("OrderDetails")]
     public virtual Product Product { get; set; } = null!;
+
+    [ForeignKey("VariantId")]
+    [InverseProperty("OrderDetails")] 
+    public virtual ProductVariant? ProductVariant { get; set; }
 }

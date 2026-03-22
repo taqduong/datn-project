@@ -16,6 +16,8 @@ function CheckoutContent() {
   const searchParams = useSearchParams();
   const buyNowId = searchParams.get("buyNowId");
   const qty = searchParams.get("qty");
+  // ✅ 2. THÊM STATE ĐỂ NHẬN variantId TỪ URL NẾU KHÁCH "MUA NGAY" BIẾN THỂ
+  const variantId = searchParams.get("variantId"); 
   
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [loadingCart, setLoadingCart] = useState(true);
@@ -38,18 +40,42 @@ function CheckoutContent() {
     const loadCart = async () => {
       try {
         setLoadingCart(true);
-        // ✅ 2. THAY ĐOẠN FETCH GIỎ HÀNG BẰNG CỤM NÀY:
+        // ✅ 3. SỬA ĐOẠN FETCH MUA NGAY ĐỂ HỖ TRỢ BIẾN THỂ
         if (buyNowId && qty) {
           // Nếu đang "Mua ngay" -> Chỉ fetch 1 món
           const res = await fetchProductById(buyNowId);
           const p = res.data;
+          
+          // Ép kiểu number rõ ràng để TypeScript khỏi bắt bẻ
+          let priceToUse: number = (p.priceAfterDiscount && p.priceAfterDiscount > 0) ? p.priceAfterDiscount : p.price;
+          let variantName = undefined;
+          
+          // Nếu có biến thể, lấy giá của biến thể đó
+          if (variantId && p.variants) {
+             const selectedVariant = p.variants.find((v: any) => v.id === Number(variantId));
+             if (selectedVariant) {
+                 priceToUse = selectedVariant.price;
+                 variantName = selectedVariant.variantName;
+             }
+          }
+
           setCartItems([{
             cartItemId: 0, // ID ảo để giao diện không lỗi
             productId: p.id,
+            variantId: variantId ? Number(variantId) : undefined,
+            variantName: variantName,
             quantity: Number(qty),
-            product: { ...p, priceAfterDiscount: p.priceAfterDiscount || 0 }
+            // ✅ Chỉ trích xuất đúng các trường cần thiết thay vì dùng ...p
+            product: { 
+                id: p.id,
+                name: p.name,
+                price: p.price,
+                discount: p.discount,
+                priceAfterDiscount: Number(priceToUse), // Khóa mồm TypeScript
+                imageUrl: p.imageUrl
+            }
           }]);
-        } else {
+        }else {
           // Nếu vô từ Giỏ hàng -> Lấy data như bình thường
           const res = await fetchCart();
           const items = Array.isArray(res.data) ? res.data : [];
@@ -74,7 +100,7 @@ function CheckoutContent() {
       }
     };
     loadCart();
-  }, [buyNowId, qty]);
+  }, [buyNowId, qty, variantId]); // ✅ Thêm variantId vào dependency
 
   // Tính tổng tiền dựa trên giá sau khi giảm (priceAfterDiscount)
   const subtotal = cartItems.reduce((sum, item) => {
@@ -106,9 +132,14 @@ function CheckoutContent() {
       setIsSubmitting(true);
       
       const payload: any = { ...formData };
+      
+      // ✅ 4. SỬA LẠI ĐỂ TRUYỀN variantId NẾU KHÁCH MUA NGAY
       if (buyNowId && qty) {
         payload.buyNowProductId = Number(buyNowId);
         payload.buyNowQuantity = Number(qty);
+        if (variantId) {
+            payload.buyNowVariantId = Number(variantId);
+        }
       }
       
       // 1. TẠO ĐƠN HÀNG VÀO DATABASE TRƯỚC
@@ -370,6 +401,14 @@ function CheckoutContent() {
                       />
                       <div className="flex-1 flex flex-col justify-center">
                         <h3 className="text-sm font-bold text-slate-800 line-clamp-2 leading-tight mb-1">{item.product.name}</h3>
+                        
+                        {/* ✅ 5. THÊM TÊN PHÂN LOẠI HIỂN THỊ TẠI ĐÂY */}
+                        {item.variantName && (
+                          <span className="text-xs text-slate-500 font-medium bg-slate-100 w-max px-2 py-0.5 rounded-md mb-1">
+                            {item.variantName}
+                          </span>
+                        )}
+
                         <p className="text-xs text-slate-500 font-medium mb-1">SL: {item.quantity}</p>
                         
                         <div className="flex items-center gap-2">

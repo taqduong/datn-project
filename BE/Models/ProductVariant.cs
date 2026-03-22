@@ -26,5 +26,11 @@ namespace BE.Models
 
         [ForeignKey(nameof(ProductId))]
         public virtual Product Product { get; set; } = null!;
+
+        [InverseProperty("ProductVariant")]
+        public virtual ICollection<Cart> Carts { get; set; } = new List<Cart>();
+
+        [InverseProperty("ProductVariant")]
+        public virtual ICollection<OrderDetail> OrderDetails { get; set; } = new List<OrderDetail>();
     }
 }

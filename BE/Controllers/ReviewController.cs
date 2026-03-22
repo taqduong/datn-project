@@ -69,7 +69,7 @@ namespace BE.Controllers
 
             // 2. Chặn Spam: Kiểm tra xem User này đã review Sản phẩm này chưa
             var existingReview = await _context.Reviews
-                .FirstOrDefaultAsync(r => r.UserId == userId && r.ProductId == dto.ProductId);
+                .FirstOrDefaultAsync(r => r.UserId == userId && r.ProductId == dto.ProductId && r.OrderId == dto.OrderId);
             
             if (existingReview != null)
                 return BadRequest(new { message = "Bạn đã đánh giá sản phẩm này rồi!" });
@@ -92,6 +92,7 @@ namespace BE.Controllers
             var review = new Review
             {
                 ProductId = dto.ProductId,
+                OrderId = dto.OrderId,
                 UserId = userId,
                 Rating = dto.Rating,
                 Comment = dto.Comment,
@@ -140,7 +141,7 @@ namespace BE.Controllers
             public int UserId { get; set; }
             public string UserName { get; set; } = null!;
             public int Rating { get; set; }
-            public string Comment { get; set; } = null!;
+            public string? Comment { get; set; } = null!;
             public DateTime CreatedAt { get; set; }
             public bool IsVerifiedPurchase { get; set; }
         }
@@ -149,7 +150,8 @@ namespace BE.Controllers
         {
             public int ProductId { get; set; }
             public int Rating { get; set; }
-            public string Comment { get; set; } = null!;
+            public string? Comment { get; set; } = null!;
+            public int OrderId { get; set; }
         }
     }
 }

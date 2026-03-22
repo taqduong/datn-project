@@ -40,84 +40,104 @@ namespace BE.Controllers
             decimal totalAmount = 0;
             var orderDetails = new List<OrderDetail>();
 
-            // ✅ RẼ NHÁNH 1: NẾU KHÁCH BẤM "MUA NGAY"
+            // RẼ NHÁNH 1: NẾU KHÁCH BẤM "MUA NGAY"
             if (request.BuyNowProductId.HasValue && request.BuyNowQuantity.HasValue)
             {
                 var product = await _context.Products.FindAsync(request.BuyNowProductId.Value);
                 if (product == null) return BadRequest(new { message = "Sản phẩm không tồn tại." });
 
-                // 🛑 KIỂM TRA TỒN KHO
-                if (product.Stock < request.BuyNowQuantity.Value)
+                decimal basePrice = product.Price;
+
+                // NẾU CÓ BIẾN THỂ (MÀU/SIZE)
+                if (request.BuyNowVariantId.HasValue)
                 {
-                    return BadRequest(new { message = $"Sản phẩm {product.Name} không đủ số lượng trong kho (Còn lại: {product.Stock})." });
+                    var variant = await _context.ProductVariants.FindAsync(request.BuyNowVariantId.Value);
+                    if (variant == null) return BadRequest(new { message = "Phân loại sản phẩm không tồn tại." });
+
+                    if (variant.Stock < request.BuyNowQuantity.Value)
+                        return BadRequest(new { message = $"Phân loại {variant.VariantName} không đủ số lượng." });
+
+                    variant.Stock -= request.BuyNowQuantity.Value; // Trừ kho biến thể
+                    basePrice = variant.Price; // Lấy giá của biến thể
+                }
+                else // NẾU LÀ SẢN PHẨM GỐC
+                {
+                    if (product.Stock < request.BuyNowQuantity.Value)
+                        return BadRequest(new { message = $"Sản phẩm không đủ số lượng." });
+
+                    product.Stock -= request.BuyNowQuantity.Value;
                 }
 
-                // 📉 TRỪ TỒN KHO
-                product.Stock -= request.BuyNowQuantity.Value;
-
-                // 💰 TÍNH GIÁ ĐÃ GIẢM (Áp dụng công thức y hệt ProductDto)
                 decimal finalPrice = product.Discount.HasValue 
-                    ? Math.Round(product.Price * (1 - (decimal)product.Discount.Value / 100), 0) 
-                    : product.Price;
+                    ? Math.Round(basePrice * (1 - (decimal)product.Discount.Value / 100), 0) 
+                    : basePrice;
                     
                 totalAmount = finalPrice * request.BuyNowQuantity.Value;
 
                 orderDetails.Add(new OrderDetail
                 {
                     ProductId = product.Id,
+                    VariantId = request.BuyNowVariantId, // Lưu ID biến thể
                     Quantity = request.BuyNowQuantity.Value,
                     UnitPrice = finalPrice
                 });
             }
-            // ✅ RẼ NHÁNH 2: NẾU KHÁCH MUA TỪ GIỎ HÀNG
+            // RẼ NHÁNH 2: NẾU KHÁCH MUA TỪ GIỎ HÀNG
             else
             {
                 var cartItems = await _context.Carts
                     .Include(c => c.Product)
+                    .Include(c => c.ProductVariant) // Lấy thêm thông tin Biến thể
                     .Where(c => c.UserId == userId.Value)
                     .ToListAsync();
 
-                if (!cartItems.Any())
-                    return BadRequest(new { message = "Giỏ hàng của bạn đang trống." });
+                if (!cartItems.Any()) return BadRequest(new { message = "Giỏ hàng trống." });
 
                 foreach (var item in cartItems)
                 {
-                    // 🛑 KIỂM TRA TỒN KHO TỪNG MÓN
-                    if (item.Product.Stock < item.Quantity)
+                    decimal basePrice = item.Product.Price;
+
+                    // 🛑 NẾU LÀ SẢN PHẨM CÓ BIẾN THỂ
+                    if (item.VariantId.HasValue && item.ProductVariant != null)
                     {
-                        return BadRequest(new { message = $"Sản phẩm {item.Product.Name} không đủ số lượng trong kho." });
+                        if (item.ProductVariant.Stock < item.Quantity)
+                            return BadRequest(new { message = $"Phân loại {item.ProductVariant.VariantName} không đủ số lượng." });
+
+                        item.ProductVariant.Stock -= item.Quantity;
+                        basePrice = item.ProductVariant.Price;
+                    }
+                    else
+                    {
+                        if (item.Product.Stock < item.Quantity)
+                            return BadRequest(new { message = $"Sản phẩm {item.Product.Name} không đủ." });
+
+                        item.Product.Stock -= item.Quantity;
                     }
 
-                    // 📉 TRỪ TỒN KHO
-                    item.Product.Stock -= item.Quantity;
-
-                    // 💰 TÍNH GIÁ ĐÃ GIẢM
                     decimal finalPrice = item.Product.Discount.HasValue 
-                        ? Math.Round(item.Product.Price * (1 - (decimal)item.Product.Discount.Value / 100), 0) 
-                        : item.Product.Price;
+                        ? Math.Round(basePrice * (1 - (decimal)item.Product.Discount.Value / 100), 0) 
+                        : basePrice;
 
                     totalAmount += finalPrice * item.Quantity;
 
                     orderDetails.Add(new OrderDetail
                     {
                         ProductId = item.ProductId,
+                        VariantId = item.VariantId, // Lưu ID biến thể
                         Quantity = item.Quantity,
                         UnitPrice = finalPrice
                     });
                 }
-
-                // Nhớ xóa giỏ hàng sau khi chốt đơn thành công
                 _context.Carts.RemoveRange(cartItems);
             }
 
-            // ✅ TẠO ĐƠN HÀNG
             var newOrder = new Order
             {
                 UserId = userId.Value,
                 OrderDate = DateTime.Now,
                 TotalAmount = totalAmount,
                 Status = "Pending", 
-                PaymentMethod = request.PaymentMethod, // Lưu phương thức thanh toán vào đơn hàng
+                PaymentMethod = request.PaymentMethod,
                 FullName = request.FullName,
                 Phone = request.Phone,
                 Address = request.Address,
@@ -130,10 +150,8 @@ namespace BE.Controllers
 
             _context.Orders.Add(newOrder);
             await _context.SaveChangesAsync();
-
             return Ok(new { message = "Đặt hàng thành công!", orderId = newOrder.OrderId });
         }
-
 
         // ================== ADMIN: Lấy tất cả đơn hàng ==================
         [HttpGet("admin")]
@@ -142,7 +160,10 @@ namespace BE.Controllers
         {
             var orders = await _context.Orders
                 .Include(o => o.OrderDetails)
-                .ThenInclude(od => od.Product)
+                    .ThenInclude(od => od.Product)
+                // BỔ SUNG: Nối thêm bảng ProductVariant để lấy màu/size
+                .Include(o => o.OrderDetails)
+                    .ThenInclude(od => od.ProductVariant) 
                 .OrderByDescending(o => o.OrderDate)
                 .Select(o => new OrderDto
                 {
@@ -161,10 +182,15 @@ namespace BE.Controllers
                     OrderDetails = o.OrderDetails.Select(od => new OrderDetailDto
                     {
                         ProductId = od.ProductId,
+                        // BỔ SUNG: Truyền ID, Tên và Ảnh của Biến thể ra ngoài API
+                        VariantId = od.VariantId, 
+                        VariantName = od.ProductVariant != null ? od.ProductVariant.VariantName : null, 
                         Quantity = od.Quantity,
                         Price = od.UnitPrice,
                         ProductName = od.Product.Name ?? "",
-                        ImageUrl = od.Product.ImageUrl ?? "", // FIX: Gán ImageUrl cho DTO để Frontend hiển thị ảnh
+                        ImageUrl = (od.ProductVariant != null && !string.IsNullOrEmpty(od.ProductVariant.ImageUrl)) 
+                                    ? od.ProductVariant.ImageUrl 
+                                    : (od.Product.ImageUrl ?? ""), 
                         Product = new ProductMiniDto
                         {
                             Id = od.Product.Id,
@@ -189,7 +215,10 @@ namespace BE.Controllers
 
             var orders = await _context.Orders
                 .Include(o => o.OrderDetails)
-                .ThenInclude(od => od.Product)
+                    .ThenInclude(od => od.Product)
+                // BỔ SUNG: Nối thêm bảng ProductVariant
+                .Include(o => o.OrderDetails)
+                    .ThenInclude(od => od.ProductVariant) 
                 .Where(o => o.UserId == userId)
                 .OrderByDescending(o => o.OrderDate)
                 .Select(o => new OrderDto
@@ -209,10 +238,15 @@ namespace BE.Controllers
                     OrderDetails = o.OrderDetails.Select(od => new OrderDetailDto
                     {
                         ProductId = od.ProductId,
+                        // BỔ SUNG: Truyền dữ liệu Biến thể
+                        VariantId = od.VariantId,
+                        VariantName = od.ProductVariant != null ? od.ProductVariant.VariantName : null,
                         Quantity = od.Quantity,
                         Price = od.UnitPrice,
                         ProductName = od.Product.Name ?? "",
-                        ImageUrl = od.Product.ImageUrl ?? "", // FIX: Bổ sung ImageUrl
+                        ImageUrl = (od.ProductVariant != null && !string.IsNullOrEmpty(od.ProductVariant.ImageUrl)) 
+                                    ? od.ProductVariant.ImageUrl 
+                                    : (od.Product.ImageUrl ?? ""),
                         Product = new ProductMiniDto
                         {
                             Id = od.Product.Id,
@@ -235,11 +269,12 @@ namespace BE.Controllers
             var userId = GetUserIdFromToken();
             if (userId == null) return Unauthorized();
 
-            // Nếu bạn có phân quyền Admin, có thể bỏ check o.UserId == userId để Admin xem được chi tiết
             var order = await _context.Orders
                 .Include(o => o.OrderDetails)
-                .ThenInclude(od => od.Product)
-                .FirstOrDefaultAsync(o => o.OrderId == orderId); // Bỏ tạm check User để test linh hoạt
+                    .ThenInclude(od => od.Product)
+                .Include(o => o.OrderDetails)
+                    .ThenInclude(od => od.ProductVariant) 
+                .FirstOrDefaultAsync(o => o.OrderId == orderId); 
 
             if (order == null) return NotFound();
 
@@ -260,14 +295,39 @@ namespace BE.Controllers
                 OrderDetails = order.OrderDetails.Select(od => new OrderDetailDto
                 {
                     ProductId = od.ProductId,
+                    // BỔ SUNG: Truyền dữ liệu Biến thể ra Front-end
+                    VariantId = od.VariantId,
+                    VariantName = od.ProductVariant != null ? od.ProductVariant.VariantName : null,
                     ProductName = od.Product?.Name ?? "",
                     Quantity = od.Quantity,
                     Price = od.UnitPrice,
-                    ImageUrl = od.Product?.ImageUrl ?? ""
+                    ImageUrl = (od.ProductVariant != null && !string.IsNullOrEmpty(od.ProductVariant.ImageUrl)) 
+                                    ? od.ProductVariant.ImageUrl 
+                                    : (od.Product?.ImageUrl ?? "")
                 }).ToList()
             };
 
             return Ok(dto);
+        }
+
+        // ================== HOÀN TỒN KHO KHI HỦY/XÓA ĐƠN ==================
+        private async Task RestoreStockAsync(Order order)
+        {
+            foreach (var detail in order.OrderDetails)
+            {
+                // ✅ Nếu khách mua biến thể -> Trả lại kho biến thể
+                if (detail.VariantId.HasValue) 
+                {
+                    var variant = await _context.ProductVariants.FindAsync(detail.VariantId.Value);
+                    if (variant != null) variant.Stock += detail.Quantity;
+                }
+                // ✅ Nếu khách mua áo gốc -> Trả lại kho áo gốc
+                else 
+                {
+                    var product = await _context.Products.FindAsync(detail.ProductId);
+                    if (product != null) product.Stock += detail.Quantity;
+                }
+            }
         }
 
         // ================== USER: HỦY ĐƠN HÀNG ==================
@@ -283,57 +343,36 @@ namespace BE.Controllers
                 .FirstOrDefaultAsync(o => o.OrderId == id);
 
             if (order == null) return NotFound(new { message = "Không tìm thấy đơn hàng." });
-
-            // Kiểm tra xem đơn này có đúng là của user đang đăng nhập không
             if (order.UserId != userId.Value) return Forbid();
 
-            // Chỉ cho phép hủy khi đơn còn đang "Pending" hoặc "Chờ xử lý" (check cả Anh lẫn Việt)
             var currentStatus = order.Status?.ToLower();
             if (currentStatus != "pending" && currentStatus != "processing")
-            {
                 return BadRequest(new { message = "Không thể hủy đơn hàng đã được xử lý hoặc giao hàng." });
-            }
 
             order.Status = "Cancelled";
-
-            // ♻️ HOÀN LẠI TỒN KHO BẰNG FindAsync (Khắc phục lỗi EF không lưu)
-            foreach (var detail in order.OrderDetails)
-            {
-                var productToUpdate = await _context.Products.FindAsync(detail.ProductId);
-                if (productToUpdate != null)
-                {
-                    productToUpdate.Stock += detail.Quantity;
-                }
-            }
+            
+            // GỌI HÀM HOÀN KHO DÙNG CHUNG CHO GỌN
+            await RestoreStockAsync(order); 
 
             await _context.SaveChangesAsync();
             return Ok(new { message = "Đã hủy đơn hàng và hoàn lại số lượng vào kho." });
         }
 
-        // ================== TÍNH NĂNG MỚI: ADMIN DUYỆT/HỦY ĐƠN HÀNG ==================
+        // ================== ADMIN: DUYỆT/HỦY ĐƠN HÀNG ==================
         [HttpPut("{id:int}/status")]
         // [Authorize(Roles = "admin")]
         public async Task<IActionResult> UpdateOrderStatus(int id, [FromBody] UpdateStatusDto request)
         {
-            // TẮT TRACKING ĐỂ TRÁNH LỖI CONFLICT CỦA ENTITY FRAMEWORK
             var order = await _context.Orders
                 .Include(o => o.OrderDetails)
-                .ThenInclude(od => od.Product)
                 .FirstOrDefaultAsync(o => o.OrderId == id);
                 
             if (order == null) return NotFound(new { message = "Không tìm thấy đơn hàng." });
 
             if (request.Status == "Cancelled" && order.Status != "Cancelled")
             {
-                foreach (var detail in order.OrderDetails)
-                {
-                    // ✅ PHẢI TÌM LẠI PRODUCT TRONG DB RỒI MỚI CỘNG LẠI KHO
-                    var productToUpdate = await _context.Products.FindAsync(detail.ProductId);
-                    if (productToUpdate != null)
-                    {
-                        productToUpdate.Stock += detail.Quantity;
-                    }
-                }
+                // GỌI HÀM HOÀN KHO DÙNG CHUNG
+                await RestoreStockAsync(order); 
             }
 
             order.Status = request.Status;
@@ -349,27 +388,15 @@ namespace BE.Controllers
         {
             var order = await _context.Orders
                 .Include(o => o.OrderDetails)
-                .ThenInclude(od => od.Product)
                 .FirstOrDefaultAsync(o => o.OrderId == id);
 
             if (order == null)
                 return NotFound(new { message = "Không tìm thấy đơn hàng." });
 
-            // ♻️ TRƯỚC KHI XÓA: NẾU ĐƠN CHƯA BỊ HỦY -> HOÀN LẠI KHO ĐÃ RỒI MỚI XÓA
             if (order.Status != "Cancelled")
             {
-                foreach (var detail in order.OrderDetails)
-                {
-                    if (detail.Product != null) 
-                    {
-                        // ✅ PHẢI TÌM LẠI PRODUCT TRONG DB RỒI MỚI TRỪ
-                        var productToUpdate = await _context.Products.FindAsync(detail.ProductId);
-                        if (productToUpdate != null)
-                        {
-                            productToUpdate.Stock += detail.Quantity;
-                        }
-                    }
-                }
+                // GỌI HÀM HOÀN KHO DÙNG CHUNG
+                await RestoreStockAsync(order); 
             }
 
             _context.OrderDetails.RemoveRange(order.OrderDetails);
@@ -393,6 +420,7 @@ namespace BE.Controllers
         public string PaymentMethod { get; set; } = "COD";
         public int? BuyNowProductId { get; set; }
         public int? BuyNowQuantity { get; set; }
+        public int? BuyNowVariantId { get; set; }
     }
 
     public class UpdateStatusDto
@@ -412,6 +440,8 @@ namespace BE.Controllers
     public class OrderDetailDto
     {
         public int ProductId { get; set; }
+        public int? VariantId { get; set; } //Truyền lên Frontend
+        public string? VariantName { get; set; }
         public string ProductName { get; set; } = "";
         public int Quantity { get; set; }
         public decimal Price { get; set; }

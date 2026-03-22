@@ -9,6 +9,7 @@ export default function ReviewPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const productId = searchParams.get("productId");
+  const orderId = searchParams.get("orderId");
 
   const [product, setProduct] = useState<Product | null>(null);
   const [rating, setRating] = useState(5);
@@ -37,20 +38,20 @@ export default function ReviewPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!comment.trim()) {
-      alert("Vui lòng nhập nội dung đánh giá của bạn!");
-      return;
-    }
-
     try {
       setIsSubmitting(true);
-      await addReview({ productId: Number(productId), rating, comment });
-      alert("Đánh giá thành công! Cảm ơn sếp đã nhận xét.");
-      // Đánh giá xong thì đẩy về trang chi tiết sản phẩm để ngắm thành quả
+      // ✅ GỬI KÈM orderId TRONG PAYLOAD
+      await addReview({ 
+        productId: Number(productId), 
+        orderId: Number(orderId), // 🚀 QUAN TRỌNG NHẤT LÀ DÒNG NÀY
+        rating, 
+        comment 
+      }); 
+      
+      alert("Đánh giá thành công!");
       router.push(`/products/${productId}`);
     } catch (error: any) {
-      const msg = error.response?.data?.message || "Có lỗi xảy ra, không thể gửi đánh giá.";
-      alert(msg);
+       alert(error.response?.data?.message || "Lỗi");
     } finally {
       setIsSubmitting(false);
     }
@@ -127,7 +128,7 @@ export default function ReviewPage() {
               </div>
 
               <div className="mb-8">
-                <label className="block text-slate-700 font-medium mb-2">Chia sẻ thêm về trải nghiệm của bạn (bắt buộc)</label>
+                <label className="block text-slate-700 font-medium mb-2">Chia sẻ thêm về trải nghiệm của bạn (tuỳ chọn)</label>
                 <textarea
                   rows={4}
                   placeholder="Ví dụ: Sản phẩm chất lượng, đóng gói cẩn thận, giao hàng nhanh..."

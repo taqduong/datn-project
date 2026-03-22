@@ -4,6 +4,7 @@ using BE.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BE.Migrations
 {
     [DbContext(typeof(ShopDbContext))]
-    partial class ShopDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260322174350_MakeReviewCommentOptional")]
+    partial class MakeReviewCommentOptional
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -344,9 +347,6 @@ namespace BE.Migrations
                     b.Property<bool>("IsVerifiedPurchase")
                         .HasColumnType("bit");
 
-                    b.Property<int>("OrderId")
-                        .HasColumnType("int");
-
                     b.Property<int>("ProductId")
                         .HasColumnType("int");
 
@@ -365,7 +365,7 @@ namespace BE.Migrations
 
                     b.HasIndex(new[] { "ProductId" }, "IX_Review_ProductId");
 
-                    b.HasIndex(new[] { "UserId", "ProductId", "OrderId" }, "IX_Review_User_Product_Order_Unique")
+                    b.HasIndex(new[] { "UserId", "ProductId" }, "IX_Review_User_Product_Unique")
                         .IsUnique();
 
                     b.ToTable("Reviews");

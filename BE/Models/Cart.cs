@@ -23,6 +23,8 @@ public partial class Cart
 
     public int? VariantId { get; set; } 
     
+    [ForeignKey("VariantId")]
+    [InverseProperty("Carts")]
     public virtual ProductVariant? ProductVariant { get; set; }
 
     [ForeignKey("ProductId")]

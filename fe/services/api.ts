@@ -166,10 +166,15 @@ export interface CheckoutPayload {
   ward?: string;
   note?: string;
   paymentMethod: string;
+  buyNowProductId?: number; 
+  buyNowQuantity?: number;  
+  buyNowVariantId?: number;
 }
 
 export interface OrderDetailDto {
   productId: number;
+  variantId?: number;    
+  variantName?: string;
   productName: string;
   quantity: number;
   price: number;
@@ -208,15 +213,16 @@ export interface ReviewDto {
   userId: number;
   userName: string;
   rating: number;
-  comment: string;
+  comment?: string;
   createdAt: string;
   isVerifiedPurchase: boolean;
 }
 
 export interface CreateReviewPayload {
   productId: number;
+  orderId: number;
   rating: number;
-  comment: string;
+  comment?: string;
 }
 
 export interface ReviewResponse {
@@ -450,7 +456,7 @@ export const changePassword = authAPI.changePassword;
 
 export const fetchCart = cartAPI.get;
 export const addToCart = (productId: number, quantity: number, variantId?: number) => 
-  cartAPI.add({ productId, quantity, variantId }); // ✅ GỬI THÊM variantId XUỐNG API
+  cartAPI.add({ productId, quantity, variantId });
 export const updateCartItem = (productId: number, quantity: number, variantId?: number) => cartAPI.updateQuantity({ productId, quantity, variantId });
 export const removeCartItem = cartAPI.remove;
 

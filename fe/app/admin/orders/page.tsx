@@ -83,22 +83,28 @@ export default function AdminOrdersPage() {
       return;
     }
 
-    const exportData = orders.map((order, index) => {
-      const addressParts = [order.address, order.ward, order.city].filter(p => p && p.trim() !== "");
-      const displayAddress = addressParts.length > 0 ? addressParts.join(", ") : "Chưa có địa chỉ";
+  const exportData = orders.map((order, index) => {
+  const addressParts = [order.address, order.ward, order.city].filter(p => p && p.trim() !== "");
+  const displayAddress = addressParts.length > 0 ? addressParts.join(", ") : "Chưa có địa chỉ";
 
-      return {
-        "STT": index + 1,
-        "Mã ĐH": `#${order.orderId}`,
-        "Ngày đặt": new Date(order.orderDate).toLocaleString("vi-VN"),
-        "Tên khách hàng": order.fullName,
-        "Số điện thoại": order.phone,
-        "Địa chỉ": displayAddress,
-        "Tổng tiền (VNĐ)": order.totalAmount,
-        "Trạng thái": order.status,
-        "Ghi chú": order.note || "Không có"
-      };
-    });
+  // ✅ CHỖ MỚI: Gom danh sách sản phẩm thành chuỗi (Ví dụ: - Áo thun (Màu Đỏ) x2)
+  const productInfo = order.orderDetails
+    .map(item => `- ${item.productName}${item.variantName ? ` (${item.variantName})` : ""} x${item.quantity}`)
+    .join("\n"); // Dùng dấu xuống dòng để trong 1 ô Excel hiện danh sách theo hàng dọc
+
+  return {
+    "STT": index + 1,
+    "Mã ĐH": `#${order.orderId}`,
+    "Ngày đặt": new Date(order.orderDate).toLocaleString("vi-VN"),
+    "Tên khách hàng": order.fullName,
+    "Số điện thoại": order.phone,
+    "Sản phẩm": productInfo, // Thêm cột Sản phẩm vào đây
+    "Địa chỉ": displayAddress,
+    "Tổng tiền (VNĐ)": order.totalAmount,
+    "Trạng thái": order.status,
+    "Ghi chú": order.note || "Không có"
+  };
+});
 
     const worksheet = XLSX.utils.json_to_sheet(exportData);
     const columnWidths = [
@@ -276,10 +282,19 @@ export default function AdminOrdersPage() {
                                     <img 
                                       src={resolveImgUrl(detail.imageUrl)} 
                                       alt={detail.productName} 
-                                      className="w-12 h-12 object-cover rounded-lg border border-slate-200 bg-white"
+                                      className="w-12 h-12 shrink-0 object-cover rounded-lg border border-slate-200 bg-white"
                                       onError={(e) => (e.currentTarget.src = "https://placehold.co/100x100?text=No+Image")}
                                     />
-                                    <span className="font-bold text-slate-800 line-clamp-1">{detail.productName}</span>
+                                    <div className="flex flex-col">
+                                      <span className="font-bold text-slate-800 line-clamp-1">{detail.productName}</span>
+                                      
+                                      {/*HIỂN THỊ BIẾN THỂ TẠI ĐÂY */}
+                                      {detail.variantName && (
+                                        <span className="text-[10px] font-bold text-blue-600 uppercase bg-blue-50 px-1.5 py-0.5 rounded w-fit mt-1 border border-blue-100">
+                                          Phân loại: {detail.variantName}
+                                        </span>
+                                      )}
+                                    </div>
                                   </td>
                                   <td className="px-4 py-3 text-center">
                                     <span className="inline-flex items-center justify-center min-w-9 px-3 py-1.5 rounded-lg bg-white border border-slate-300 font-bold text-slate-900 shadow-sm">

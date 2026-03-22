@@ -281,6 +281,11 @@ export default function OrdersPage() {
                           />
                           <div className="flex-1">
                             <h4 className="font-bold text-slate-800 text-sm md:text-base line-clamp-1">{item.productName}</h4>
+                            {item.variantName && (
+                              <p className="text-[10px] font-bold text-blue-600 uppercase bg-blue-50 w-fit px-2 py-0.5 rounded mt-0.5">
+                                Phân loại: {item.variantName}
+                              </p>
+                            )}
                             <p className="text-sm text-slate-500 mt-1">
                               Số lượng: <span className="font-semibold">{item.quantity}</span> 
                               <span className="mx-2">•</span> 

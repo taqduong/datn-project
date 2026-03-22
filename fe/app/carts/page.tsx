@@ -9,6 +9,8 @@ import { useRouter } from 'next/navigation'
 type CartItem = {
   cartItemId: number
   productId: number
+  variantId?: number      
+  variantName?: string
   quantity: number
   product: {
     id: number
@@ -75,24 +77,23 @@ export default function CartPage() {
   }, [])
 
   // ================= Cập nhật số lượng =================
-  const handleUpdateQuantity = async (itemId: number, productId: number, quantity: number) => {
+  const handleUpdateQuantity = async (itemId: number, productId: number, variantId: number | undefined, quantity: number) => {
     if (quantity < 1) {
-      await handleRemoveItem(itemId, productId)
+      await handleRemoveItem(itemId, productId, variantId) // ✅ Truyền thêm variantId
       return
     }
 
     try {
-      // 1. Cập nhật giao diện trước (Optimistic UI) cho mượt
+      // 1. Cập nhật giao diện (✅ Đổi từ productId sang cartItemId để phân biệt Đỏ/Xanh)
       const updatedItems = cartItems.map((item) =>
-        item.productId === productId ? { ...item, quantity } : item
+        item.cartItemId === itemId ? { ...item, quantity } : item 
       )
       setCartItems(updatedItems)
       calculateSubtotal(updatedItems)
 
-      // 2. Gọi API ngầm phía sau
-      await updateCartItem(productId, quantity)
+      // 2. Gọi API ngầm (✅ Truyền thêm variantId)
+      await updateCartItem(productId, quantity, variantId)
 
-      // 3. Bắn event để Header update số lượng giỏ hàng
       window.dispatchEvent(new Event('cartUpdated'))
     } catch (err) {
       console.error('Lỗi cập nhật số lượng:', err)
@@ -101,10 +102,10 @@ export default function CartPage() {
   }
 
   // ================= Xóa sản phẩm =================
-  const handleRemoveItem = async (itemId: number, productId: number) => {
+  const handleRemoveItem = async (itemId: number, productId: number, variantId?: number) => {
     setRemovingItems((prev) => new Set(prev).add(itemId)) // Khóa nút xóa
     try {
-      await removeCartItem(productId)
+      await removeCartItem(productId, variantId)
 
       const updatedItems = cartItems.filter((item) => item.cartItemId !== itemId)
       setCartItems(updatedItems)
@@ -213,11 +214,19 @@ export default function CartPage() {
                     {/* Chi tiết sản phẩm */}
                     <div className="flex-1 flex flex-col justify-between">
                       <div className="flex justify-between items-start gap-4">
-                        <h3 className="font-semibold text-gray-900 text-lg leading-tight line-clamp-2">
-                          {item.product.name}
-                        </h3>
+                        <div>
+                          <h3 className="font-semibold text-gray-900 text-lg leading-tight line-clamp-2">
+                            {item.product.name}
+                          </h3>
+                          {/* HIỂN THỊ TÊN PHÂN LOẠI NẾU CÓ */}
+                          {item.variantName && (
+                            <div className="mt-1.5 inline-block rounded-md bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600">
+                              Phân loại: <span className="text-slate-900">{item.variantName}</span>
+                            </div>
+                          )}
+                        </div>
                         <button
-                          onClick={() => handleRemoveItem(item.cartItemId, item.productId)}
+                          onClick={() => handleRemoveItem(item.cartItemId, item.productId, item.variantId)} // ✅ Truyền thêm variantId
                           disabled={removingItems.has(item.cartItemId)}
                           className="text-gray-400 hover:text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors disabled:opacity-50"
                           title="Xóa sản phẩm"
@@ -241,7 +250,7 @@ export default function CartPage() {
 
                         <div className="flex items-center bg-gray-50 border border-gray-200 rounded-lg p-1">
                           <button
-                            onClick={() => handleUpdateQuantity(item.cartItemId, item.productId, item.quantity - 1)}
+                            onClick={() => handleUpdateQuantity(item.cartItemId, item.productId, item.variantId, item.quantity - 1)}
                             className="w-8 h-8 flex items-center justify-center rounded bg-white shadow-sm text-gray-600 hover:text-blue-600 hover:border-blue-200 transition-all"
                           >
                             <Minus size={16} />
@@ -250,7 +259,7 @@ export default function CartPage() {
                             {item.quantity}
                           </span>
                           <button
-                            onClick={() => handleUpdateQuantity(item.cartItemId, item.productId, item.quantity + 1)}
+                            onClick={() => handleUpdateQuantity(item.cartItemId, item.productId, item.variantId, item.quantity + 1)}
                             className="w-8 h-8 flex items-center justify-center rounded bg-white shadow-sm text-gray-600 hover:text-blue-600 hover:border-blue-200 transition-all"
                           >
                             <Plus size={16} />

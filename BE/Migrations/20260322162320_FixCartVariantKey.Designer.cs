@@ -4,6 +4,7 @@ using BE.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BE.Migrations
 {
     [DbContext(typeof(ShopDbContext))]
-    partial class ShopDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260322162320_FixCartVariantKey")]
+    partial class FixCartVariantKey
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -171,12 +174,7 @@ namespace BE.Migrations
                     b.Property<decimal>("UnitPrice")
                         .HasColumnType("decimal(18, 2)");
 
-                    b.Property<int?>("VariantId")
-                        .HasColumnType("int");
-
                     b.HasKey("OrderDetailId");
-
-                    b.HasIndex("VariantId");
 
                     b.HasIndex(new[] { "OrderId" }, "IX_OrderDetails_OrderId");
 
@@ -335,6 +333,7 @@ namespace BE.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("Comment")
+                        .IsRequired()
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
 
@@ -343,9 +342,6 @@ namespace BE.Migrations
 
                     b.Property<bool>("IsVerifiedPurchase")
                         .HasColumnType("bit");
-
-                    b.Property<int>("OrderId")
-                        .HasColumnType("int");
 
                     b.Property<int>("ProductId")
                         .HasColumnType("int");
@@ -365,7 +361,7 @@ namespace BE.Migrations
 
                     b.HasIndex(new[] { "ProductId" }, "IX_Review_ProductId");
 
-                    b.HasIndex(new[] { "UserId", "ProductId", "OrderId" }, "IX_Review_User_Product_Order_Unique")
+                    b.HasIndex(new[] { "UserId", "ProductId" }, "IX_Review_User_Product_Unique")
                         .IsUnique();
 
                     b.ToTable("Reviews");
@@ -509,15 +505,9 @@ namespace BE.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("BE.Models.ProductVariant", "ProductVariant")
-                        .WithMany("OrderDetails")
-                        .HasForeignKey("VariantId");
-
                     b.Navigation("Order");
 
                     b.Navigation("Product");
-
-                    b.Navigation("ProductVariant");
                 });
 
             modelBuilder.Entity("BE.Models.Product", b =>
@@ -632,8 +622,6 @@ namespace BE.Migrations
             modelBuilder.Entity("BE.Models.ProductVariant", b =>
                 {
                     b.Navigation("Carts");
-
-                    b.Navigation("OrderDetails");
                 });
 
             modelBuilder.Entity("BE.Models.User", b =>
