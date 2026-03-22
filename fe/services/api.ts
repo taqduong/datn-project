@@ -137,6 +137,9 @@ export interface CartItem {
   cartItemId: number;
   productId: number;
   quantity: number;
+  variantId?: number; 
+  variantName?: string; 
+  variantImageUrl?: string; 
   product: {
     id: number;
     name: string;
@@ -150,6 +153,7 @@ export interface CartItem {
 export interface CartRequest {
   productId: number;
   quantity: number;
+  variantId?: number;
 }
 
 export interface CheckoutPayload {
@@ -286,7 +290,10 @@ export const cartAPI = {
 
   updateQuantity: (data: CartRequest) => api.put("/cart/update-quantity", data),
 
-  remove: (productId: number | string) => api.delete(`/cart/remove/${productId}`),
+  remove: (productId: number | string, variantId?: number) => {
+    const query = variantId ? `?variantId=${variantId}` : "";
+    return api.delete(`/cart/remove/${productId}${query}`);
+  }
 };
 // ================= Auth API =================
 export const authAPI = {
@@ -442,8 +449,9 @@ export const logoutUser = authAPI.logout;
 export const changePassword = authAPI.changePassword;
 
 export const fetchCart = cartAPI.get;
-export const addToCart = (productId: number, quantity: number) => cartAPI.add({ productId, quantity });
-export const updateCartItem = (productId: number, quantity: number) => cartAPI.updateQuantity({ productId, quantity });
+export const addToCart = (productId: number, quantity: number, variantId?: number) => 
+  cartAPI.add({ productId, quantity, variantId }); // ✅ GỬI THÊM variantId XUỐNG API
+export const updateCartItem = (productId: number, quantity: number, variantId?: number) => cartAPI.updateQuantity({ productId, quantity, variantId });
 export const removeCartItem = cartAPI.remove;
 
 export const checkoutOrder = ordersAPI.checkout;

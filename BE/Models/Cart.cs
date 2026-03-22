@@ -21,6 +21,10 @@ public partial class Cart
 
     public DateTime CreatedAt { get; set; }
 
+    public int? VariantId { get; set; } 
+    
+    public virtual ProductVariant? ProductVariant { get; set; }
+
     [ForeignKey("ProductId")]
     [InverseProperty("Carts")]
     public virtual Product Product { get; set; } = null!;

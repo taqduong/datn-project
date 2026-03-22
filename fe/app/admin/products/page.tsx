@@ -47,6 +47,13 @@ export default function ProductPage() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(true);
+  // ✅ TRỢ LÝ TÍNH TỔNG TỒN KHO THỰC TẾ
+  const getRealStock = (p: any) => {
+    if (p.variants && p.variants.length > 0) {
+      return p.variants.reduce((sum: number, v: any) => sum + (v.stock || 0), 0);
+    }
+    return p.stock || 0;
+  };
 
   // ✅ State mới để chứa mảng file ảnh phụ chuẩn bị upload
   const [additionalFiles, setAdditionalFiles] = useState<File[]>([]);
@@ -383,7 +390,7 @@ export default function ProductPage() {
             <div>
               <p className="text-sm text-gray-500">Sản phẩm có sẵn</p>
               <h3 className="text-2xl font-bold text-gray-800">
-                {products.filter((p) => p.stock > 0).length}
+                {products.filter((p) => getRealStock(p) > 0).length}
               </h3>
             </div>
             <div className="rounded-lg bg-green-100 p-3">
@@ -397,7 +404,7 @@ export default function ProductPage() {
             <div>
               <p className="text-sm text-gray-500">Sản phẩm hết hàng</p>
               <h3 className="text-2xl font-bold text-gray-800">
-                {products.filter((p) => p.stock === 0).length}
+                {products.filter((p) => getRealStock(p) === 0).length}
               </h3>
             </div>
             <div className="rounded-lg bg-red-100 p-3">
@@ -514,29 +521,57 @@ export default function ProductPage() {
                         </div>
                       </td>
 
+                      {/* ✅ CỘT GIÁ (ĐÃ FIX: HIỂN THỊ KHOẢNG GIÁ BIẾN THỂ) */}
                       <td className="px-6 py-4">
                         <div className="text-sm font-medium text-gray-900">
-                          {formatVND(product.price)}
+                          {(() => {
+                            if (product.variants && product.variants.length > 0) {
+                              const prices = product.variants.map((v: any) => v.price);
+                              const minPrice = Math.min(...prices);
+                              const maxPrice = Math.max(...prices);
+                              return minPrice === maxPrice 
+                                ? formatVND(minPrice) 
+                                : `${formatVND(minPrice)} - ${formatVND(maxPrice)}`;
+                            }
+                            return formatVND(product.price);
+                          })()}
                         </div>
                         {(product.discount || 0) > 0 && (
                           <div className="text-xs text-green-600">
-                            Sau giảm: {formatVND(product.priceAfterDiscount || 0)}
+                            Sau giảm: {(() => {
+                              if (product.variants && product.variants.length > 0) {
+                                const d = (product.discount || 0) / 100;
+                                const prices = product.variants.map((v: any) => v.price);
+                                const minPrice = Math.min(...prices) * (1 - d);
+                                const maxPrice = Math.max(...prices) * (1 - d);
+                                return minPrice === maxPrice 
+                                  ? formatVND(minPrice) 
+                                  : `${formatVND(minPrice)} - ${formatVND(maxPrice)}`;
+                              }
+                              return formatVND(product.priceAfterDiscount || 0);
+                            })()}
                           </div>
                         )}
                       </td>
 
+                      {/* ✅ CỘT TỒN KHO (ĐÃ FIX: CỘNG DỒN KHO BIẾN THỂ) */}
                       <td className="px-6 py-4">
-                        <div
-                          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                            product.stock > 10
-                              ? "bg-green-100 text-green-800"
-                              : product.stock > 0
-                              ? "bg-yellow-100 text-yellow-800"
-                              : "bg-red-100 text-red-800"
-                          }`}
-                        >
-                          {product.stock > 0 ? `${product.stock} sản phẩm` : "Hết hàng"}
-                        </div>
+                        {(() => {
+                          const realStock = getRealStock(product);
+                          return (
+                            <div
+                              className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                                realStock > 10
+                                  ? "bg-green-100 text-green-800"
+                                  : realStock > 0
+                                  ? "bg-yellow-100 text-yellow-800"
+                                  : "bg-red-100 text-red-800"
+                              }`}
+                            >
+                              {realStock > 0 ? `${realStock} sản phẩm` : "Hết hàng"}
+                            </div>
+                          );
+                        })()}
                       </td>
 
                       <td className="px-6 py-4 text-sm text-gray-900">

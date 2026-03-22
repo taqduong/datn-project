@@ -81,7 +81,7 @@ namespace BE.Controllers
                 return NotFound("Không tìm thấy sản phẩm.");
 
             var existingCart = await _context.Carts.FirstOrDefaultAsync(
-                c => c.UserId == userId && c.ProductId == request.ProductId);
+            c => c.UserId == userId && c.ProductId == request.ProductId && c.VariantId == request.VariantId); 
 
             if (existingCart != null)
             {
@@ -94,6 +94,7 @@ namespace BE.Controllers
                 {
                     UserId = (int)userId,
                     ProductId = request.ProductId,
+                    VariantId = request.VariantId,
                     Quantity = request.Quantity,
                     CreatedAt = DateTime.Now
                 };
@@ -120,6 +121,7 @@ namespace BE.Controllers
             var cartItems = await _context.Carts
                 .Where(c => c.UserId == userId)
                 .Include(c => c.Product)
+                .Include(c => c.ProductVariant)
                 .ToListAsync();
 
             if (!cartItems.Any())
@@ -128,21 +130,27 @@ namespace BE.Controllers
             var result = cartItems.Select(c =>
             {
                 var p = c.Product;
-                var priceAfterDiscount = CalcPriceAfterDiscount(p.Price, p.Discount);
+                var v = c.ProductVariant; 
+
+                var basePrice = v != null ? v.Price : p.Price;
+                var imageUrl = v != null && !string.IsNullOrEmpty(v.ImageUrl) ? v.ImageUrl : p.ImageUrl;
+                var priceAfterDiscount = CalcPriceAfterDiscount(basePrice, p.Discount);
 
                 return new
                 {
                     cartItemId = c.CartItemId,
                     productId = c.ProductId,
+                    variantId = c.VariantId, 
                     quantity = c.Quantity,
+                    variantName = v != null ? v.VariantName : null, 
                     product = new
                     {
                         id = p.Id,
                         name = p.Name,
-                        price = p.Price,
+                        price = basePrice, 
                         discount = p.Discount,
                         priceAfterDiscount = priceAfterDiscount,
-                        imageUrl = p.ImageUrl // Sửa lại đúng tên thuộc tính trong Product.cs của bạn
+                        imageUrl = imageUrl 
                     }
                 };
             });
@@ -160,7 +168,7 @@ namespace BE.Controllers
                 return Unauthorized("Không tìm thấy người dùng.");
 
             var cartItem = await _context.Carts.FirstOrDefaultAsync(
-                c => c.UserId == userId && c.ProductId == request.ProductId);
+            c => c.UserId == userId && c.ProductId == request.ProductId && c.VariantId == request.VariantId);
 
             if (cartItem == null)
                 return NotFound("Không tìm thấy sản phẩm trong giỏ hàng.");
@@ -175,14 +183,14 @@ namespace BE.Controllers
         // ================== Xóa sản phẩm khỏi giỏ hàng ==================
         [HttpDelete("remove/{productId}")]
         [Authorize]
-        public async Task<IActionResult> RemoveFromCart(int productId)
+        public async Task<IActionResult> RemoveFromCart(int productId, [FromQuery] int? variantId)
         {
             var userId = GetUserIdFromToken();
             if (userId == null)
                 return Unauthorized("Không tìm thấy người dùng.");
 
             var cartItem = await _context.Carts.FirstOrDefaultAsync(
-                c => c.UserId == userId && c.ProductId == productId);
+                c => c.UserId == userId && c.ProductId == productId && c.VariantId == variantId);
 
             if (cartItem == null)
                 return NotFound("Không tìm thấy sản phẩm trong giỏ hàng.");
@@ -199,6 +207,7 @@ namespace BE.Controllers
         {
             public int ProductId { get; set; }
             public int Quantity { get; set; }
+            public int? VariantId { get; set; }
         }
 
         // NOTE: Checkout hiện tại chưa code vì bạn cần làm xong bảng Order/OrderDetail trước
