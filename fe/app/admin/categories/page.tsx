@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
-import {
+import React, { useEffect, useMemo, useState, useRef } from "react";
+import api, {
   fetchCategories,
   createCategory,
   updateCategory,
@@ -27,6 +27,41 @@ export default function CategoryPage() {
   const [submitting, setSubmitting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editCategoryId, setEditCategoryId] = useState<number | null>(null);
+
+  // --- STATE VÀ HÀM CHO IMPORT FILE ---
+  const [isUploading, setIsUploading] = useState(false);
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setIsUploading(true);
+      
+      const formData = new FormData();
+      formData.append("file", file); // Chữ "file" khớp với [FromForm] IFormFile file bên C#
+      
+      //  Ép Axios phải dùng 'multipart/form-data' thay vì 'application/json' mặc định
+      const res = await api.post("/Categories/import", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+      
+      toast.success(res.data.message || "Import thành công!");
+      await loadCategories(); // Load lại bảng danh sách
+      
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || "Lỗi từ C# gửi về!";
+      toast.error(errorMessage);
+      console.error("🚨 Chi tiết lỗi:", error.response?.data || error);
+    } finally {
+      setIsUploading(false);
+      event.target.value = '';
+    }
+  };
+
+  const nameInputRef = useRef<HTMLInputElement>(null);
 
   const loadCategories = async () => {
     try {
@@ -163,6 +198,10 @@ export default function CategoryPage() {
     });
 
     window.scrollTo({ top: 0, behavior: "smooth" });
+
+    setTimeout(() => {
+      nameInputRef.current?.focus();
+    }, 500);
   };
 
   return (
@@ -177,11 +216,32 @@ export default function CategoryPage() {
             <p className="text-gray-600">Quản lý danh mục và phân loại sản phẩm</p>
           </div>
 
-          <div className="text-right">
-            <div className="text-2xl font-bold text-gray-800">
-              {categories.length}
+          <div className="flex items-center gap-6">
+            {/* Nút Upload File */}
+            <div>
+              <input
+                type="file"
+                id="import-excel"
+                className="hidden"
+                accept=".xlsx, .xls, .csv"
+                onChange={handleFileUpload}
+                disabled={isUploading}
+              />
+              <label
+                htmlFor="import-excel"
+                className="cursor-pointer flex items-center gap-2 rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-2 text-sm font-bold text-emerald-600 transition hover:bg-emerald-100 hover:text-emerald-700 disabled:opacity-50"
+              >
+                {isUploading ? "⏳ Đang xử lý..." : "📁 Import từ File Excel"}
+              </label>
             </div>
-            <div className="text-sm text-gray-600">Tổng số danh mục</div>
+
+            {/* Thống kê số lượng */}
+            <div className="text-right border-l-2 border-gray-200 pl-6">
+              <div className="text-2xl font-bold text-gray-800">
+                {categories.length}
+              </div>
+              <div className="text-sm text-gray-600">Tổng số danh mục</div>
+            </div>
           </div>
         </div>
 
@@ -210,6 +270,7 @@ export default function CategoryPage() {
                 Tên danh mục *
               </label>
               <input
+                ref={nameInputRef}
                 type="text"
                 name="name"
                 className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-purple-500"

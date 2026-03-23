@@ -4,12 +4,15 @@ using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using OfficeOpenXml;
 
 var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 {
     Args = args,
     WebRootPath = "wwwroot"
 });
+
+OfficeOpenXml.ExcelPackage.License.SetNonCommercialPersonal("DATN Project");
 
 // Add DbContext
 builder.Services.AddDbContext<ShopDbContext>(options =>
@@ -128,5 +131,3 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
-
-app.UseStaticFiles();
