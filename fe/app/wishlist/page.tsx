@@ -13,6 +13,7 @@ type Product = {
   imageUrl?: string;
   imageUrls?: string | string[];
   stock: number;
+  variants?: any[]; 
 };
 
 type WishlistItem = {
@@ -31,7 +32,6 @@ export default function WishlistPage() {
     loadWishlist();
   }, []);
 
-  // Gọi API lấy danh sách (Axios tự động lo Token, Backend tự động lo UserId)
   const loadWishlist = async () => {
     try {
       setLoading(true);
@@ -42,7 +42,6 @@ export default function WishlistPage() {
       }
 
       const res = await fetchWishlist();
-      // Dựa theo Controller BE trả về Ok(new { success = true, data = wishlist })
       if (res.data && res.data.success) {
         setWishlist(res.data.data);
       } else {
@@ -56,7 +55,6 @@ export default function WishlistPage() {
     }
   };
 
-  // Hàm chuẩn hoá URL ảnh (Tái sử dụng chuẩn như trang Sale)
   const getImageUrl = (value: string | string[] | undefined): string => {
     if (!value) return "https://placehold.co/400x400?text=No+Image";
     let url = Array.isArray(value) ? value[0] : value;
@@ -76,43 +74,34 @@ export default function WishlistPage() {
     }
   };
 
-  // ❌ Xóa 1 sản phẩm
   const handleRemove = async (productId: number) => {
     try {
       await removeFromWishlist(productId);
-      
-      // Xóa trên giao diện ngay lập tức cho mượt
       setWishlist((prev) => prev.filter((item) => item.productId !== productId));
-      window.dispatchEvent(new Event('wishlistUpdated')); // Cập nhật Header
-      
+      window.dispatchEvent(new Event('wishlistUpdated'));
     } catch (error) {
       console.error('Lỗi khi xóa:', error);
       alert('Không thể xóa sản phẩm, vui lòng thử lại!');
     }
   };
 
-  // 🗑 Xóa toàn bộ Wishlist
   const handleClearAll = async () => {
     if (!confirm('Bạn có chắc chắn muốn dọn sạch danh sách yêu thích không?')) return;
-
     try {
       await clearWishlist();
-      
       setWishlist([]);
       window.dispatchEvent(new Event('wishlistUpdated'));
       alert('Đã xóa sạch danh sách yêu thích!');
-      
     } catch (error) {
       console.error('Lỗi khi dọn dẹp wishlist:', error);
       alert('Đã xảy ra lỗi khi xóa!');
     }
   };
 
-  // 🛒 Thêm vào giỏ hàng (Gọi API chuẩn)
-    const handleAddToCart = async (product: Product) => {
+  const handleAddToCart = async (product: Product) => {
     try {
-      await addToCart(product.id, 1); // Đổi thành như này là ăn ngay!
-      window.dispatchEvent(new Event('cartUpdated')); // Nhảy số trên Navbar
+      await addToCart(product.id, 1);
+      window.dispatchEvent(new Event('cartUpdated'));
       alert(`Đã thêm "${product.name}" vào giỏ hàng!`);
     } catch (error) {
       console.error('Lỗi thêm giỏ hàng:', error);
@@ -156,7 +145,6 @@ export default function WishlistPage() {
 
         {/* ================= CONTENT ================= */}
         {loading ? (
-          /* Trạng thái Loading (Skeleton) */
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {Array.from({ length: 8 }).map((_, i) => (
               <div key={i} className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 animate-pulse">
@@ -171,7 +159,6 @@ export default function WishlistPage() {
             ))}
           </div>
         ) : wishlist.length === 0 ? (
-          /* Trạng thái Rỗng */
           <div className="bg-white rounded-[2.5rem] shadow-xl shadow-slate-200/40 p-16 text-center max-w-3xl mx-auto border border-slate-100">
             <div className="w-32 h-32 bg-pink-50 rounded-full flex items-center justify-center mx-auto mb-8 animate-bounce">
               <Heart className="w-16 h-16 text-pink-400 opacity-50" />
@@ -189,20 +176,32 @@ export default function WishlistPage() {
             </button>
           </div>
         ) : (
-          /* Danh sách Sản phẩm */
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 animate-in slide-in-from-bottom-8 fade-in duration-700">
             {wishlist.map((item) => {
               const p = item.product;
               const imageUrl = getImageUrl(p.imageUrls || p.imageUrl);
-              const priceBeforeDiscount = p.price;
-              const priceAfterDiscount = Math.round(p.price * (1 - (p.discount || 0) / 100));
+              
+              const hasVariants = p.variants && p.variants.length > 0;
+              const discountRate = (p.discount || 0) / 100;
+
+              let minPrice = p.price || 0;
+              let maxPrice = p.price || 0;
+
+              if (hasVariants) {
+                const prices = p.variants!.map((v: any) => v.price || 0);
+                minPrice = Math.min(...prices);
+                maxPrice = Math.max(...prices);
+              }
+
+              const minPriceAfterDiscount = minPrice * (1 - discountRate);
+              const maxPriceAfterDiscount = maxPrice * (1 - discountRate);
+              const isPriceRange = hasVariants && minPrice !== maxPrice;
 
               return (
                 <div
                   key={item.id}
                   className="group bg-white rounded-3xl shadow-sm hover:shadow-2xl hover:shadow-pink-100/50 transition-all duration-300 border border-slate-100 overflow-hidden flex flex-col relative"
                 >
-                  {/* Nút Xóa (Góc phải) */}
                   <button
                     onClick={() => handleRemove(p.id)}
                     className="absolute top-4 right-4 z-20 w-8 h-8 bg-white/80 backdrop-blur-md hover:bg-red-500 text-slate-400 hover:text-white flex items-center justify-center rounded-full shadow-sm transition-all duration-300"
@@ -211,14 +210,12 @@ export default function WishlistPage() {
                     <XCircle size={18} />
                   </button>
 
-                  {/* Badge Sale */}
                   {p.discount > 0 && (
                     <div className="absolute top-4 left-4 z-20 bg-red-500 text-white text-xs font-black px-3 py-1.5 rounded-full shadow-md shadow-red-500/30 flex items-center gap-1">
                       <Tag size={12} /> -{p.discount}%
                     </div>
                   )}
 
-                  {/* Ảnh */}
                   <div 
                     className="relative w-full pt-[100%] bg-slate-50 overflow-hidden cursor-pointer"
                     onClick={() => router.push(`/products/${p.id}`)}
@@ -230,7 +227,6 @@ export default function WishlistPage() {
                     />
                   </div>
 
-                  {/* Info */}
                   <div className="p-5 flex flex-col flex-1">
                     <h3 
                       className="text-base font-bold text-slate-900 line-clamp-2 mb-2 cursor-pointer group-hover:text-pink-600 transition-colors"
@@ -242,20 +238,31 @@ export default function WishlistPage() {
                     <div className="mt-auto pt-4 flex items-end justify-between">
                       <div>
                         <div className="text-lg font-black text-pink-600">
-                          {formatVND(priceAfterDiscount)}
+                          {isPriceRange 
+                            ? `${formatVND(minPriceAfterDiscount)} - ${formatVND(maxPriceAfterDiscount)}` 
+                            : formatVND(minPriceAfterDiscount)}
                         </div>
+                        
                         {p.discount > 0 && (
                           <div className="text-xs font-semibold text-slate-400 line-through">
-                            {formatVND(priceBeforeDiscount)}
+                            {isPriceRange 
+                              ? `${formatVND(minPrice)} - ${formatVND(maxPrice)}` 
+                              : formatVND(minPrice)}
                           </div>
                         )}
                       </div>
 
-                      {/* Nút Thêm Giỏ Hàng */}
                       <button
-                        onClick={() => handleAddToCart(p)}
-                        className="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center hover:bg-emerald-500 transition-colors duration-300 shadow-md"
-                        title="Thêm vào giỏ"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (hasVariants) {
+                            router.push(`/products/${p.id}`);
+                          } else {
+                            handleAddToCart(p as any);
+                          }
+                        }}
+                        className="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center hover:bg-pink-500 transition-colors duration-300 shadow-md shrink-0 ml-2"
+                        title={hasVariants ? "Chọn phân loại" : "Thêm vào giỏ"}
                       >
                         <ShoppingCart size={18} />
                       </button>

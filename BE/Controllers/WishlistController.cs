@@ -40,6 +40,7 @@ namespace BE.Controllers
             
             var wishlist = await _context.Wishlists
                 .Include(w => w.Product)
+                .ThenInclude(p => p.ProductVariants)
                 .Where(w => w.UserId == userId)
                 .OrderByDescending(w => w.CreatedAt) // Sắp xếp cái nào mới thả tim thì lên đầu
                 .Select(w => new {
@@ -52,7 +53,16 @@ namespace BE.Controllers
                         w.Product.Price,
                         w.Product.Discount,
                         w.Product.ImageUrl, // Dùng để hiển thị ảnh trên giao diện
-                        w.Product.Stock
+                        w.Product.Stock,
+                        // LẤY THÊM DANH SÁCH BIẾN THỂ TRẢ VỀ CHO FRONTEND
+                        Variants = w.Product.ProductVariants.Select(v => new {
+                            v.Id,
+                            v.Price,
+                            v.Stock,
+                            v.Color,
+                            v.VariantName,
+                            v.ImageUrl
+                        })
                     }
                 })
                 .ToListAsync();

@@ -33,6 +33,7 @@ export default function HomePage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentSlide, setCurrentSlide] = useState(0);
 
   // THÊM HÀM NỐI LINK BACKEND
   const resolveImgUrl = (url?: string) => {
@@ -77,11 +78,48 @@ export default function HomePage() {
     return categories.slice(0, 4);
   }, [categories]);
 
+  const bannerProducts = useMemo(() => {
+    return featuredProducts.filter(p => p.imageUrl); 
+  }, [featuredProducts]);
+
+  //LOGIC SLIDER: Auto-play mỗi 3 giây
+  useEffect(() => {
+    if (bannerProducts.length === 0) return;
+    const timer = setInterval(() => {
+      setCurrentSlide((prev) => (prev === bannerProducts.length - 1 ? 0 : prev + 1));
+    }, 3000);
+    return () => clearInterval(timer);
+  }, [bannerProducts.length]);
+
   const formatVND = (value: number) =>
     new Intl.NumberFormat("vi-VN", {
       style: "currency",
       currency: "VND",
     }).format(value || 0);
+
+  // Hàm này sẽ kiểm tra xem nếu có biến thể thì lấy giá của biến thể, tính cả giảm giá
+  const getBannerPrice = (product: any) => {
+    const hasVariants = product.variants && product.variants.length > 0;
+    const discountRate = (product.discount || 0) / 100;
+
+    let minPrice = product.price || 0;
+    let maxPrice = product.price || 0;
+
+    if (hasVariants) {
+      const prices = product.variants.map((v: any) => v.price || 0);
+      minPrice = Math.min(...prices);
+      maxPrice = Math.max(...prices);
+    }
+
+    const minPriceAfterDiscount = minPrice * (1 - discountRate);
+    const maxPriceAfterDiscount = maxPrice * (1 - discountRate);
+
+    // Nếu giá biến thể khác nhau thì hiện khoảng giá (VD: 100k - 200k)
+    if (hasVariants && minPrice !== maxPrice) {
+      return `${formatVND(minPriceAfterDiscount)} - ${formatVND(maxPriceAfterDiscount)}`;
+    }
+    return formatVND(minPriceAfterDiscount);
+  };
 
   return (
     <div className="bg-slate-50 text-slate-800 min-h-screen font-sans">
@@ -142,49 +180,66 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Cột Hình ảnh */}
-            <div className="grid gap-4 sm:grid-cols-2 relative">
+            {/* CỘT HÌNH ẢNH: BANNER LƯỚT CHUYỂN ĐỘNG */}
+            <div className="relative h-[350px] w-full overflow-hidden rounded-[2.5rem] shadow-2xl md:h-[450px] group border-4 border-white">
               
-              {/* 1. Ảnh sản phẩm Mới nhất (Ô to bên trái) */}
-              <div className="overflow-hidden rounded-4xl border-8 border-white bg-white shadow-xl -rotate-2 hover:rotate-0 transition-all duration-500 z-10 aspect-4/5 sm:aspect-auto">
-                {featuredProducts[0]?.imageUrl ? (
-                  <img
-                    src={resolveImgUrl(featuredProducts[0].imageUrl)}
-                    alt={featuredProducts[0].name}
-                    className="h-full w-full object-cover sm:h-80"
-                  />
+              <div
+                className="flex h-full w-full transition-transform duration-700 ease-in-out"
+                style={{ transform: `translateX(-${currentSlide * 100}%)` }}
+              >
+                {bannerProducts.length > 0 ? (
+                  bannerProducts.map((product, index) => (
+                    <Link 
+                      href={`/products/${product.id}`}
+                      key={index} 
+                      className="relative h-full min-w-full block"
+                    >
+                      <img
+                        src={resolveImgUrl(product.imageUrl)}
+                        alt={product.name}
+                        className="h-full w-full object-cover"
+                      />
+                      {/* Lớp gradient dưới chân ảnh để chữ dễ đọc */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent"></div>
+                      
+                      {/* Text hiển thị */}
+                      <div className="absolute bottom-8 left-8 right-8 text-left">
+                        <span className="mb-3 inline-block rounded-full bg-blue-600 px-3 py-1 text-xs font-bold text-white shadow-sm">
+                          Mới về
+                        </span>
+                        <h3 className="line-clamp-2 text-2xl font-bold text-white drop-shadow-md">
+                          {product.name}
+                        </h3>
+                        <p className="text-2xl font-black text-yellow-400 drop-shadow-lg">
+                          {getBannerPrice(product)}
+                        </p>
+                      </div>
+                    </Link>
+                  ))
                 ) : (
-                  <div className="flex h-full w-full items-center justify-center bg-slate-50 text-6xl text-slate-200">📦</div>
+                  <div className="flex h-full min-w-full items-center justify-center bg-slate-100 text-6xl text-slate-300">
+                    📦
+                  </div>
                 )}
               </div>
 
-              <div className="grid gap-4 translate-y-6">
-                {/* 2. Ảnh sản phẩm thứ 2 (Ô nhỏ trên) */}
-                <div className="overflow-hidden rounded-3xl border-4 border-white bg-white shadow-lg rotate-3 hover:rotate-0 transition-all duration-500 aspect-square sm:aspect-auto">
-                  {featuredProducts[1]?.imageUrl ? (
-                    <img
-                      src={resolveImgUrl(featuredProducts[1].imageUrl)}
-                      alt={featuredProducts[1].name}
-                      className="h-full w-full object-cover sm:h-40"
+              {/* Dấu chấm điều hướng (Chỉ hiện khi có hơn 1 ảnh) */}
+              {bannerProducts.length > 1 && (
+                <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-2 z-10">
+                  {bannerProducts.map((_, index) => (
+                    <button
+                      key={index}
+                      onClick={(e) => {
+                        e.preventDefault(); // Tránh bị nhảy link khi click vào chấm
+                        setCurrentSlide(index);
+                      }}
+                      className={`h-2.5 rounded-full transition-all duration-300 ${
+                        currentSlide === index ? "w-8 bg-blue-600" : "w-2.5 bg-white/60 hover:bg-white"
+                      }`}
                     />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center bg-slate-50 text-4xl text-slate-200">👕</div>
-                  )}
+                  ))}
                 </div>
-
-                {/* 3. Ảnh sản phẩm thứ 3 (Ô nhỏ dưới) */}
-                <div className="overflow-hidden rounded-3xl border-4 border-white bg-white shadow-lg -rotate-1 hover:rotate-0 transition-all duration-500 aspect-square sm:aspect-auto">
-                  {featuredProducts[2]?.imageUrl ? (
-                    <img
-                      src={resolveImgUrl(featuredProducts[2].imageUrl)}
-                      alt={featuredProducts[2].name}
-                      className="h-full w-full object-cover sm:h-36"
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center bg-slate-50 text-4xl text-slate-200">👟</div>
-                  )}
-                </div>
-              </div>
+              )}
             </div>
           </div>
         </div>

@@ -200,9 +200,9 @@ export default function ProductCard({ product }: { product: Product }) {
             </div>
           )}
           {totalStock <= 0 && (
-            <div className="absolute right-4 bottom-4 z-20 rotate-[18deg]">
+            <div className="absolute right-4 bottom-4 z-20 rotate-[18deg] transform-gpu">
               <div className="rounded-full border-[4px] border-red-600 px-4 py-2 text-sm font-extrabold uppercase tracking-wider text-red-600 bg-white/80 shadow-md">
-                <span className="text-sm font-black text-red-600">
+                <span className="font-sans antialiased text-sm font-black text-red-600">
                   HẾT HÀNG
                 </span>
               </div>
