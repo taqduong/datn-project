@@ -17,6 +17,8 @@ type SuggestedProduct = {
   id: number | string;
   name: string;
   price?: number;
+  maxPrice?: number; 
+  discount?: number;
   priceAfterDiscount?: number;
   imageUrl?: string;
   slug?: string;
@@ -24,6 +26,7 @@ type SuggestedProduct = {
   stock?: number;
   soldCount?: number;
   averageRating?: number;
+  hasVariants?: boolean;
 };
 
 type ChatMsg = {
@@ -52,6 +55,26 @@ const QUICK_PROMPTS = [
   "Có sản phẩm nào đang giảm giá không?",
   "Tư vấn giúp mình một vài sản phẩm nổi bật",
 ];
+
+// Hàm xử lý link ảnh chuẩn
+const getValidImageUrl = (val?: string) => {
+  if (!val) return "";
+  let url = val;
+  try {
+    if (url.startsWith("[")) {
+      const arr = JSON.parse(url);
+      if (Array.isArray(arr) && arr.length > 0) url = arr[0];
+    }
+    if (url.includes(",")) url = url.split(",")[0].trim();
+    if (!/^https?:\/\//i.test(url)) {
+      const baseUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5270/api").replace("/api", "");
+      url = `${baseUrl}${url.startsWith("/") ? "" : "/"}${url}`;
+    }
+    return url;
+  } catch {
+    return val;
+  }
+};
 
 function createMessageId() {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -398,10 +421,10 @@ export default function ChatBox() {
 
       {isOpen && (
         <div className={`flex flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl transition-[width,height] duration-300 ${
-          isExpanded 
-            ? "h-[60vh] w-[88vw] sm:w-[446px] sm:h-[576px]" // 🚀 Kích thước khi phóng to
-            : "h-[520px] w-[335px] max-w-[calc(100vw-24px)] sm:w-[372px]" // Kích thước bình thường
-        }`}>
+        isExpanded 
+          ? "h-[66.1vh] w-[97vw] sm:w-[492px] sm:h-[634px]" 
+          : "h-[572px] w-[369px] max-w-[calc(100vw-24px)] sm:w-[410px]" 
+      }`}>
             <div className="relative z-10 shrink-0 flex items-center justify-between bg-linear-to-r from-blue-600 to-blue-500 px-4 py-4 text-white">            <div className="flex items-center gap-3">
               <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-linear-to-tr from-blue-500 to-indigo-500 shadow-md shadow-blue-900/20">
                 <Store className="h-5 w-5 text-white" strokeWidth={2} />
@@ -583,7 +606,7 @@ function MessageItem({ message }: { message: ChatMsg }) {
                   {product.imageUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
-                      src={product.imageUrl}
+                      src={getValidImageUrl(product.imageUrl)}
                       alt={product.name}
                       className="h-full w-full object-cover"
                     />
@@ -600,9 +623,12 @@ function MessageItem({ message }: { message: ChatMsg }) {
                   </p>
 
                   <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500">
-                    {formatPrice(product.priceAfterDiscount ?? product.price) && (
+                    {/* LOGIC HIỂN THỊ KHOẢNG GIÁ NẾU CÓ BIẾN THỂ */}
+                    {typeof product.price === "number" && (
                       <span className="font-semibold text-blue-600">
-                        {formatPrice(product.priceAfterDiscount ?? product.price)}
+                        {product.hasVariants && typeof product.maxPrice === "number" && product.maxPrice !== product.price
+                          ? `${formatPrice(product.price * (1 - (product.discount || 0) / 100))} - ${formatPrice(product.maxPrice * (1 - (product.discount || 0) / 100))}`
+                          : formatPrice(product.priceAfterDiscount ?? (product.price * (1 - (product.discount || 0) / 100)))}
                       </span>
                     )}
 

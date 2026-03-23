@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Heart, XCircle, ArrowRight, ShoppingCart, Trash2, Tag } from 'lucide-react';
-import { fetchWishlist, removeFromWishlist, clearWishlist, addToCart } from '@/services/api';
+import { fetchWishlist, removeFromWishlist, clearWishlist, addToCart, trackProductAddToCart } from '@/services/api';
+import Modal from '@/components/Modal'; 
 
 type Product = {
   id: number;
@@ -27,6 +28,13 @@ export default function WishlistPage() {
   const [wishlist, setWishlist] = useState<WishlistItem[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+
+  // ✅ STATE CHO MODAL THÊM VÀO GIỎ
+  const [showVariantModal, setShowVariantModal] = useState(false);
+  const [selectedModalProduct, setSelectedModalProduct] = useState<Product | null>(null);
+  const [selectedVariant, setSelectedVariant] = useState<any | null>(null);
+  const [quantity, setQuantity] = useState(1);
+  const [isAdding, setIsAdding] = useState(false);
 
   useEffect(() => {
     loadWishlist();
@@ -98,19 +106,55 @@ export default function WishlistPage() {
     }
   };
 
-  const handleAddToCart = async (product: Product) => {
+  const formatVND = (val: number) =>
+    new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(val);
+
+  // HÀM KHI BẤM XÁC NHẬN TRONG MODAL
+  const handleConfirmAddToCart = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!selectedModalProduct) return;
+
+    const modalHasVariants = selectedModalProduct.variants && selectedModalProduct.variants.length > 0;
+    
+    if (modalHasVariants && !selectedVariant) {
+      alert("Vui lòng chọn phân loại sản phẩm!");
+      return;
+    }
+
     try {
-      await addToCart(product.id, 1);
+      setIsAdding(true);
+      await addToCart(selectedModalProduct.id, quantity, modalHasVariants ? selectedVariant.id : undefined);
+      trackProductAddToCart(selectedModalProduct.id).catch(err => console.error(err));
+      
       window.dispatchEvent(new Event('cartUpdated'));
-      alert(`Đã thêm "${product.name}" vào giỏ hàng!`);
+      setShowVariantModal(false);
+      alert(`Đã thêm ${quantity} sản phẩm vào giỏ hàng!`);
     } catch (error) {
       console.error('Lỗi thêm giỏ hàng:', error);
       alert('Có lỗi xảy ra, không thể thêm vào giỏ.');
+    } finally {
+      setIsAdding(false);
     }
   };
 
-  const formatVND = (val: number) =>
-    new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(val);
+  // LOGIC TÍNH TOÁN CHO MODAL TƯƠNG TỰ NHƯ PRODUCT CARD
+  const modalHasVariants = selectedModalProduct?.variants && selectedModalProduct.variants.length > 0;
+  const modalDiscountRate = (selectedModalProduct?.discount || 0) / 100;
+  const modalHasDiscount = !!selectedModalProduct?.discount && selectedModalProduct.discount > 0;
+  
+  let modalMinPrice = selectedModalProduct?.price || 0;
+  if (modalHasVariants && selectedModalProduct?.variants) {
+    const prices = selectedModalProduct.variants.map((v: any) => v.price || 0);
+    modalMinPrice = Math.min(...prices);
+  }
+
+  const modalCurrentPrice = (modalHasVariants && selectedVariant) 
+    ? selectedVariant.price * (1 - modalDiscountRate)
+    : (selectedModalProduct?.price || 0) * (1 - modalDiscountRate);
+
+  const maxStockLimit = modalHasVariants 
+    ? (selectedVariant ? selectedVariant.stock : 0) 
+    : (selectedModalProduct?.stock || 0);
 
   return (
     <div className="min-h-screen bg-slate-50 pb-20 pt-10">
@@ -183,6 +227,9 @@ export default function WishlistPage() {
               
               const hasVariants = p.variants && p.variants.length > 0;
               const discountRate = (p.discount || 0) / 100;
+              const totalStock = hasVariants
+                ? p.variants!.reduce((sum: number, v: any) => sum + (v.stock || 0), 0)
+                : (p.stock || 0);
 
               let minPrice = p.price || 0;
               let maxPrice = p.price || 0;
@@ -223,8 +270,20 @@ export default function WishlistPage() {
                     <img
                       src={imageUrl}
                       alt={p.name}
-                      className="absolute inset-0 w-full h-full object-contain p-4 group-hover:scale-110 transition-transform duration-500 mix-blend-multiply"
+                      // Nếu hết hàng thì làm mờ ảnh (opacity-60), còn hàng thì hover zoom
+                      className={`absolute inset-0 w-full h-full object-contain p-4 transition-transform duration-500 mix-blend-multiply ${totalStock > 0 ? 'group-hover:scale-110' : 'opacity-60'}`}
                     />
+                    
+                    {/* Tem Hết Hàng */}
+                    {totalStock <= 0 && (
+                      <div className="absolute right-4 bottom-4 z-20 rotate-[18deg] transform-gpu">
+                        <div className="rounded-full border-[4px] border-red-600 px-4 py-2 text-sm font-extrabold uppercase tracking-wider text-red-600 bg-white/80 shadow-md">
+                          <span className="font-sans antialiased text-sm font-black text-red-600">
+                            HẾT HÀNG
+                          </span>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <div className="p-5 flex flex-col flex-1">
@@ -235,37 +294,49 @@ export default function WishlistPage() {
                       {p.name}
                     </h3>
 
-                    <div className="mt-auto pt-4 flex items-end justify-between">
-                      <div>
-                        <div className="text-lg font-black text-pink-600">
+                    <div className="mt-auto pt-4 flex items-center justify-between gap-2">
+                      <div className="flex flex-col flex-wrap items-baseline gap-1">
+                        <span className="text-xl font-bold text-red-600">
                           {isPriceRange 
                             ? `${formatVND(minPriceAfterDiscount)} - ${formatVND(maxPriceAfterDiscount)}` 
                             : formatVND(minPriceAfterDiscount)}
-                        </div>
-                        
+                        </span>
                         {p.discount > 0 && (
-                          <div className="text-xs font-semibold text-slate-400 line-through">
+                          <span className="text-xs font-semibold text-slate-400 line-through">
                             {isPriceRange 
                               ? `${formatVND(minPrice)} - ${formatVND(maxPrice)}` 
                               : formatVND(minPrice)}
-                          </div>
+                          </span>
                         )}
                       </div>
 
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (hasVariants) {
-                            router.push(`/products/${p.id}`);
-                          } else {
-                            handleAddToCart(p as any);
-                          }
-                        }}
-                        className="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center hover:bg-pink-500 transition-colors duration-300 shadow-md shrink-0 ml-2"
-                        title={hasVariants ? "Chọn phân loại" : "Thêm vào giỏ"}
-                      >
-                        <ShoppingCart size={18} />
-                      </button>
+                      <div className="flex items-center gap-2">
+                        {/* Nút Giỏ Hàng (Xám đi nếu hết hàng) */}
+                        <button
+                          disabled={totalStock <= 0}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (totalStock <= 0) return;
+                            
+                            setSelectedModalProduct(p);
+                            if (hasVariants && p.variants && p.variants.length > 0) {
+                              setSelectedVariant(p.variants[0]);
+                            } else {
+                              setSelectedVariant(null);
+                            }
+                            setQuantity(1);
+                            setShowVariantModal(true);
+                          }}
+                          className={`shrink-0 flex h-10 w-10 items-center justify-center rounded-xl text-white shadow-md transition-colors duration-300 ${
+                            totalStock <= 0 
+                              ? "bg-slate-300 cursor-not-allowed" 
+                              : "bg-slate-900 hover:bg-pink-500"
+                          }`}
+                          title={totalStock <= 0 ? "Hết hàng" : "Thêm vào giỏ"}
+                        >
+                          <ShoppingCart size={18} />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -274,6 +345,137 @@ export default function WishlistPage() {
           </div>
         )}
       </div>
+
+      {/* POPUP MODAL */}
+      {selectedModalProduct && (
+        <Modal isOpen={showVariantModal} onClose={() => setShowVariantModal(false)}>
+          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-white p-6 relative">
+            <div className="flex flex-col gap-6">
+              
+              <div className="flex items-start gap-4 border-b border-gray-100 pb-4">
+                <div className="relative h-60 w-60 shrink-0 aspect-square overflow-hidden rounded-3xl border border-gray-200 bg-gray-50 p-1.5 shadow-sm">
+                  <img 
+                    src={getImageUrl((modalHasVariants && selectedVariant && selectedVariant.imageUrl) || selectedModalProduct.imageUrls || selectedModalProduct.imageUrl)} 
+                    alt={selectedModalProduct.name} 
+                    className="h-full w-full object-contain rounded-3xl"
+                  />
+                </div>
+                <div className="flex flex-col flex-1">
+                  <h3 className="line-clamp-2 text-base font-bold text-gray-900 pr-10">{selectedModalProduct.name}</h3>
+                  
+                  {/* BỌC GIÁ TIỀN VÀ NÚT CHI TIẾT VÀO CHUNG 1 DÒNG */}
+                  <div className="mt-3 flex items-center justify-between gap-4">
+                    <div className="flex flex-wrap items-baseline gap-2">
+                      <span className="text-2xl font-bold text-red-600">
+                        {formatVND(modalCurrentPrice)}
+                      </span>
+                      {modalHasDiscount && (
+                        <span className="text-sm text-gray-400 line-through">
+                          {formatVND(modalHasVariants && selectedVariant ? selectedVariant.price : modalMinPrice)}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Nút Chi tiết >> */}
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        router.push(`/products/${selectedModalProduct.id}`);
+                      }}
+                      className="shrink-0 flex items-center gap-1 rounded border border-blue-600 px-3 py-1.5 text-sm font-semibold text-blue-600 transition-colors hover:bg-blue-50"
+                    >
+                      Chi tiết <span className="text-[14px] leading-none">»</span>
+                    </button>
+                  </div>
+                  {modalHasVariants && selectedVariant && (
+                    <p className="mt-1.5 text-sm text-slate-600">
+                      Bạn đang chọn: <span className="font-semibold text-gray-900">{selectedVariant.variantName}</span>
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {modalHasVariants && (
+                <div className="space-y-4">
+                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Phân loại</h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    {selectedModalProduct.variants?.map((v, index) => {
+                      const isOutOfStock = v.stock <= 0;
+                      return (
+                        <button
+                          key={v.id}
+                          onClick={() => {
+                            if (!isOutOfStock) {
+                              setSelectedVariant(v);
+                              setQuantity(1);
+                            }
+                          }}
+                          disabled={isOutOfStock}
+                          className={`relative overflow-hidden rounded-lg border px-3 py-2 text-sm font-medium transition-all duration-200 flex items-center gap-1.5
+                            ${selectedVariant?.id === v.id 
+                              ? 'border-blue-600 bg-blue-50 text-blue-700 ring-1 ring-blue-600' 
+                              : 'border-slate-200 bg-white text-slate-700 hover:border-slate-400'
+                            }
+                            ${isOutOfStock ? 'opacity-50 cursor-not-allowed bg-slate-100 text-slate-400 border-slate-200' : ''}
+                          `}
+                        >
+                          {v.color && (
+                            <div 
+                              className={`w-3 h-3 rounded-full shrink-0 border border-slate-300`}
+                              style={{ backgroundColor: v.color.toLowerCase() }} 
+                            />
+                          )}
+                          <span className="leading-none">{v.variantName}</span>
+                          {isOutOfStock && (
+                            <span className="absolute inset-0 flex items-center justify-center">
+                              <span className="w-full border-t border-slate-400 -rotate-12 transform absolute"></span>
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              <div className="border-t border-gray-100 pt-4 flex items-center justify-between gap-4">
+                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Số lượng</h3>
+                <div className="flex items-center gap-3">
+                  <div className="inline-flex items-center overflow-hidden rounded-lg border border-gray-300">
+                    <button 
+                      onClick={() => setQuantity(prev => Math.max(prev - 1, 1))}
+                      className="px-3 py-1.5 text-lg font-semibold text-slate-700 transition hover:bg-slate-50"
+                    >−</button>
+                    <div className="min-w-10 border-x border-slate-300 px-3 py-1.5 text-center font-semibold text-slate-900">{quantity}</div>
+                    <button 
+                      onClick={() => setQuantity(prev => Math.min(prev + 1, maxStockLimit))}
+                      disabled={maxStockLimit <= 0 || quantity >= maxStockLimit}
+                      className="px-3 py-1.5 text-lg font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
+                    >+</button>
+                  </div>
+                  <p className="text-xs text-slate-500">Tối đa: {maxStockLimit} sản phẩm</p>
+                </div>
+              </div>
+
+              <div className="mt-6">
+                <button 
+                  onClick={handleConfirmAddToCart}
+                  disabled={(modalHasVariants && !selectedVariant) || isAdding || maxStockLimit <= 0}
+                  className={`w-full flex items-center justify-center gap-2 rounded-xl px-5 py-3.5 font-bold text-white shadow transition ${
+                    (modalHasVariants && !selectedVariant) || maxStockLimit <= 0
+                      ? "cursor-not-allowed bg-slate-300"
+                      : "bg-blue-600 hover:bg-blue-700"
+                  }`}
+                >
+                  {isAdding ? "Đang xử lý..." : "Thêm vào giỏ hàng"}
+                </button>
+              </div>
+
+            </div>
+          </div>
+        </Modal>
+      )}
+
     </div>
   );
 }
