@@ -74,6 +74,20 @@ export default function ProductPage() {
 
   const [importModalOpen, setImportModalOpen] = useState(false);
 
+  // State phục vụ Preview (Bước 1 & Bước 2)
+  const [importStep, setImportStep] = useState<1 | 2>(1);
+  const [previewData, setPreviewData] = useState<any[]>([]);
+  const [selectedExcelFile, setSelectedExcelFile] = useState<File | null>(null);
+  const [selectedZipFile, setSelectedZipFile] = useState<File | null>(null);
+
+  const handleCloseImportModal = () => {
+    setImportModalOpen(false);
+    setImportStep(1);
+    setPreviewData([]);
+    setSelectedExcelFile(null);
+    setSelectedZipFile(null);
+  };
+
   // HÀM XỬ LÝ BIẾN THỂ
   const handleAddVariant = () => {
     setVariants([...variants, { variantName: "", color: "", price: 0, stock: 0, imageUrl: "" }]);
@@ -896,62 +910,171 @@ export default function ProductPage() {
             </div>
 
             <div className="flex justify-end gap-3 pt-4">
-              <button type="button" onClick={closeModal} className="rounded-lg border border-gray-300 px-5 py-2.5 font-medium text-gray-700 transition-colors duration-150 hover:bg-gray-50">Hủy</button>
+              <button type="button" onClick={closeModal} className="rounded-lg bg-black px-5 py-2.5 font-bold text-white border-2 border-black transition-colors duration-150 hover:bg-gray-900 hover:border-gray-900">Hủy</button>
               <button type="submit" className="flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 font-medium text-white shadow transition-colors duration-150 hover:bg-blue-700">{editingProduct ? "Cập nhật sản phẩm" : "Thêm sản phẩm"}</button>
             </div>
           </form>
         </div>
       </Modal>
-      {/* ================= MODAL IMPORT EXCEL VÀ ZIP ================= */}
-      <Modal isOpen={importModalOpen} onClose={() => setImportModalOpen(false)}>
-        <div className="w-full max-w-md rounded-xl bg-white p-6">
-          <h2 className="mb-4 text-xl font-bold text-gray-800">Nhập Sản Phẩm Hàng Loạt</h2>
-          <form onSubmit={async (e) => {
-            e.preventDefault();
-            const formObj = e.target as HTMLFormElement;
-            const excelFile = (formObj.elements.namedItem('excelFile') as HTMLInputElement).files?.[0];
-            const zipFile = (formObj.elements.namedItem('zipFile') as HTMLInputElement).files?.[0];
+      {/* ================= MODAL IMPORT 2 BƯỚC (PREVIEW) ================= */}
+      <Modal isOpen={importModalOpen} onClose={handleCloseImportModal}>
+        {/* Nới rộng kích thước Modal ra nếu ở Bước 2 để chứa bảng */}
+        <div className={`w-full rounded-xl bg-white p-6 transition-all duration-300 ${importStep === 2 ? 'max-w-[90vw]' : 'max-w-md'}`}>
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-xl font-bold text-gray-800">
+              {importStep === 1 ? "Nhập Sản Phẩm Hàng Loạt" : "Xem Trước Dữ Liệu"}
+            </h2>
+          </div>
 
-            if (!excelFile) return toast.error("Vui lòng chọn file Excel!");
-
-            try {
-              setIsUploadingExcel(true);
-              const fd = new FormData();
-              fd.append("excelFile", excelFile);
-              if (zipFile) fd.append("zipFile", zipFile);
-
-              const res = await api.post("/products/import", fd, {
-                headers: { "Content-Type": "multipart/form-data" },
-              });
-
-              toast.success(res.data.message || "Import thành công!");
-              setImportModalOpen(false);
-              await loadProducts();
-            } catch (err: any) {
-              toast.error(err.response?.data?.message || "Lỗi import!");
-            } finally {
-              setIsUploadingExcel(false);
-            }
-          }}>
-            <div className="mb-4">
-              <label className="mb-1 block text-sm font-medium text-gray-700">1. File Excel (.xlsx) *</label>
-              <input type="file" name="excelFile" accept=".xlsx" className="w-full rounded border p-2" required />
+          {/* ============ BƯỚC 1: CHỌN FILE ============ */}
+          {importStep === 1 && (
+            <div className="space-y-4">
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">1. File Excel (.xlsx) *</label>
+                <input 
+                  type="file" 
+                  accept=".xlsx" 
+                  className="w-full rounded border p-2" 
+                  onChange={(e) => setSelectedExcelFile(e.target.files?.[0] || null)}
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">2. File nén chứa ẢNH (.zip)</label>
+                <input 
+                  type="file" 
+                  accept=".zip" 
+                  className="w-full rounded border p-2" 
+                  onChange={(e) => setSelectedZipFile(e.target.files?.[0] || null)}
+                />
+              </div>
+              
+              <div className="mt-6 flex justify-end gap-2">
+                <button type="button" onClick={handleCloseImportModal} className="rounded-lg bg-black px-4 py-2 font-bold text-white border-2 border-black transition-colors duration-150 hover:bg-gray-900 hover:border-gray-900">Hủy</button>
+                <button 
+                  type="button" 
+                  disabled={!selectedExcelFile || isUploadingExcel} 
+                  onClick={async () => {
+                    try {
+                      setIsUploadingExcel(true);
+                      const fd = new FormData();
+                      fd.append("excelFile", selectedExcelFile!);
+                      const res = await api.post("/products/preview-import", fd, { headers: { "Content-Type": "multipart/form-data" } });
+                      setPreviewData(res.data);
+                      setImportStep(2); // Chuyển sang bước 2
+                    } catch (err: any) {
+                      toast.error(err.response?.data?.message || "Lỗi đọc file nháp!");
+                    } finally {
+                      setIsUploadingExcel(false);
+                    }
+                  }}
+                  className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white disabled:opacity-50"
+                >
+                  {isUploadingExcel ? "Đang quét dữ liệu..." : "Xem trước dữ liệu"}
+                </button>
+              </div>
             </div>
-            <div className="mb-6">
-              <label className="mb-1 block text-sm font-medium text-gray-700">2. File nén chứa ẢNH (.zip)</label>
-              <input type="file" name="zipFile" accept=".zip" className="w-full rounded border p-2" />
-              <p className="mt-1 text-xs text-gray-500">Nếu không có ảnh, có thể bỏ trống ô này.</p>
+          )}
+
+          {/* ============ BƯỚC 2: HIỂN THỊ PREVIEW ============ */}
+          {importStep === 2 && (
+            <div>
+              <div className="max-h-[75vh] overflow-auto rounded-lg border border-gray-200">
+                <table className="w-full text-left text-sm whitespace-nowrap">
+                  <thead className="sticky top-0 z-10 bg-gray-200 text-gray-800 shadow-sm">
+                    <tr>
+                      <th className="p-3 font-bold">Dòng</th>
+                      <th className="p-3 font-bold">Tên SP</th>
+                      <th className="p-3 font-bold">Danh mục</th>
+                      <th className="p-3 font-bold">Giá</th>
+                      <th className="p-3 font-bold">Kho</th>
+                      <th className="p-3 font-bold">Giảm (%)</th>
+                      <th className="p-3 font-bold">Ảnh bìa</th>
+                      <th className="p-3 font-bold">Ảnh phụ</th>
+                      <th className="p-3 font-bold">Mô tả</th>
+                      <th className="p-3 font-bold">Phân loại (Biến thể)</th>
+                      <th className="p-3 text-center font-bold sticky right-0 bg-gray-200 border-l border-gray-300">Trạng thái</th>
+                      <th className="p-3 font-bold">Lỗi</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {previewData.map((row, idx) => (
+                      <tr key={idx} className={row.isValid ? "bg-white hover:bg-gray-50" : "bg-red-100 hover:bg-red-200"}>
+                        <td className="p-3 text-black font-medium">{row.row}</td>
+                        <td className="p-3 text-black max-w-[150px] truncate" title={row.name}>{row.name}</td>
+                        <td className="p-3 text-black">{row.categoryName}</td>
+                        {/* Nếu khác null thì in số tiền, nếu null (trống) thì in vạch ngang */}
+                        <td className="p-3 text-black font-medium">
+                          {row.price != null ? row.price.toLocaleString('vi-VN') : <span className="text-gray-400 font-bold">-</span>}
+                        </td>
+                        <td className="p-3 text-black font-medium">
+                          {row.stock != null ? row.stock : <span className="text-gray-400 font-bold">-</span>}
+                        </td>
+                        <td className="p-3 text-black">{row.discount}%</td>
+                        <td className="p-3 text-gray-600 max-w-[100px] truncate" title={row.imageUrl}>{row.imageUrl || "-"}</td>
+                        <td className="p-3 text-gray-600 max-w-[100px] truncate" title={row.additionalImages}>{row.additionalImages || "-"}</td>
+                        <td className="p-3 text-gray-600 max-w-[150px] truncate" title={row.description}>{row.description || "-"}</td>
+                        
+                        {/* Cột Biến thể - Chữ xanh cho nổi bật nếu có */}
+                        <td className="p-3 max-w-[200px] truncate" title={row.variants}>
+                          {row.variants ? (
+                            <span className="font-semibold text-blue-700">{row.variants}</span>
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
+                        </td>
+
+                        <td className="p-3 text-center sticky right-0 border-l border-gray-200 shadow-[-5px_0_10px_rgba(0,0,0,0.05)]" style={{ backgroundColor: row.isValid ? '#fff' : '#fee2e2' }}>
+                          {row.isValid ? (
+                            <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-bold text-green-700 border border-green-200">Hợp lệ</span>
+                          ) : (
+                            <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-bold text-red-700 border border-red-200">Lỗi</span>
+                          )}
+                        </td>
+                        <td className="p-3 text-red-600 text-xs font-bold max-w-[200px] truncate" title={row.errors?.join(", ")}>
+                          {row.errors?.join(", ")}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="mt-4 flex items-center justify-between">
+                <p className="text-sm font-medium text-gray-600">
+                  Phát hiện <span className="text-red-600 font-bold">{previewData.filter(r => !r.isValid).length}</span> dòng lỗi trên tổng số {previewData.length} dòng. (Các dòng lỗi sẽ bị bỏ qua khi Import).
+                </p>
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => setImportStep(1)} className="rounded-lg bg-black px-4 py-2 font-bold text-white border-2 border-black transition-colors duration-150 hover:bg-gray-900 hover:border-gray-900">Quay lại</button>
+                  <button 
+                    type="button" 
+                    disabled={isUploadingExcel}
+                    onClick={async () => {
+                      try {
+                        setIsUploadingExcel(true);
+                        const fd = new FormData();
+                        fd.append("excelFile", selectedExcelFile!);
+                        if (selectedZipFile) fd.append("zipFile", selectedZipFile);
+
+                        const res = await api.post("/products/import", fd, { headers: { "Content-Type": "multipart/form-data" } });
+                        toast.success(res.data.message);
+                        handleCloseImportModal();
+                        loadProducts();
+                      } catch (err: any) {
+                        toast.error(err.response?.data?.message || "Lỗi import thật!");
+                      } finally {
+                        setIsUploadingExcel(false);
+                      }
+                    }}
+                    className="rounded-lg bg-green-600 px-4 py-2 font-medium text-white disabled:opacity-50"
+                  >
+                    {isUploadingExcel ? "Đang nhập..." : "Xác nhận Import"}
+                  </button>
+                </div>
+              </div>
             </div>
-            
-            <div className="flex justify-end gap-2">
-              <button type="button" onClick={() => setImportModalOpen(false)} className="rounded-lg bg-gray-800 px-4 py-2 text-white">Hủy</button>
-              <button type="submit" disabled={isUploadingExcel} className="rounded-lg bg-green-600 px-4 py-2 text-white">
-                {isUploadingExcel ? "Đang xử lý..." : "Bắt đầu Import"}
-              </button>
-            </div>
-          </form>
+          )}
         </div>
-      </Modal>           
+      </Modal>          
     </div>
   );
 }

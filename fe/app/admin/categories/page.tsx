@@ -9,6 +9,7 @@ import api, {
   type Category,
 } from "@/services/api";
 import toast from "react-hot-toast";
+import Modal from "@/components/Modal";
 
 type CategoryForm = {
   name: string;
@@ -28,37 +29,17 @@ export default function CategoryPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [editCategoryId, setEditCategoryId] = useState<number | null>(null);
 
-  // --- STATE VÀ HÀM CHO IMPORT FILE ---
-  const [isUploading, setIsUploading] = useState(false);
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [importStep, setImportStep] = useState<1 | 2>(1);
+  const [previewData, setPreviewData] = useState<any[]>([]);
+  const [selectedExcelFile, setSelectedExcelFile] = useState<File | null>(null);
+  const [isUploadingExcel, setIsUploadingExcel] = useState(false);
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    try {
-      setIsUploading(true);
-      
-      const formData = new FormData();
-      formData.append("file", file); // Chữ "file" khớp với [FromForm] IFormFile file bên C#
-      
-      //  Ép Axios phải dùng 'multipart/form-data' thay vì 'application/json' mặc định
-      const res = await api.post("/Categories/import", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
-      
-      toast.success(res.data.message || "Import thành công!");
-      await loadCategories(); // Load lại bảng danh sách
-      
-    } catch (error: any) {
-      const errorMessage = error.response?.data?.message || "Lỗi từ C# gửi về!";
-      toast.error(errorMessage);
-      console.error("🚨 Chi tiết lỗi:", error.response?.data || error);
-    } finally {
-      setIsUploading(false);
-      event.target.value = '';
-    }
+  const handleCloseImportModal = () => {
+    setImportModalOpen(false);
+    setImportStep(1);
+    setPreviewData([]);
+    setSelectedExcelFile(null);
   };
 
   const nameInputRef = useRef<HTMLInputElement>(null);
@@ -218,21 +199,14 @@ export default function CategoryPage() {
 
           <div className="flex items-center gap-6">
             {/* Nút Upload File */}
+            {/* Nút Mở Modal Import */}
             <div>
-              <input
-                type="file"
-                id="import-excel"
-                className="hidden"
-                accept=".xlsx, .xls, .csv"
-                onChange={handleFileUpload}
-                disabled={isUploading}
-              />
-              <label
-                htmlFor="import-excel"
-                className="cursor-pointer flex items-center gap-2 rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-2 text-sm font-bold text-emerald-600 transition hover:bg-emerald-100 hover:text-emerald-700 disabled:opacity-50"
+              <button
+                onClick={() => setImportModalOpen(true)}
+                className="cursor-pointer flex items-center gap-2 rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-2 text-sm font-bold text-emerald-600 transition hover:bg-emerald-100 hover:text-emerald-700"
               >
-                {isUploading ? "⏳ Đang xử lý..." : "📁 Import từ File Excel"}
-              </label>
+                📁 Import từ File Excel
+              </button>
             </div>
 
             {/* Thống kê số lượng */}
@@ -470,6 +444,131 @@ export default function CategoryPage() {
           )}
         </div>
       </div>
+      {/* ================= MODAL IMPORT DANH MỤC 2 BƯỚC ================= */}
+      <Modal isOpen={importModalOpen} onClose={handleCloseImportModal}>
+        <div className={`w-full rounded-xl bg-white p-6 transition-all duration-300 ${importStep === 2 ? 'max-w-4xl' : 'max-w-md'}`}>
+          <div className="mb-6 flex items-center justify-between border-b pb-4">
+            <h2 className="text-xl font-bold text-gray-800">
+              {importStep === 1 ? "Nhập Danh Mục Hàng Loạt" : "Xem Trước Dữ Liệu Danh Mục"}
+            </h2>
+            <button onClick={handleCloseImportModal} className="text-gray-400 hover:text-gray-600">✕</button>
+          </div>
+
+          {/* BƯỚC 1: CHỌN FILE */}
+          {importStep === 1 && (
+            <div className="space-y-4">
+              <div>
+                <label className="mb-2 block text-sm font-bold text-gray-700">Chọn File Excel (.xlsx) *</label>
+                <input 
+                  type="file" 
+                  accept=".xlsx" 
+                  className="w-full rounded-lg border border-gray-300 p-2.5 text-black focus:ring-2 focus:ring-purple-500 outline-none" 
+                  onChange={(e) => setSelectedExcelFile(e.target.files?.[0] || null)}
+                />
+              </div>
+              <div className="mt-8 flex justify-end gap-3">
+                <button type="button" onClick={handleCloseImportModal} className="cursor-pointer rounded-lg bg-black px-6 py-2.5 font-bold text-white transition hover:bg-gray-800">Hủy</button>
+                <button 
+                  type="button" 
+                  disabled={!selectedExcelFile || isUploadingExcel} 
+                  onClick={async () => {
+                    try {
+                      setIsUploadingExcel(true);
+                      const fd = new FormData();
+                      fd.append("file", selectedExcelFile!);
+                      const res = await api.post("/categories/preview-import", fd, { headers: { "Content-Type": "multipart/form-data" } });
+                      setPreviewData(res.data);
+                      setImportStep(2); 
+                    } catch (err: any) {
+                      toast.error(err.response?.data?.message || "Lỗi đọc file nháp!");
+                    } finally {
+                      setIsUploadingExcel(false);
+                    }
+                  }}
+                  className="cursor-pointer rounded-lg bg-purple-600 px-6 py-2.5 font-bold text-white shadow-md transition hover:bg-purple-700 disabled:opacity-50"
+                >
+                  {isUploadingExcel ? "⏳ Đang quét..." : "Xem trước dữ liệu"}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* BƯỚC 2: BẢNG PREVIEW */}
+          {importStep === 2 && (
+            <div>
+              <div className="max-h-[60vh] overflow-auto rounded-xl border border-gray-200 shadow-sm">
+                <table className="w-full text-left text-sm">
+                  <thead className="sticky top-0 z-10 bg-gray-100 text-gray-800 shadow-sm">
+                    <tr>
+                      <th className="p-4 font-bold">Dòng</th>
+                      <th className="p-4 font-bold">Tên Danh Mục</th>
+                      <th className="p-4 font-bold">Mô Tả</th>
+                      <th className="p-4 text-center font-bold">Trạng thái</th>
+                      <th className="p-4 font-bold">Lỗi</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {previewData.map((row, idx) => (
+                      <tr key={idx} className={row.isValid ? "bg-white hover:bg-gray-50" : "bg-red-50 hover:bg-red-100"}>
+                        <td className="p-4 text-black font-medium">{row.row}</td>
+                        <td className="p-4 text-black font-bold text-base">{row.name || "-"}</td>
+                        <td className="p-4 text-gray-700">{row.description || "-"}</td>
+                        <td className="p-4 text-center">
+                          {row.isValid ? (
+                            <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-black text-green-700 border border-green-200">Hợp lệ</span>
+                          ) : (
+                            <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-black text-red-700 border border-red-200">Lỗi</span>
+                          )}
+                        </td>
+                        <td className="p-4 text-red-600 text-xs font-black uppercase">
+                          {row.errors?.join(", ")}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="mt-6 flex items-center justify-between border-t pt-5">
+                <p className="text-sm font-semibold text-gray-600 italic">
+                  * Hệ thống sẽ tự động loại bỏ <span className="text-red-600 font-black">{previewData.filter(r => !r.isValid).length}</span> dòng lỗi khi lưu.
+                </p>
+                <div className="flex gap-3">
+                  <button 
+                    type="button" 
+                    onClick={() => setImportStep(1)} 
+                    className="cursor-pointer rounded-lg bg-black px-6 py-2.5 font-bold text-white transition hover:bg-gray-800"
+                  >
+                    Quay lại
+                  </button>
+                  <button 
+                    type="button" 
+                    disabled={isUploadingExcel}
+                    onClick={async () => {
+                      try {
+                        setIsUploadingExcel(true);
+                        const fd = new FormData();
+                        fd.append("file", selectedExcelFile!);
+                        const res = await api.post("/categories/import", fd, { headers: { "Content-Type": "multipart/form-data" } });
+                        toast.success(res.data.message);
+                        handleCloseImportModal();
+                        loadCategories();
+                      } catch (err: any) {
+                        toast.error(err.response?.data?.message || "Lỗi import thật!");
+                      } finally {
+                        setIsUploadingExcel(false);
+                      }
+                    }}
+                    className="cursor-pointer rounded-lg bg-green-600 px-8 py-2.5 font-black text-white shadow-lg transition hover:bg-green-700 disabled:opacity-50"
+                  >
+                    {isUploadingExcel ? "Đang nhập..." : "🚀 Xác nhận Import"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </Modal>
     </div>
   );
 }

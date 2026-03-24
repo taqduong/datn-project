@@ -457,8 +457,122 @@ namespace BE.Controllers
             return Ok(results);
         }
 
+        // DTO dùng riêng cho vụ Preview
+        public class PreviewImportRowDto
+        {
+            public int Row { get; set; }
+            public string Name { get; set; } = string.Empty;
+            public string CategoryName { get; set; } = string.Empty;
+            public decimal? Price { get; set; }
+            public int? Stock { get; set; }
+            public int Discount { get; set; }
+            public string ImageUrl { get; set; } = string.Empty;
+            public string AdditionalImages { get; set; } = string.Empty;
+            public string Description { get; set; } = string.Empty;
+            public string Variants { get; set; } = string.Empty;
+            public bool IsValid { get; set; }
+            public List<string> Errors { get; set; } = new List<string>();
+        }
+
         // =========================================================================
-        // API MỚI: IMPORT EXCEL + XẢ NÉN FILE ZIP ẢNH
+        // BƯỚC 1: API ĐỌC NHÁP EXCEL 
+        // =========================================================================
+        [HttpPost("preview-import")]
+        public async Task<IActionResult> PreviewImport([FromForm] IFormFile excelFile)
+        {
+            if (excelFile == null || excelFile.Length == 0) return BadRequest(new { message = "Vui lòng chọn file Excel." });
+            if (Path.GetExtension(excelFile.FileName).ToLower() != ".xlsx") return BadRequest(new { message = "Chỉ hỗ trợ file Excel .xlsx." });
+
+            var previewList = new List<PreviewImportRowDto>();
+
+            try
+            {
+                using (var stream = new MemoryStream())
+                {
+                    await excelFile.CopyToAsync(stream);
+                    stream.Position = 0;
+
+                    using (var package = new ExcelPackage(stream))
+                    {
+                        var worksheet = package.Workbook.Worksheets.FirstOrDefault();
+                        if (worksheet == null || worksheet.Dimension == null) return BadRequest(new { message = "File Excel trống." });
+
+                        int rowCount = worksheet.Dimension.Rows;
+
+                        for (int row = 2; row <= rowCount; row++)
+                        {
+                            var name = worksheet.Cells[row, 1].Value?.ToString()?.Trim() ?? "";
+                            var categoryName = worksheet.Cells[row, 2].Value?.ToString()?.Trim() ?? "";
+                            var priceStr = worksheet.Cells[row, 3].Value?.ToString()?.Trim(); // Cho phép null
+                            var stockStr = worksheet.Cells[row, 4].Value?.ToString()?.Trim(); // Cho phép null
+                            var discountStr = worksheet.Cells[row, 5].Value?.ToString()?.Trim() ?? "0";
+                            var coverImg = worksheet.Cells[row, 6].Value?.ToString()?.Trim() ?? "";
+                            var additionalImgs = worksheet.Cells[row, 7].Value?.ToString()?.Trim() ?? "";
+                            var description = worksheet.Cells[row, 8].Value?.ToString()?.Trim() ?? "";
+                            var variantsStr = worksheet.Cells[row, 9].Value?.ToString()?.Trim() ?? "";
+                            
+                            var previewRow = new PreviewImportRowDto
+                            {
+                                Row = row,
+                                Name = name,
+                                CategoryName = categoryName,
+                                ImageUrl = coverImg,
+                                AdditionalImages = additionalImgs,
+                                Description = description,
+                                Variants = variantsStr,
+                                IsValid = true
+                            };
+
+                            if (string.IsNullOrEmpty(name)) 
+                            {
+                                previewRow.IsValid = false;
+                                previewRow.Errors.Add("Tên SP trống");
+                            }
+                            else if (await _context.Products.AnyAsync(p => p.Name.ToLower() == name.ToLower()))
+                            {
+                                previewRow.IsValid = false;
+                                previewRow.Errors.Add("Tên SP đã tồn tại");
+                            }
+
+                            if (string.IsNullOrEmpty(categoryName))
+                            {
+                                previewRow.IsValid = false;
+                                previewRow.Errors.Add("Danh mục trống");
+                            }
+                            else if (!await _context.Categories.AnyAsync(c => c.Name.ToLower() == categoryName.ToLower()))
+                            {
+                                previewRow.IsValid = false;
+                                previewRow.Errors.Add("Danh mục không tồn tại");
+                            }
+
+                            // Xử lý Giá (Trống -> Null | Chữ -> Báo lỗi)
+                            if (string.IsNullOrEmpty(priceStr)) previewRow.Price = null;
+                            else if (decimal.TryParse(priceStr, out decimal parsedPrice)) previewRow.Price = parsedPrice;
+                            else { previewRow.IsValid = false; previewRow.Errors.Add("Giá lỗi"); }
+
+                            // Xử lý Kho (Trống -> Null | Chữ -> Báo lỗi)
+                            if (string.IsNullOrEmpty(stockStr)) previewRow.Stock = null;
+                            else if (int.TryParse(stockStr, out int parsedStock)) previewRow.Stock = parsedStock;
+                            else { previewRow.IsValid = false; previewRow.Errors.Add("Tồn kho lỗi"); }
+
+                            // Xử lý Giảm giá (Giữ nguyên mặc định là 0)
+                            if (int.TryParse(discountStr, out int parsedDiscount)) previewRow.Discount = parsedDiscount;
+                            else { previewRow.IsValid = false; previewRow.Errors.Add("Giảm giá lỗi"); }
+
+                            previewList.Add(previewRow);
+                        }
+                    }
+                }
+                return Ok(previewList);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Lỗi đọc file: {ex.Message}" });
+            }
+        }
+
+        // =========================================================================
+        //  BƯỚC 2: API IMPORT THẬT (LƯU DB & XẢ NÉN ZIP)
         // =========================================================================
         [HttpPost("import")]
         public async Task<IActionResult> ImportProducts([FromForm] IFormFile excelFile, [FromForm] IFormFile? zipFile)
@@ -523,9 +637,19 @@ namespace BE.Controllers
                             var category = await _context.Categories.FirstOrDefaultAsync(c => c.Name.ToLower() == categoryName.ToLower());
                             if (category == null) { skipCount++; continue; }
 
-                            decimal.TryParse(priceStr, out decimal basePrice);
-                            int.TryParse(stockStr, out int baseStock);
-                            int.TryParse(discountStr, out int discount);
+                            // Xử lý ô trống: Nếu để trống thì tự hiểu là 0 (Dành cho SP có biến thể)
+                            if (string.IsNullOrWhiteSpace(priceStr)) priceStr = "0";
+                            if (string.IsNullOrWhiteSpace(stockStr)) stockStr = "0";
+                            if (string.IsNullOrWhiteSpace(discountStr)) discountStr = "0";
+
+                            // BẮT LỖI ÉP KIỂU: Nếu cố tình nhập chữ (abc, xyz) thì đá văng luôn!
+                            if (!decimal.TryParse(priceStr, out decimal basePrice) ||
+                                !int.TryParse(stockStr, out int baseStock) ||
+                                !int.TryParse(discountStr, out int discount))
+                            {
+                                skipCount++; // Tăng biến đếm số dòng bị bỏ qua
+                                continue;    // Bỏ qua dòng này, không lưu vào DB
+                            }
 
                             // Xử lý chuỗi biến thể (Tên:Màu:Giá:Kho:TênẢnh)
                             var variants = new List<ProductVariant>();

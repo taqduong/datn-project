@@ -75,7 +75,8 @@ export default function HomePage() {
   }, [products]);
 
   const featuredCategories = useMemo(() => {
-    return categories.slice(0, 4);
+    // Lấy 8 danh mục để có đủ 2 hàng hiển thị
+    return categories.slice(0, 8);
   }, [categories]);
 
   const bannerProducts = useMemo(() => {
@@ -292,9 +293,23 @@ export default function HomePage() {
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {featuredCategories.map((category, index) => {
-              const icons = ["👕", "🎧", "🪑", "⌚", "💄", "📱"];
+          <div className="grid grid-cols-2 gap-5 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4">
+            {featuredCategories.map((category) => {
+              // 1. Từ điển Icon chuẩn chỉ của sếp
+              const iconMap: Record<string, string> = {
+                "Nhà bếp": "🍳",
+                "Phòng khách": "🛋️",
+                "Phòng ngủ": "🛏️",
+                "Phòng tắm": "🛁",
+                "Điện gia dụng": "🔌",
+                "Thiết bị thông minh": "📱",
+                "Đồ dã ngoại": "⛺",
+                "Áo nam": "👕",
+              };
+
+              // 2. Lấy icon ra (nếu không có trong từ điển thì dùng tạm cái thùng hàng 📦)
+              const categoryIcon = iconMap[category.name] || "📦";
+
               return (
                 <Link
                   href={`/products?category=${category.id}`}
@@ -302,7 +317,8 @@ export default function HomePage() {
                   className="group rounded-3xl border border-slate-100 bg-white p-6 shadow-sm transition duration-300 hover:-translate-y-1.5 hover:border-blue-200 hover:shadow-xl hover:shadow-blue-100"
                 >
                   <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-50 text-2xl transition group-hover:bg-blue-50 group-hover:scale-110">
-                    {icons[index % icons.length]}
+                    {/* 3. Hiển thị Icon đã lọc được */}
+                    {categoryIcon}
                   </div>
                   <h3 className="text-lg font-bold text-slate-900">
                     {category.name}

@@ -17,121 +17,31 @@ namespace BE.Controllers
             _context = context;
         }
 
-        // Tạo mới danh mục
-        [HttpPost]
-        public async Task<ActionResult<Category>> CreateCategory([FromBody] CategoryRequest request)
+        // =========================================================================
+        // DTO PHỤC VỤ XEM TRƯỚC (PREVIEW)
+        // =========================================================================
+        public class PreviewCategoryRowDto
         {
-            try
-            {
-                var category = new Category
-                {
-                    Name = request.Name,
-                    Description = request.Description,
-                    CreatedAt = DateTime.Now
-                };
-
-                _context.Categories.Add(category);
-                await _context.SaveChangesAsync();
-
-                return CreatedAtAction(nameof(GetCategory), new { id = category.Id }, category);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
+            public int Row { get; set; }
+            public string Name { get; set; } = string.Empty;
+            public string Description { get; set; } = string.Empty;
+            public bool IsValid { get; set; }
+            public List<string> Errors { get; set; } = new List<string>();
         }
 
-        // Lấy danh mục theo id
-        [HttpGet("{id}")]
-        public async Task<ActionResult<Category>> GetCategory(int id)
+        // =========================================================================
+        // BƯỚC 1: API ĐỌC NHÁP EXCEL (PREVIEW LỖI)
+        // =========================================================================
+        [HttpPost("preview-import")]
+        public async Task<IActionResult> PreviewImport([FromForm] IFormFile file)
         {
-            var category = await _context.Categories
-                .FirstOrDefaultAsync(c => c.Id == id);
+            if (file == null || file.Length == 0) return BadRequest(new { message = "Vui lòng chọn file hợp lệ." });
+            if (Path.GetExtension(file.FileName).ToLower() != ".xlsx") return BadRequest(new { message = "Chỉ hỗ trợ file Excel .xlsx." });
 
-            if (category == null)
-                return NotFound(new { message = "Không tìm thấy danh mục." });
-
-            return Ok(category);
-        }
-
-        // Lấy toàn bộ danh mục
-        [HttpGet]
-        public async Task<ActionResult<IEnumerable<Category>>> GetAllCategories()
-        {
-            var categories = await _context.Categories.ToListAsync();
-            return Ok(categories);
-        }
-
-        // Cập nhật danh mục
-        [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateCategory(int id, [FromBody] CategoryRequest request)
-        {
-            var category = await _context.Categories
-                .FirstOrDefaultAsync(c => c.Id == id);
-
-            if (category == null)
-                return NotFound(new { message = "Không tìm thấy danh mục." });
-
-            category.Name = request.Name;
-            category.Description = request.Description;
-
-            await _context.SaveChangesAsync();
-
-            return Ok(new
-            {
-                message = "Cập nhật Category thành công."
-            });
-        }
-
-        // Xóa danh mục
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteCategory(int id)
-        {
-            var category = await _context.Categories
-                .Include(c => c.Products)
-                .FirstOrDefaultAsync(c => c.Id == id);
-
-            if (category == null)
-                return NotFound(new { message = "Không tìm thấy danh mục." });
-
-            if (category.Products.Any())
-            {
-                return BadRequest(new
-                {
-                    message = "Không thể xóa danh mục vì vẫn còn sản phẩm thuộc danh mục này."
-                });
-            }
-
-            _context.Categories.Remove(category);
-            await _context.SaveChangesAsync();
-
-            return Ok(new
-            {
-                message = "Xóa Category thành công."
-            });
-        }
-
-        // API IMPORT EXCEL (THÊM HÀNG LOẠT DANH MỤC)
-        [HttpPost("import")]
-        public async Task<IActionResult> ImportCategories([FromForm] IFormFile file)
-        {
-            // 1. Kiểm tra file có rỗng hay sai định dạng không
-            if (file == null || file.Length == 0)
-                return BadRequest(new { message = "Vui lòng chọn file hợp lệ." });
-
-            var extension = Path.GetExtension(file.FileName).ToLower();
-            if (extension != ".xlsx")
-                return BadRequest(new { message = "Chỉ hỗ trợ định dạng file Excel (.xlsx)." });
-
-            var importedCategories = new List<Category>();
-            int successCount = 0;
-            int skipCount = 0;
+            var previewList = new List<PreviewCategoryRowDto>();
 
             try
             {
-                // Cấu hình bản quyền miễn phí cho EPPlus
-                // ExcelPackage.LicenseContext = LicenseContext.NonCommercial; 
-
                 using (var stream = new MemoryStream())
                 {
                     await file.CopyToAsync(stream);
@@ -139,35 +49,83 @@ namespace BE.Controllers
                     using (var package = new ExcelPackage(stream))
                     {
                         var worksheet = package.Workbook.Worksheets.FirstOrDefault();
-                        if (worksheet == null) 
-                            return BadRequest(new { message = "File Excel không có trang tính nào (sheet)." });
+                        if (worksheet == null || worksheet.Dimension == null) return BadRequest(new { message = "File Excel trống." });
 
-                        if (worksheet.Dimension == null)
-                            return BadRequest(new { message = "File Excel trống, không có dữ liệu." });
-
-                        // Đếm tổng số dòng
                         int rowCount = worksheet.Dimension.Rows;
 
-                        // 2. Chạy vòng lặp từ dòng 2 (Bỏ qua dòng 1 là Header Tên Cột)
+                        for (int row = 2; row <= rowCount; row++)
+                        {
+                            var name = worksheet.Cells[row, 1].Value?.ToString()?.Trim() ?? "";
+                            var description = worksheet.Cells[row, 2].Value?.ToString()?.Trim() ?? "";
+
+                            var previewRow = new PreviewCategoryRowDto
+                            {
+                                Row = row,
+                                Name = name,
+                                Description = description,
+                                IsValid = true
+                            };
+
+                            // Check lỗi rỗng
+                            if (string.IsNullOrEmpty(name))
+                            {
+                                previewRow.IsValid = false;
+                                previewRow.Errors.Add("Tên danh mục trống");
+                            }
+                            // Check trùng tên trong Database
+                            else if (await _context.Categories.AnyAsync(c => c.Name.ToLower() == name.ToLower()))
+                            {
+                                previewRow.IsValid = false;
+                                previewRow.Errors.Add("Tên danh mục đã tồn tại");
+                            }
+
+                            previewList.Add(previewRow);
+                        }
+                    }
+                }
+                return Ok(previewList);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Lỗi đọc file: {ex.Message}" });
+            }
+        }
+
+        // =========================================================================
+        // BƯỚC 2: API IMPORT THẬT (CHẶN DÒNG LỖI)
+        // =========================================================================
+        [HttpPost("import")]
+        public async Task<IActionResult> ImportCategories([FromForm] IFormFile file)
+        {
+            if (file == null || file.Length == 0) return BadRequest(new { message = "Vui lòng chọn file." });
+
+            var importedCategories = new List<Category>();
+            int successCount = 0, skipCount = 0;
+
+            try
+            {
+                using (var stream = new MemoryStream())
+                {
+                    await file.CopyToAsync(stream);
+                    stream.Position = 0;
+                    using (var package = new ExcelPackage(stream))
+                    {
+                        var worksheet = package.Workbook.Worksheets.FirstOrDefault();
+                        if (worksheet == null || worksheet.Dimension == null) return BadRequest(new { message = "File trống." });
+
+                        int rowCount = worksheet.Dimension.Rows;
                         for (int row = 2; row <= rowCount; row++)
                         {
                             var name = worksheet.Cells[row, 1].Value?.ToString()?.Trim();
                             var description = worksheet.Cells[row, 2].Value?.ToString()?.Trim();
 
-                            // Bỏ qua nếu cột Name bị trống
-                            if (string.IsNullOrEmpty(name)) continue;
-
-                            // 3. (Tuỳ chọn) Kiểm tra xem Tên danh mục này đã tồn tại trong DB chưa
+                            // Bảo vệ Database: Tên trống hoặc trùng thì SKIP
+                            if (string.IsNullOrEmpty(name)) { skipCount++; continue; }
+                            
                             var isExist = await _context.Categories.AnyAsync(c => c.Name.ToLower() == name.ToLower());
-                            if (isExist)
-                            {
-                                skipCount++; // Bỏ qua không import để tránh trùng lặp
-                                continue;
-                            }
+                            if (isExist) { skipCount++; continue; }
 
-                            // 4. Đưa vào danh sách chờ thêm mới
-                            importedCategories.Add(new Category
-                            {
+                            importedCategories.Add(new Category {
                                 Name = name,
                                 Description = description,
                                 CreatedAt = DateTime.Now
@@ -177,24 +135,61 @@ namespace BE.Controllers
                     }
                 }
 
-                // 5. Lưu 1 cục vào Database cho nhanh
                 if (importedCategories.Any())
                 {
                     await _context.Categories.AddRangeAsync(importedCategories);
                     await _context.SaveChangesAsync();
                 }
 
-                return Ok(new { 
-                    message = $"Import hoàn tất! Thêm thành công {successCount} danh mục. Bỏ qua {skipCount} danh mục đã tồn tại." 
-                });
+                return Ok(new { message = $"Import hoàn tất! Thêm {successCount} danh mục. Bỏ qua {skipCount} dòng lỗi hoặc đã tồn tại." });
             }
             catch (Exception ex)
             {
-                // C# phải in lỗi ra màn hình đen (Terminal)
-                Console.WriteLine("\n🚨🚨🚨 LỖI IMPORT EXCEL SẾP ƠI: " + ex.ToString() + "\n");
-                
-                return StatusCode(500, new { message = $"Đã xảy ra lỗi khi đọc file: {ex.Message}" });
+                return StatusCode(500, new { message = $"Lỗi hệ thống: {ex.Message}" });
             }
+        }
+
+        // --- CÁC API CRUD CƠ BẢN GIỮ NGUYÊN CHO SẾP ---
+
+        [HttpGet]
+        public async Task<ActionResult<IEnumerable<Category>>> GetAllCategories() => await _context.Categories.ToListAsync();
+
+        [HttpGet("{id}")]
+        public async Task<ActionResult<Category>> GetCategory(int id)
+        {
+            var category = await _context.Categories.FindAsync(id);
+            return category == null ? NotFound() : Ok(category);
+        }
+
+        [HttpPost("create-manual")] // Đổi tên để tránh trùng route với CreateCategory cũ
+        public async Task<ActionResult<Category>> CreateCategory([FromBody] CategoryRequest request)
+        {
+            var category = new Category { Name = request.Name, Description = request.Description, CreatedAt = DateTime.Now };
+            _context.Categories.Add(category);
+            await _context.SaveChangesAsync();
+            return CreatedAtAction(nameof(GetCategory), new { id = category.Id }, category);
+        }
+
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateCategory(int id, [FromBody] CategoryRequest request)
+        {
+            var category = await _context.Categories.FindAsync(id);
+            if (category == null) return NotFound();
+            category.Name = request.Name;
+            category.Description = request.Description;
+            await _context.SaveChangesAsync();
+            return Ok(new { message = "Cập nhật thành công." });
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteCategory(int id)
+        {
+            var category = await _context.Categories.Include(c => c.Products).FirstOrDefaultAsync(c => c.Id == id);
+            if (category == null) return NotFound();
+            if (category.Products.Any()) return BadRequest(new { message = "Danh mục đang có sản phẩm, không thể xóa!" });
+            _context.Categories.Remove(category);
+            await _context.SaveChangesAsync();
+            return Ok(new { message = "Xóa thành công." });
         }
     }
 

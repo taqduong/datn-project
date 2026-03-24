@@ -31,3 +31,16 @@ textarea::placeholder {
   color: #9ca3af;
   opacity: 1;
 }
+
+@layer base {
+  button, 
+  [role="button"],
+  select {
+    cursor: pointer;
+  }
+
+  /*  Nút bị disabled thì hiện hình cấm */
+  button:disabled {
+    cursor: not-allowed;
+  }
+}
