@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import {
+import api, {
   fetchProducts,
   createProduct,
   updateProduct,
@@ -47,7 +47,7 @@ export default function ProductPage() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(true);
-  // ✅ TRỢ LÝ TÍNH TỔNG TỒN KHO THỰC TẾ
+  // TRỢ LÝ TÍNH TỔNG TỒN KHO THỰC TẾ
   const getRealStock = (p: any) => {
     if (p.variants && p.variants.length > 0) {
       return p.variants.reduce((sum: number, v: any) => sum + (v.stock || 0), 0);
@@ -55,12 +55,12 @@ export default function ProductPage() {
     return p.stock || 0;
   };
 
-  // ✅ State mới để chứa mảng file ảnh phụ chuẩn bị upload
+  //  State mới để chứa mảng file ảnh phụ chuẩn bị upload
   const [additionalFiles, setAdditionalFiles] = useState<File[]>([]);
-  // ✅ State mới để hiển thị các ảnh phụ đã có sẵn (khi bấm Sửa)
+  //  State mới để hiển thị các ảnh phụ đã có sẵn (khi bấm Sửa)
   const [existingImages, setExistingImages] = useState<string[]>([]);
 
-  // ✅ THÊM TYPE & STATE CHO BIẾN THỂ (VARIANTS)
+  // THÊM TYPE & STATE CHO BIẾN THỂ (VARIANTS)
   type VariantForm = {
     id?: number;
     variantName: string;
@@ -72,7 +72,9 @@ export default function ProductPage() {
   const [hasVariants, setHasVariants] = useState(false);
   const [variants, setVariants] = useState<VariantForm[]>([]);
 
-  // ✅ HÀM XỬ LÝ BIẾN THỂ
+  const [importModalOpen, setImportModalOpen] = useState(false);
+
+  // HÀM XỬ LÝ BIẾN THỂ
   const handleAddVariant = () => {
     setVariants([...variants, { variantName: "", color: "", price: 0, stock: 0, imageUrl: "" }]);
   };
@@ -99,6 +101,11 @@ export default function ProductPage() {
     discount: 0,
     categoryId: 0,
   });
+
+  // ==========================================
+  // HÀM UPLOAD EXCEL (Ép chuẩn Multipart/form-data) DÁN VÀO ĐÂY
+  // ==========================================
+  const [isUploadingExcel, setIsUploadingExcel] = useState(false);
 
   const clampDiscount = (d: number) => {
     if (Number.isNaN(d)) return 0;
@@ -196,7 +203,7 @@ export default function ProductPage() {
     setAdditionalFiles([]);
     setExistingImages(product.additionalImages || []);
     
-    // ✅ Ép kiểu (product as any) để lấy variants
+    // Ép kiểu (product as any) để lấy variants
     const productVariants = product.variants || [];
     const productHasVariants = productVariants.length > 0;
     
@@ -250,7 +257,7 @@ export default function ProductPage() {
           discount: clampDiscount(form.discount),
           price: hasVariants ? 0 : form.price,
           stock: hasVariants ? 0 : form.stock,
-          variants: hasVariants ? variants : [], // ✅PHẢI GỬI MẢNG NÀY LÊN
+          variants: hasVariants ? variants : [], // PHẢI GỬI MẢNG NÀY LÊN
           retainedAdditionalImages: existingImages
         };
         
@@ -296,12 +303,12 @@ export default function ProductPage() {
     setAdditionalFiles(prev => prev.filter((_, i) => i !== index));
   };
 
-  // ✅ 1. Hàm xóa ảnh phụ cũ (khi đang sửa sản phẩm)
+  // 1. Hàm xóa ảnh phụ cũ (khi đang sửa sản phẩm)
   const removeExistingImage = (index: number) => {
     setExistingImages(prev => prev.filter((_, i) => i !== index));
   };
 
-  // ✅ 2. Hàm hoán đổi ảnh phụ (đã có sẵn) lên làm Ảnh bìa
+  // 2. Hàm hoán đổi ảnh phụ (đã có sẵn) lên làm Ảnh bìa
   const setExistingAsCover = (index: number) => {
     const clickedUrl = existingImages[index];
     const oldCover = form.imageUrl;
@@ -315,7 +322,7 @@ export default function ProductPage() {
     });
   };
 
-  // ✅ HÀM UPLOAD ẢNH RIÊNG CHO TỪNG BIẾN THỂ (VÁ LẠI CHO CHUẨN)
+  // HÀM UPLOAD ẢNH RIÊNG CHO TỪNG BIẾN THỂ (VÁ LẠI CHO CHUẨN)
   const handleVariantImageUpload = async (index: number, file: File) => {
     const toastId = toast.loading("Đang tải ảnh biến thể...");
     try {
@@ -333,7 +340,7 @@ export default function ProductPage() {
     }
   };
 
-  // ✅ HÀM CHUYỂN ĐỔI ẢNH BIẾN THỂ (ĐÃ CÓ SẴN) LÊN LÀM ẢNH BÌA SẢN PHẨM
+  // HÀM CHUYỂN ĐỔI ẢNH BIẾN THỂ (ĐÃ CÓ SẴN) LÊN LÀM ẢNH BÌA SẢN PHẨM
   const setVariantAsCover = (index: number) => {
     const clickedUrl = variants[index].imageUrl;
     const oldCover = form.imageUrl;
@@ -364,12 +371,21 @@ export default function ProductPage() {
           </p>
         </div>
 
-        <button
-          className="flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-3 font-medium text-white shadow transition duration-300 hover:bg-blue-700"
-          onClick={openAddModal}
-        >
-          <span>+</span> Thêm sản phẩm mới
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            className="flex items-center gap-2 rounded-lg bg-green-600 px-5 py-3 font-medium text-white shadow transition duration-300 hover:bg-green-700"
+            onClick={() => setImportModalOpen(true)}
+          >
+            <span>📁</span> Nhập Excel & Ảnh
+          </button>
+
+          <button
+            className="flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-3 font-medium text-white shadow transition duration-300 hover:bg-blue-700"
+            onClick={openAddModal}
+          >
+            <span>+</span> Thêm sản phẩm mới
+          </button>
+        </div>
       </div>
 
       <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-4">
@@ -521,7 +537,7 @@ export default function ProductPage() {
                         </div>
                       </td>
 
-                      {/* ✅ CỘT GIÁ (ĐÃ FIX: HIỂN THỊ KHOẢNG GIÁ BIẾN THỂ) */}
+                      {/* CỘT GIÁ (ĐÃ FIX: HIỂN THỊ KHOẢNG GIÁ BIẾN THỂ) */}
                       <td className="px-6 py-4">
                         <div className="text-sm font-medium text-gray-900">
                           {(() => {
@@ -554,7 +570,7 @@ export default function ProductPage() {
                         )}
                       </td>
 
-                      {/* ✅ CỘT TỒN KHO (ĐÃ FIX: CỘNG DỒN KHO BIẾN THỂ) */}
+                      {/* CỘT TỒN KHO (ĐÃ FIX: CỘNG DỒN KHO BIẾN THỂ) */}
                       <td className="px-6 py-4">
                         {(() => {
                           const realStock = getRealStock(product);
@@ -693,7 +709,7 @@ export default function ProductPage() {
               />
             </div>
 
-            {/* ✅ KHU VỰC CÔNG TẮC BẬT BIẾN THỂ */}
+            {/* KHU VỰC CÔNG TẮC BẬT BIẾN THỂ */}
             <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 mt-2">
               <label className="flex cursor-pointer items-center text-sm font-semibold text-blue-800">
                 <input type="checkbox" className="mr-3 h-5 w-5 accent-blue-600" checked={hasVariants} onChange={(e) => { setHasVariants(e.target.checked); if (e.target.checked && variants.length === 0) handleAddVariant(); }} />
@@ -701,7 +717,7 @@ export default function ProductPage() {
               </label>
             </div>
 
-            {/* ✅ NẾU KHÔNG CÓ BIẾN THỂ -> HIỆN THÔNG SỐ CƠ BẢN */}
+            {/* NẾU KHÔNG CÓ BIẾN THỂ -> HIỆN THÔNG SỐ CƠ BẢN */}
             {!hasVariants && (
               <div className="grid grid-cols-1 gap-4 md:grid-cols-3 mt-4">
                 <div>
@@ -720,12 +736,12 @@ export default function ProductPage() {
               </div>
             )}
 
-            {/* ✅ NẾU BẬT BIẾN THỂ -> BẢNG NÀY SẼ HIỆN LÊN */}
+            {/* NẾU BẬT BIẾN THỂ -> BẢNG NÀY SẼ HIỆN LÊN */}
             {hasVariants && (
               <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm mt-4">
                 <div className="mb-3 flex items-center justify-between">
                   <h3 className="font-bold text-gray-800">Danh sách phân loại sản phẩm</h3>
-                  {/* ✅ Fix màu chữ "Giảm giá chung" ở đây */}
+                  {/* Fix màu chữ "Giảm giá chung" ở đây */}
                   <div className="flex items-center gap-2 text-sm text-black font-medium">
                     <span>Giảm giá chung (%):</span>
                     <input 
@@ -743,7 +759,7 @@ export default function ProductPage() {
                   <table className="w-full text-sm">
                     <thead className="bg-gray-100 text-gray-600">
                       <tr>
-                        {/* ✅ THÊM CỘT ẢNH CHO BIẾN THỂ Ở ĐÂY */}
+                        {/* THÊM CỘT ẢNH CHO BIẾN THỂ Ở ĐÂY */}
                         <th className="border p-2 text-center w-20">Ảnh</th> 
                         <th className="border p-2 text-left">Tên Phân Loại (VD: Đỏ) *</th>
                         <th className="border p-2 text-left w-24">Màu sắc</th>
@@ -755,7 +771,7 @@ export default function ProductPage() {
                     <tbody>
                       {variants.map((variant, index) => (
                         <tr key={index} className="border-b hover:bg-gray-50">
-                          {/* ✅ THÊM Ô UPLOAD ẢNH CHO TỪNG DÒNG (DÒNG 730 LÀ CHỖ NÀY ĐÂY) */}
+                          {/* THÊM Ô UPLOAD ẢNH CHO TỪNG DÒNG (DÒNG 730 LÀ CHỖ NÀY ĐÂY) */}
                           <td className="p-2 text-center">
                             <div className="relative mx-auto flex h-14 w-14 items-center justify-center overflow-hidden rounded border border-gray-200 bg-gray-50 group">
                               {variant.imageUrl ? (
@@ -804,7 +820,7 @@ export default function ProductPage() {
               </div>
             )}
 
-            {/* ✅ KHU VỰC UPLOAD ẢNH PHỤ (RETAIN) - GIỮ NGUYÊN NHƯ FILE GỐC CỦA SẾP */}
+            {/* KHU VỰC UPLOAD ẢNH PHỤ (RETAIN) - GIỮ NGUYÊN NHƯ FILE GỐC CỦA SẾP */}
             <div>
               <label className="mb-2 block text-sm font-bold text-gray-800">
                 Hình ảnh sản phẩm (Ảnh bìa và ảnh phụ)
@@ -886,6 +902,56 @@ export default function ProductPage() {
           </form>
         </div>
       </Modal>
+      {/* ================= MODAL IMPORT EXCEL VÀ ZIP ================= */}
+      <Modal isOpen={importModalOpen} onClose={() => setImportModalOpen(false)}>
+        <div className="w-full max-w-md rounded-xl bg-white p-6">
+          <h2 className="mb-4 text-xl font-bold text-gray-800">Nhập Sản Phẩm Hàng Loạt</h2>
+          <form onSubmit={async (e) => {
+            e.preventDefault();
+            const formObj = e.target as HTMLFormElement;
+            const excelFile = (formObj.elements.namedItem('excelFile') as HTMLInputElement).files?.[0];
+            const zipFile = (formObj.elements.namedItem('zipFile') as HTMLInputElement).files?.[0];
+
+            if (!excelFile) return toast.error("Vui lòng chọn file Excel!");
+
+            try {
+              setIsUploadingExcel(true);
+              const fd = new FormData();
+              fd.append("excelFile", excelFile);
+              if (zipFile) fd.append("zipFile", zipFile);
+
+              const res = await api.post("/products/import", fd, {
+                headers: { "Content-Type": "multipart/form-data" },
+              });
+
+              toast.success(res.data.message || "Import thành công!");
+              setImportModalOpen(false);
+              await loadProducts();
+            } catch (err: any) {
+              toast.error(err.response?.data?.message || "Lỗi import!");
+            } finally {
+              setIsUploadingExcel(false);
+            }
+          }}>
+            <div className="mb-4">
+              <label className="mb-1 block text-sm font-medium text-gray-700">1. File Excel (.xlsx) *</label>
+              <input type="file" name="excelFile" accept=".xlsx" className="w-full rounded border p-2" required />
+            </div>
+            <div className="mb-6">
+              <label className="mb-1 block text-sm font-medium text-gray-700">2. File nén chứa ẢNH (.zip)</label>
+              <input type="file" name="zipFile" accept=".zip" className="w-full rounded border p-2" />
+              <p className="mt-1 text-xs text-gray-500">Nếu không có ảnh, có thể bỏ trống ô này.</p>
+            </div>
+            
+            <div className="flex justify-end gap-2">
+              <button type="button" onClick={() => setImportModalOpen(false)} className="rounded-lg bg-gray-800 px-4 py-2 text-white">Hủy</button>
+              <button type="submit" disabled={isUploadingExcel} className="rounded-lg bg-green-600 px-4 py-2 text-white">
+                {isUploadingExcel ? "Đang xử lý..." : "Bắt đầu Import"}
+              </button>
+            </div>
+          </form>
+        </div>
+      </Modal>           
     </div>
   );
 }

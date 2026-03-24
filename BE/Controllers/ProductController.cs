@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using BE.Models;
 using BE.Data;
+using OfficeOpenXml;
+using System.IO.Compression;
 
 namespace BE.Controllers
 {
@@ -48,7 +50,7 @@ namespace BE.Controllers
                         Price = v.Price, Stock = v.Stock, ImageUrl = v.ImageUrl
                     }).ToList(),
                     
-                    // ✅ BƯỚC 2: CÔNG THỨC ĐẾM LƯỢT BÁN
+                    // BƯỚC 2: CÔNG THỨC ĐẾM LƯỢT BÁN
                     SoldCount = p.OrderDetails
                         .Where(od => od.Order != null && od.Order.Status == "Completed")
                         .Sum(od => (int?)od.Quantity) ?? 0,
@@ -162,7 +164,7 @@ namespace BE.Controllers
                     CategoryName = p.Category.Name,
                     ImageUrl = p.ImageUrl,
                     CreatedAt = p.CreatedAt,
-                    // ✅ THÊM DÒNG NÀY (Vì tạo mới nên mảng rỗng):
+                    // THÊM DÒNG NÀY (Vì tạo mới nên mảng rỗng):
                     AdditionalImages = new List<string>(),
 
                     Variants = p.ProductVariants.Select(v => new ProductVariantDto
@@ -225,7 +227,7 @@ namespace BE.Controllers
 
             if (!string.IsNullOrWhiteSpace(dto.ImageUrl))
             {
-                // ✅ Dọn dẹp: Nếu link có http://... thì chỉ lấy phần /uploads/...
+                // Dọn dẹp: Nếu link có http://... thì chỉ lấy phần /uploads/...
                 product.ImageUrl = dto.ImageUrl.Contains("/uploads/") 
                                 ? "/uploads/" + dto.ImageUrl.Split("/uploads/")[1] 
                                 : dto.ImageUrl;
@@ -249,7 +251,7 @@ namespace BE.Controllers
 
             await _context.SaveChangesAsync();
 
-            // ✅ LOGIC CẬP NHẬT BIẾN THỂ (DÁN VÀO SAU KHI LƯU PRODUCT MẸ)
+            // LOGIC CẬP NHẬT BIẾN THỂ (DÁN VÀO SAU KHI LƯU PRODUCT MẸ)
             if (dto.Variants != null)
             {
                 // 1. Xóa sạch biến thể cũ của sản phẩm này để ghi đè cái mới (Cách đơn giản nhất)
@@ -327,7 +329,7 @@ namespace BE.Controllers
         }
 
         // =========================================================================
-        // ✅ API MỚI: UPLOAD NHIỀU ẢNH PHỤ
+        // API MỚI: UPLOAD NHIỀU ẢNH PHỤ
         // =========================================================================
         [HttpPost("{id}/upload-images")]
         public async Task<IActionResult> UploadImages(int id, [FromForm] List<IFormFile> files)
@@ -455,6 +457,147 @@ namespace BE.Controllers
             return Ok(results);
         }
 
+        // =========================================================================
+        // API MỚI: IMPORT EXCEL + XẢ NÉN FILE ZIP ẢNH
+        // =========================================================================
+        [HttpPost("import")]
+        public async Task<IActionResult> ImportProducts([FromForm] IFormFile excelFile, [FromForm] IFormFile? zipFile)
+        {
+            if (excelFile == null || excelFile.Length == 0) return BadRequest(new { message = "Vui lòng chọn file Excel." });
+            if (Path.GetExtension(excelFile.FileName).ToLower() != ".xlsx") return BadRequest(new { message = "Chỉ hỗ trợ file Excel .xlsx." });
+
+            var uploadPath = Path.Combine(_env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot"), "uploads", "products");
+            if (!Directory.Exists(uploadPath)) Directory.CreateDirectory(uploadPath);
+
+            // 1. NẾU CÓ FILE ZIP -> GIẢI NÉN TOÀN BỘ ẢNH VÀO FOLDER
+            if (zipFile != null && zipFile.Length > 0)
+            {
+                if (Path.GetExtension(zipFile.FileName).ToLower() != ".zip") return BadRequest(new { message = "Chỉ hỗ trợ file ảnh nén .zip." });
+                
+                using (var stream = zipFile.OpenReadStream())
+                using (var archive = new ZipArchive(stream))
+                {
+                    foreach (var entry in archive.Entries)
+                    {
+                        if (string.IsNullOrEmpty(entry.Name)) continue; // Bỏ qua folder rỗng
+                        var destinationPath = Path.Combine(uploadPath, entry.Name);
+                        entry.ExtractToFile(destinationPath, true); // Extract và ghi đè nếu trùng tên
+                    }
+                }
+            }
+
+            var importedProducts = new List<Product>();
+            int successCount = 0, skipCount = 0;
+
+            try
+            {
+                using (var stream = new MemoryStream())
+                {
+                    await excelFile.CopyToAsync(stream);
+                    stream.Position = 0;
+
+                    using (var package = new ExcelPackage(stream))
+                    {
+                        var worksheet = package.Workbook.Worksheets.FirstOrDefault();
+                        if (worksheet == null || worksheet.Dimension == null) return BadRequest(new { message = "File Excel trống." });
+
+                        int rowCount = worksheet.Dimension.Rows;
+
+                        for (int row = 2; row <= rowCount; row++)
+                        {
+                            var name = worksheet.Cells[row, 1].Value?.ToString()?.Trim();
+                            var categoryName = worksheet.Cells[row, 2].Value?.ToString()?.Trim();
+                            var priceStr = worksheet.Cells[row, 3].Value?.ToString()?.Trim();
+                            var stockStr = worksheet.Cells[row, 4].Value?.ToString()?.Trim();
+                            var discountStr = worksheet.Cells[row, 5].Value?.ToString()?.Trim();
+                            var coverImg = worksheet.Cells[row, 6].Value?.ToString()?.Trim();
+                            var additionalImgs = worksheet.Cells[row, 7].Value?.ToString()?.Trim();
+                            var description = worksheet.Cells[row, 8].Value?.ToString()?.Trim();
+                            var variantsStr = worksheet.Cells[row, 9].Value?.ToString()?.Trim();
+
+                            if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(categoryName)) continue;
+
+                            if (await _context.Products.AnyAsync(p => p.Name.ToLower() == name.ToLower()))
+                            { skipCount++; continue; }
+
+                            var category = await _context.Categories.FirstOrDefaultAsync(c => c.Name.ToLower() == categoryName.ToLower());
+                            if (category == null) { skipCount++; continue; }
+
+                            decimal.TryParse(priceStr, out decimal basePrice);
+                            int.TryParse(stockStr, out int baseStock);
+                            int.TryParse(discountStr, out int discount);
+
+                            // Xử lý chuỗi biến thể (Tên:Màu:Giá:Kho:TênẢnh)
+                            var variants = new List<ProductVariant>();
+                            if (!string.IsNullOrEmpty(variantsStr))
+                            {
+                                var variantParts = variantsStr.Split('|', StringSplitOptions.RemoveEmptyEntries);
+                                foreach (var part in variantParts)
+                                {
+                                    var props = part.Split(':', StringSplitOptions.RemoveEmptyEntries);
+                                    if (props.Length >= 4)
+                                    {
+                                        decimal.TryParse(props[2].Trim(), out decimal vPrice);
+                                        int.TryParse(props[3].Trim(), out int vStock);
+                                        var vImage = props.Length >= 5 && !string.IsNullOrWhiteSpace(props[4]) 
+                                                     ? $"/uploads/products/{props[4].Trim()}" : null;
+
+                                        variants.Add(new ProductVariant
+                                        {
+                                            VariantName = props[0].Trim(),
+                                            Color = props[1].Trim(),
+                                            Price = vPrice,
+                                            Stock = vStock,
+                                            ImageUrl = vImage
+                                        });
+                                    }
+                                }
+                            }
+
+                            // Xử lý ảnh phụ
+                            var productImages = new List<ProductImage>();
+                            if (!string.IsNullOrEmpty(additionalImgs))
+                            {
+                                var imgNames = additionalImgs.Split(',', StringSplitOptions.RemoveEmptyEntries);
+                                foreach (var img in imgNames)
+                                {
+                                    productImages.Add(new ProductImage { ImageUrl = $"/uploads/products/{img.Trim()}", CreatedAt = DateTime.Now });
+                                }
+                            }
+
+                            importedProducts.Add(new Product
+                            {
+                                Name = name,
+                                CategoryId = category.Id,
+                                Price = variants.Any() ? 0 : basePrice,
+                                Stock = variants.Any() ? 0 : baseStock,
+                                Discount = discount,
+                                ImageUrl = string.IsNullOrWhiteSpace(coverImg) ? null : $"/uploads/products/{coverImg}",
+                                Description = description,
+                                CreatedAt = DateTime.Now,
+                                ProductVariants = variants,
+                                ProductImages = productImages
+                            });
+                            successCount++;
+                        }
+                    }
+                }
+
+                if (importedProducts.Any())
+                {
+                    await _context.Products.AddRangeAsync(importedProducts);
+                    await _context.SaveChangesAsync();
+                }
+
+                return Ok(new { message = $"Import hoàn tất! Thêm {successCount} SP. Bỏ qua {skipCount} SP." });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("\n🚨 LỖI IMPORT EXCEL SẢN PHẨM: " + ex.ToString());
+                return StatusCode(500, new { message = $"Lỗi đọc file: {ex.Message}" });
+            }
+        }
+
         public class ProductDto
         {
             public int Id { get; set; }
@@ -468,7 +611,7 @@ namespace BE.Controllers
             public int CategoryId { get; set; }
             public string? CategoryName { get; set; }
             public DateTime CreatedAt { get; set; }
-            // ✅ THÊM DÒNG NÀY ĐỂ HỨNG MẢNG ẢNH TRẢ VỀ:
+            // THÊM DÒNG NÀY ĐỂ HỨNG MẢNG ẢNH TRẢ VỀ:
             public List<string> AdditionalImages { get; set; } = new List<string>();
             public int SoldCount { get; set; }
             public int TotalReviews { get; set; }
