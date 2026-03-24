@@ -919,36 +919,71 @@ export default function ProductPage() {
       {/* ================= MODAL IMPORT 2 BƯỚC (PREVIEW) ================= */}
       <Modal isOpen={importModalOpen} onClose={handleCloseImportModal}>
         {/* Nới rộng kích thước Modal ra nếu ở Bước 2 để chứa bảng */}
-        <div className={`w-full rounded-xl bg-white p-6 transition-all duration-300 ${importStep === 2 ? 'max-w-[90vw]' : 'max-w-md'}`}>
-          <div className="mb-4 flex items-center justify-between">
+        <div
+          className={`w-full rounded-2xl bg-white p-7 shadow-2xl transition-all duration-300 ${
+            importStep === 2 ? "max-w-[98vw] xl:max-w-[1700px]" : "max-w-3xl"
+          }`}
+        >
+          <div className="mb-5 flex items-center justify-between">
             <h2 className="text-xl font-bold text-gray-800">
-              {importStep === 1 ? "Nhập Sản Phẩm Hàng Loạt" : "Xem Trước Dữ Liệu"}
+              {importStep === 1 ? "Nhập sản phẩm hàng loạt" : "Xem trước dữ liệu"}
             </h2>
           </div>
 
           {/* ============ BƯỚC 1: CHỌN FILE ============ */}
           {importStep === 1 && (
-            <div className="space-y-4">
+            <div className="space-y-5">
               <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">1. File Excel (.xlsx) *</label>
-                <input 
-                  type="file" 
-                  accept=".xlsx" 
-                  className="w-full rounded border p-2" 
-                  onChange={(e) => setSelectedExcelFile(e.target.files?.[0] || null)}
-                />
+                <label className="mb-1 block text-sm font-medium text-gray-700">
+                  1. File Excel (.xlsx) *
+                </label>
+
+                <div className="w-[65%]">
+                  <input
+                    id="product-excel-upload"
+                    type="file"
+                    accept=".xlsx"
+                    className="hidden"
+                    onChange={(e) => setSelectedExcelFile(e.target.files?.[0] || null)}
+                  />
+
+                  <label
+                    htmlFor="product-excel-upload"
+                    className="flex cursor-pointer items-center rounded-lg border border-gray-300 px-3 py-2 text-black hover:border-blue-400"
+                  >
+                    <span className="truncate">
+                      {selectedExcelFile ? selectedExcelFile.name : "Chọn tệp"}
+                    </span>
+                  </label>
+                </div>
               </div>
+
               <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">2. File nén chứa ẢNH (.zip)</label>
-                <input 
-                  type="file" 
-                  accept=".zip" 
-                  className="w-full rounded border p-2" 
-                  onChange={(e) => setSelectedZipFile(e.target.files?.[0] || null)}
-                />
+                <label className="mb-1 block text-sm font-medium text-gray-700">
+                  2. File nén chứa ẢNH (.zip)
+                </label>
+
+                <div className="w-[65%]">
+                  <input
+                    id="product-zip-upload"
+                    type="file"
+                    accept=".zip"
+                    className="hidden"
+                    onChange={(e) => setSelectedZipFile(e.target.files?.[0] || null)}
+                  />
+
+                  <label
+                    htmlFor="product-zip-upload"
+                    className="flex cursor-pointer items-center rounded-lg border border-gray-300 px-3 py-2 text-black hover:border-blue-400"
+                  >
+                    <span className="truncate">
+                      {selectedZipFile ? selectedZipFile.name : "Chọn tệp"}
+                    </span>
+                  </label>
+                </div>
               </div>
               
-              <div className="mt-6 flex justify-end gap-2">
+              <div className="mt-7 flex justify-end gap-3">
                 <button type="button" onClick={handleCloseImportModal} className="rounded-lg bg-black px-4 py-2 font-bold text-white border-2 border-black transition-colors duration-150 hover:bg-gray-900 hover:border-gray-900">Hủy</button>
                 <button 
                   type="button" 
@@ -978,13 +1013,13 @@ export default function ProductPage() {
           {/* ============ BƯỚC 2: HIỂN THỊ PREVIEW ============ */}
           {importStep === 2 && (
             <div>
-              <div className="max-h-[75vh] overflow-auto rounded-lg border border-gray-200">
+              <div className="max-h-[78vh] overflow-auto rounded-xl border border-gray-200 shadow-sm">
                 <table className="w-full text-left text-sm whitespace-nowrap">
                   <thead className="sticky top-0 z-10 bg-gray-200 text-gray-800 shadow-sm">
                     <tr>
                       <th className="p-3 font-bold">Dòng</th>
-                      <th className="p-3 font-bold">Tên SP</th>
-                      <th className="p-3 font-bold">Danh mục</th>
+                      <th className="p-3 font-bold w-[220px]">Tên SP</th>
+                      <th className="p-3 font-bold w-[180px]">Danh mục</th>
                       <th className="p-3 font-bold">Giá</th>
                       <th className="p-3 font-bold">Kho</th>
                       <th className="p-3 font-bold">Giảm (%)</th>
@@ -999,7 +1034,7 @@ export default function ProductPage() {
                   <tbody className="divide-y divide-gray-200">
                     {previewData.map((row, idx) => (
                       <tr key={idx} className={row.isValid ? "bg-white hover:bg-gray-50" : "bg-red-100 hover:bg-red-200"}>
-                        <td className="p-3 text-black font-medium">{row.row}</td>
+                        <td className="p-3 text-black font-medium">{idx + 1}</td>
                         <td className="p-3 text-black max-w-[150px] truncate" title={row.name}>{row.name}</td>
                         <td className="p-3 text-black">{row.categoryName}</td>
                         {/* Nếu khác null thì in số tiền, nếu null (trống) thì in vạch ngang */}
@@ -1039,14 +1074,20 @@ export default function ProductPage() {
                 </table>
               </div>
 
-              <div className="mt-4 flex items-center justify-between">
+              <div className="mt-5 flex flex-wrap items-center justify-between gap-4 border-t border-gray-200 pt-4">
                 <p className="text-sm font-medium text-gray-600">
                   Phát hiện <span className="text-red-600 font-bold">{previewData.filter(r => !r.isValid).length}</span> dòng lỗi trên tổng số {previewData.length} dòng. (Các dòng lỗi sẽ bị bỏ qua khi Import).
                 </p>
-                <div className="flex gap-2">
-                  <button type="button" onClick={() => setImportStep(1)} className="rounded-lg bg-black px-4 py-2 font-bold text-white border-2 border-black transition-colors duration-150 hover:bg-gray-900 hover:border-gray-900">Quay lại</button>
-                  <button 
-                    type="button" 
+                <div className="ml-auto flex shrink-0 items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setImportStep(1)}
+                    className="min-w-[120px] whitespace-nowrap rounded-xl border-2 border-black bg-black px-6 py-3 text-base font-semibold text-white transition-colors duration-150 hover:border-gray-900 hover:bg-gray-900"
+                  >
+                    Quay lại
+                  </button>
+                  <button
+                    type="button"
                     disabled={isUploadingExcel}
                     onClick={async () => {
                       try {
@@ -1055,7 +1096,9 @@ export default function ProductPage() {
                         fd.append("excelFile", selectedExcelFile!);
                         if (selectedZipFile) fd.append("zipFile", selectedZipFile);
 
-                        const res = await api.post("/products/import", fd, { headers: { "Content-Type": "multipart/form-data" } });
+                        const res = await api.post("/products/import", fd, {
+                          headers: { "Content-Type": "multipart/form-data" },
+                        });
                         toast.success(res.data.message);
                         handleCloseImportModal();
                         loadProducts();
@@ -1065,9 +1108,9 @@ export default function ProductPage() {
                         setIsUploadingExcel(false);
                       }
                     }}
-                    className="rounded-lg bg-green-600 px-4 py-2 font-medium text-white disabled:opacity-50"
+                    className="min-w-[190px] whitespace-nowrap rounded-xl bg-green-600 px-7 py-3 text-base font-semibold text-white shadow-md transition-colors duration-150 hover:bg-green-700 disabled:opacity-50"
                   >
-                    {isUploadingExcel ? "Đang nhập..." : "Xác nhận Import"}
+                    {isUploadingExcel ? "Đang nhập..." : "Xác nhận nhập"}
                   </button>
                 </div>
               </div>

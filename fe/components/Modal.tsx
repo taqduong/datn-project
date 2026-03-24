@@ -20,13 +20,6 @@ export default function Modal({ isOpen, onClose, children }: ModalProps) {
         className="relative w-full max-w-3xl rounded-3xl bg-white shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <button
-          onClick={onClose}
-          className="absolute right-4 top-4 z-10 rounded-full bg-gray-100 px-3 py-1 text-sm text-gray-600 hover:bg-gray-200"
-        >
-          ✕
-        </button>
-
         {children}
       </div>
     </div>

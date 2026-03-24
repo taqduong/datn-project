@@ -203,9 +203,9 @@ export default function CategoryPage() {
             <div>
               <button
                 onClick={() => setImportModalOpen(true)}
-                className="cursor-pointer flex items-center gap-2 rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-2 text-sm font-bold text-emerald-600 transition hover:bg-emerald-100 hover:text-emerald-700"
+                className="cursor-pointer flex items-center gap-3 rounded-xl bg-emerald-50 border border-emerald-400 shadow-sm px-6 py-3 text-base font-semibold text-emerald-700 transition hover:bg-emerald-100 hover:text-emerald-800"
               >
-                📁 Import từ File Excel
+                📁 Nhập từ File Excel
               </button>
             </div>
 
@@ -446,27 +446,41 @@ export default function CategoryPage() {
       </div>
       {/* ================= MODAL IMPORT DANH MỤC 2 BƯỚC ================= */}
       <Modal isOpen={importModalOpen} onClose={handleCloseImportModal}>
-        <div className={`w-full rounded-xl bg-white p-6 transition-all duration-300 ${importStep === 2 ? 'max-w-4xl' : 'max-w-md'}`}>
-          <div className="mb-6 flex items-center justify-between border-b pb-4">
+        <div className={`w-full rounded-xl bg-white p-6 transition-all duration-300 ${importStep === 2 ? 'max-w-4xl' : 'max-w-3xl'}`}>
+          <div className="mb-6 flex items-center justify-between pb-4">
             <h2 className="text-xl font-bold text-gray-800">
-              {importStep === 1 ? "Nhập Danh Mục Hàng Loạt" : "Xem Trước Dữ Liệu Danh Mục"}
+              {importStep === 1 ? "Nhập danh mục hàng loạt" : "Xem trước dữ liệu danh mục"}
             </h2>
-            <button onClick={handleCloseImportModal} className="text-gray-400 hover:text-gray-600">✕</button>
           </div>
 
           {/* BƯỚC 1: CHỌN FILE */}
           {importStep === 1 && (
             <div className="space-y-4">
               <div>
-                <label className="mb-2 block text-sm font-bold text-gray-700">Chọn File Excel (.xlsx) *</label>
-                <input 
-                  type="file" 
-                  accept=".xlsx" 
-                  className="w-full rounded-lg border border-gray-300 p-2.5 text-black focus:ring-2 focus:ring-purple-500 outline-none" 
-                  onChange={(e) => setSelectedExcelFile(e.target.files?.[0] || null)}
-                />
+                <label className="mb-2 block text-sm font-bold text-gray-700">
+                  Chọn File Excel (.xlsx) *
+                </label>
+
+                <div className="w-[520px]">
+                  <input
+                    id="category-excel-upload"
+                    type="file"
+                    accept=".xlsx"
+                    className="hidden"
+                    onChange={(e) => setSelectedExcelFile(e.target.files?.[0] || null)}
+                  />
+
+                  <label
+                    htmlFor="category-excel-upload"
+                    className="flex cursor-pointer items-center rounded-lg border border-gray-300 px-3 py-2.5 text-black hover:border-purple-400"
+                  >
+                    <span className="truncate">
+                      {selectedExcelFile ? selectedExcelFile.name : "Chọn tệp"}
+                    </span>
+                  </label>
+                </div>
               </div>
-              <div className="mt-8 flex justify-end gap-3">
+              <div className="mt-8 w-full flex justify-end gap-3">
                 <button type="button" onClick={handleCloseImportModal} className="cursor-pointer rounded-lg bg-black px-6 py-2.5 font-bold text-white transition hover:bg-gray-800">Hủy</button>
                 <button 
                   type="button" 
@@ -500,27 +514,42 @@ export default function CategoryPage() {
                 <table className="w-full text-left text-sm">
                   <thead className="sticky top-0 z-10 bg-gray-100 text-gray-800 shadow-sm">
                     <tr>
-                      <th className="p-4 font-bold">Dòng</th>
-                      <th className="p-4 font-bold">Tên Danh Mục</th>
-                      <th className="p-4 font-bold">Mô Tả</th>
-                      <th className="p-4 text-center font-bold">Trạng thái</th>
-                      <th className="p-4 font-bold">Lỗi</th>
+                      <th className="p-4 font-semibold w-[60px]">Dòng</th>
+                      <th className="p-4 font-semibold w-[450px]">Tên Danh Mục</th>
+                      <th className="p-4 font-semibold w-[500px]">Mô Tả</th>
+                      <th className="p-4 text-center font-semibold w-[140px]">Trạng thái</th>
+                      <th className="p-4 font-semibold min-w-[140px]">Lỗi</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
                     {previewData.map((row, idx) => (
-                      <tr key={idx} className={row.isValid ? "bg-white hover:bg-gray-50" : "bg-red-50 hover:bg-red-100"}>
-                        <td className="p-4 text-black font-medium">{row.row}</td>
-                        <td className="p-4 text-black font-bold text-base">{row.name || "-"}</td>
+                      <tr 
+                        key={idx} 
+                        className={row.isValid 
+                          ? "bg-white hover:bg-gray-50" 
+                          : "bg-red-50 hover:bg-red-100"}
+                      >
+                        <td className="p-4 text-black font-medium">{idx + 1}</td>
+
+                        <td className="p-4 text-black font-semibold text-base">
+                          {row.name || "-"}
+                        </td>
+
                         <td className="p-4 text-gray-700">{row.description || "-"}</td>
-                        <td className="p-4 text-center">
+
+                        <td className="p-4 text-center w-[140px]">
                           {row.isValid ? (
-                            <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-black text-green-700 border border-green-200">Hợp lệ</span>
+                            <span className="inline-block rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700 border border-green-200">
+                              Hợp lệ
+                            </span>
                           ) : (
-                            <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-black text-red-700 border border-red-200">Lỗi</span>
+                            <span className="inline-block rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700 border border-red-200">
+                              Lỗi
+                            </span>
                           )}
                         </td>
-                        <td className="p-4 text-red-600 text-xs font-black uppercase">
+
+                        <td className="p-4 text-red-600 text-xs font-semibold uppercase">
                           {row.errors?.join(", ")}
                         </td>
                       </tr>
@@ -559,9 +588,9 @@ export default function CategoryPage() {
                         setIsUploadingExcel(false);
                       }
                     }}
-                    className="cursor-pointer rounded-lg bg-green-600 px-8 py-2.5 font-black text-white shadow-lg transition hover:bg-green-700 disabled:opacity-50"
+                    className="cursor-pointer rounded-lg bg-green-600 px-8 py-2.5 font-semibold tracking-wide text-white shadow-lg transition hover:bg-green-700 disabled:opacity-50"
                   >
-                    {isUploadingExcel ? "Đang nhập..." : "🚀 Xác nhận Import"}
+                    {isUploadingExcel ? "Đang nhập..." : " Xác nhận nhập"}
                   </button>
                 </div>
               </div>
