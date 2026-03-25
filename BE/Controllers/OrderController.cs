@@ -97,7 +97,7 @@ namespace BE.Controllers
                 {
                     decimal basePrice = item.Product.Price;
 
-                    // 🛑 NẾU LÀ SẢN PHẨM CÓ BIẾN THỂ
+                    //  NẾU LÀ SẢN PHẨM CÓ BIẾN THỂ
                     if (item.VariantId.HasValue && item.ProductVariant != null)
                     {
                         if (item.ProductVariant.Stock < item.Quantity)
@@ -315,13 +315,13 @@ namespace BE.Controllers
         {
             foreach (var detail in order.OrderDetails)
             {
-                // ✅ Nếu khách mua biến thể -> Trả lại kho biến thể
+                // Nếu khách mua biến thể -> Trả lại kho biến thể
                 if (detail.VariantId.HasValue) 
                 {
                     var variant = await _context.ProductVariants.FindAsync(detail.VariantId.Value);
                     if (variant != null) variant.Stock += detail.Quantity;
                 }
-                // ✅ Nếu khách mua áo gốc -> Trả lại kho áo gốc
+                // Nếu khách mua áo gốc -> Trả lại kho áo gốc
                 else 
                 {
                     var product = await _context.Products.FindAsync(detail.ProductId);
@@ -414,8 +414,8 @@ namespace BE.Controllers
         public string Phone { get; set; } = null!;
         public string Address { get; set; } = null!;
         public string? Email { get; set; }
-        public string? City { get; set; }
-        public string? Ward { get; set; }
+        public string City { get; set; } = null!;
+        public string Ward { get; set; } = null!;
         public string? Note { get; set; }
         public string PaymentMethod { get; set; } = "COD";
         public int? BuyNowProductId { get; set; }

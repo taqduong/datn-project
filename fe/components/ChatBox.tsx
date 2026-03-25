@@ -50,6 +50,8 @@ const STORAGE_KEY = "homemart_chat_messages_v2";
 const TYPE_DELAY_MS = 12;
 
 const QUICK_PROMPTS = [
+  "Tra cứu đơn hàng gần nhất của tôi", 
+  "Gợi ý cho tôi vài sản phẩm hợp gu",
   "Shop có những mặt hàng nào?",
   "Gợi ý cho mình sản phẩm giá rẻ",
   "Có sản phẩm nào đang giảm giá không?",
@@ -405,7 +407,7 @@ export default function ChatBox() {
     focusInput();
   };
 
-  const showQuickPrompts = messages.length <= 2 && !isLoading;
+  const showQuickPrompts = !isLoading; // Giữ hiển thị thanh gợi ý luôn (khi không đang tải)
 
   return (
     <div className="fixed bottom-5 right-5 z-50">
@@ -432,7 +434,7 @@ export default function ChatBox() {
               <div>
                 <h3 className="text-sm font-semibold sm:text-base">HomeMart AI</h3>
                 <p className="text-xs text-blue-100">
-                  Hỗ trợ tìm kiếm & đặt đơn hàng 24/7
+                  Hệ thống tìm kiếm, tra cứu & đặt đơn thông minh
                 </p>
               </div>
             </div>
@@ -473,25 +475,26 @@ export default function ChatBox() {
             </div>
           </div>
 
+          {showQuickPrompts && (
+            <div className="shrink-0 border-b border-slate-200 bg-white px-4 py-2 flex gap-2 overflow-x-auto scrollbar-none">
+              {QUICK_PROMPTS.map((prompt) => (
+                <button
+                  key={prompt}
+                  onClick={() => handleQuickPrompt(prompt)}
+                  className="shrink-0 rounded-full border border-blue-200 bg-white px-4 py-2.5 text-sm font-medium text-blue-700 transition hover:bg-blue-50 hover:shadow-sm"
+                >
+                  {prompt}
+                </button>
+              ))}
+            </div>
+          )}
+
           <div
             className="flex-1 min-h-0 overflow-y-auto bg-slate-50 px-4 py-4 overscroll-contain scroll-smooth"
             role="log"
             aria-live="polite"
           >
             <div className="flex flex-col gap-4">
-              {showQuickPrompts && (
-                <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 scrollbar-none">
-                  {QUICK_PROMPTS.map((prompt) => (
-                    <button
-                      key={prompt}
-                      onClick={() => handleQuickPrompt(prompt)}
-                      className="shrink-0 rounded-full border border-blue-200 bg-white px-4 py-2.5 text-sm font-medium text-blue-700 transition hover:bg-blue-50 hover:shadow-sm"
-                    >
-                      {prompt}
-                    </button>
-                  ))}
-                </div>
-              )}
 
               {messages.map((msg) => (
                 <MessageItem key={msg.id} message={msg} />
