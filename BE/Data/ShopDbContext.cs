@@ -32,6 +32,8 @@ public partial class ShopDbContext : DbContext
 
     public virtual DbSet<ProductVariant> ProductVariants { get; set; }
 
+    public virtual DbSet<UserActivity> UserActivities { get; set; }
+
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

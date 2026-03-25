@@ -12,9 +12,9 @@ export interface Product {
   id: number;
   name: string;
   price: number;
-  priceAfterDiscount: number;
-  discount: number;
-  imageUrl: string;
+  priceAfterDiscount?: number;
+  discount?: number;
+  imageUrl?: string;
   categoryName?: string;
   stock: number;
   soldCount?: number;

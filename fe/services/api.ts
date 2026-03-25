@@ -432,6 +432,23 @@ export const reviewsAPI = {
     api.get<CanReviewResponse>(`/reviews/can-review/${productId}`),
 };
 
+// ================= Recommendation & Tracking API =================
+export const trackingAPI = {
+  log: (data: { productId: number, actionType: string }) => 
+    api.post("/tracking/log", data),
+};
+
+export const recommendationsAPI = {
+  getSimilar: (productId: number | string) => 
+    api.get<Product[]>(`/recommendations/similar/${productId}`),
+    
+  getForYou: () => 
+    api.get<Product[]>("/recommendations/for-you"),
+
+  getRecentlyViewed: () => 
+    api.get<Product[]>("/recommendations/recently-viewed"),
+};
+
 
 // ================= Helper Exports =================
 export const fetchCategories = categoriesAPI.getAll;
@@ -481,6 +498,11 @@ export const trackProductPurchase = analyticsAPI.trackPurchase;
 export const fetchReviewsByProduct = reviewsAPI.getByProduct;
 export const addReview = reviewsAPI.add;
 export const checkCanReview = reviewsAPI.checkCanReview;
+
+export const logUserActivity = trackingAPI.log;
+export const fetchSimilarProducts = recommendationsAPI.getSimilar;
+export const fetchForYouProducts = recommendationsAPI.getForYou;
+export const fetchRecentlyViewed = recommendationsAPI.getRecentlyViewed;
 
 export default api;
 

@@ -478,7 +478,7 @@ namespace BE.Controllers
         // BƯỚC 1: API ĐỌC NHÁP EXCEL 
         // =========================================================================
         [HttpPost("preview-import")]
-        public async Task<IActionResult> PreviewImport([FromForm] IFormFile excelFile)
+        public async Task<IActionResult> PreviewImport(IFormFile excelFile)
         {
             if (excelFile == null || excelFile.Length == 0) return BadRequest(new { message = "Vui lòng chọn file Excel." });
             if (Path.GetExtension(excelFile.FileName).ToLower() != ".xlsx") return BadRequest(new { message = "Chỉ hỗ trợ file Excel .xlsx." });
@@ -575,7 +575,7 @@ namespace BE.Controllers
         //  BƯỚC 2: API IMPORT THẬT (LƯU DB & XẢ NÉN ZIP)
         // =========================================================================
         [HttpPost("import")]
-        public async Task<IActionResult> ImportProducts([FromForm] IFormFile excelFile, [FromForm] IFormFile? zipFile)
+        public async Task<IActionResult> ImportProducts(IFormFile excelFile, IFormFile? zipFile)
         {
             if (excelFile == null || excelFile.Length == 0) return BadRequest(new { message = "Vui lòng chọn file Excel." });
             if (Path.GetExtension(excelFile.FileName).ToLower() != ".xlsx") return BadRequest(new { message = "Chỉ hỗ trợ file Excel .xlsx." });

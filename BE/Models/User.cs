@@ -53,6 +53,9 @@ namespace BE.Models
         [InverseProperty("User")]
         public virtual ICollection<Wishlist> Wishlists { get; set; } = new List<Wishlist>();
 
+        [InverseProperty("User")]
+        public virtual ICollection<UserActivity> UserActivities { get; set; } = new List<UserActivity>();
+
         
     }
 }

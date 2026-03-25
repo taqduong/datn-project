@@ -33,7 +33,7 @@ namespace BE.Controllers
         // BƯỚC 1: API ĐỌC NHÁP EXCEL (PREVIEW LỖI)
         // =========================================================================
         [HttpPost("preview-import")]
-        public async Task<IActionResult> PreviewImport([FromForm] IFormFile file)
+        public async Task<IActionResult> PreviewImport(IFormFile file)
         {
             if (file == null || file.Length == 0) return BadRequest(new { message = "Vui lòng chọn file hợp lệ." });
             if (Path.GetExtension(file.FileName).ToLower() != ".xlsx") return BadRequest(new { message = "Chỉ hỗ trợ file Excel .xlsx." });
@@ -95,7 +95,7 @@ namespace BE.Controllers
         // BƯỚC 2: API IMPORT THẬT (CHẶN DÒNG LỖI)
         // =========================================================================
         [HttpPost("import")]
-        public async Task<IActionResult> ImportCategories([FromForm] IFormFile file)
+        public async Task<IActionResult> ImportCategories(IFormFile file)
         {
             if (file == null || file.Length == 0) return BadRequest(new { message = "Vui lòng chọn file." });
 

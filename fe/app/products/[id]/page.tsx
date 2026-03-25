@@ -5,15 +5,10 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useRef } from "react";
 import { Heart, Star, CheckCircle, User as UserIcon, ZoomIn, ZoomOut, X } from "lucide-react"; 
 import { 
-  fetchProductById, 
-  addToCart, 
-  addToWishlist, 
-  type Product, 
-  trackProductView, 
-  trackProductAddToCart,
-  fetchReviewsByProduct,
-  type ReviewDto 
+  fetchProductById, addToCart, addToWishlist, type Product, trackProductView, trackProductAddToCart, fetchReviewsByProduct,
+  type ReviewDto, logUserActivity, fetchSimilarProducts 
 } from "@/services/api";
+import ProductCard from "@/components/ProductCard";
 
 export default function ProductDetailPage() {
   const params = useParams();
@@ -24,7 +19,7 @@ export default function ProductDetailPage() {
   const [loading, setLoading] = useState(true);
   const [activeImage, setActiveImage] = useState<string>("");
 
-  // ✅ STATE QUẢN LÝ ZOOM ẢNH
+  // STATE QUẢN LÝ ZOOM ẢNH
   const [isZooming, setIsZooming] = useState(false);
   const [zoomPosition, setZoomPosition] = useState({ x: 50, y: 50 });
 
@@ -42,7 +37,7 @@ export default function ProductDetailPage() {
   const [isWishlisting, setIsWishlisting] = useState(false);
   const trackedIdRef = useRef<string | null>(null);
 
-  // ✅ STATE QUẢN LÝ BIẾN THỂ ĐƯỢC CHỌN
+  // STATE QUẢN LÝ BIẾN THỂ ĐƯỢC CHỌN
   const [selectedVariant, setSelectedVariant] = useState<any | null>(null);
 
   const [openLightbox, setOpenLightbox] = useState(false);
@@ -85,17 +80,17 @@ export default function ProductDetailPage() {
   const closeLightbox = () => {
   setOpenLightbox(false);
   setPreviewZoom(1);
-};
+  };
 
-const handleZoomIn = () => {
+  const handleZoomIn = () => {
   setPreviewZoom((prev) => Math.min(prev + 0.6, 4));
-};
+  };
 
-const handleZoomOut = () => {
+  const handleZoomOut = () => {
   setPreviewZoom((prev) => Math.max(prev - 0.6, 1));
-};
+  };
 
-useEffect(() => {
+  useEffect(() => {
   if (!openLightbox) return;
 
   const handleKeyDown = (e: KeyboardEvent) => {
@@ -106,7 +101,7 @@ useEffect(() => {
 
   window.addEventListener("keydown", handleKeyDown);
   return () => window.removeEventListener("keydown", handleKeyDown);
-}, [openLightbox]);
+  }, [openLightbox]);
 
   const loadProduct = async () => {
     try {
@@ -117,14 +112,17 @@ useEffect(() => {
       
       if (data?.imageUrl) setActiveImage(data.imageUrl);
 
-      // ✅ Tự động chọn biến thể đầu tiên nếu có
+      // Tự động chọn biến thể đầu tiên nếu có
       if (data?.variants && data.variants.length > 0) {
         setSelectedVariant(data.variants[0]);
       }
 
       if (data?.id && trackedIdRef.current !== id) {
         trackedIdRef.current = id; 
-        trackProductView(data.id).catch(err => console.error("Lỗi tracking view:", err));
+        if (data?.id && trackedIdRef.current !== id) {
+        trackedIdRef.current = id; 
+        logUserActivity({ productId: data.id, actionType: "View" }).catch(err => console.log(err));
+      }
       }
     } catch (error) {
       console.error("Lỗi khi tải chi tiết sản phẩm:", error);
@@ -168,7 +166,7 @@ useEffect(() => {
     return count.toString();
   };
 
-  // ✅ LOGIC TÍNH TOÁN GIÁ & TỒN KHO LINH HOẠT THEO BIẾN THỂ
+  // LOGIC TÍNH TOÁN GIÁ & TỒN KHO LINH HOẠT THEO BIẾN THỂ
   const currentPrice = selectedVariant ? selectedVariant.price : (product?.price || 0);
   const currentStock = selectedVariant ? selectedVariant.stock : (product?.stock || 0);
   
@@ -195,7 +193,7 @@ useEffect(() => {
 
   const handleDecrease = () => setQuantity((prev) => Math.max(prev - 1, 1));
 
-  // ✅ HÀM KHI KHÁCH BẤM CHỌN BIẾN THỂ
+  // HÀM KHI KHÁCH BẤM CHỌN BIẾN THỂ
   const handleSelectVariant = (variant: any) => {
     setSelectedVariant(variant);
     setQuantity(1); // Reset số lượng về 1 khi đổi loại
@@ -228,7 +226,7 @@ useEffect(() => {
       setIsAdding(true);
       // (Lưu ý: API AddToCart sếp có thể cần sửa lại để nhận thêm VariantId sau)
       await addToCart(product.id, quantity); 
-      trackProductAddToCart(product.id).catch(err => console.error("Lỗi tracking cart:", err));
+      logUserActivity({ productId: product.id, actionType: "AddToCart" }).catch(err => console.log(err));
       window.dispatchEvent(new Event('cartUpdated')); 
       alert(`Đã thêm ${product.name} ${selectedVariant ? `(${selectedVariant.variantName})` : ''} vào giỏ hàng!`);
     } catch (error) {
@@ -249,6 +247,7 @@ useEffect(() => {
     try {
       setIsWishlisting(true);
       await addToWishlist(product.id);
+      logUserActivity({ productId: product.id, actionType: "AddToWishlist" }).catch(err => console.log(err));
       window.dispatchEvent(new Event('wishlistUpdated')); 
       alert(`Đã thêm ${product.name} vào danh sách yêu thích!`);
     } catch (error: any) {
@@ -323,15 +322,15 @@ useEffect(() => {
           
           {/* Cột trái: Ảnh */}
           <div className="space-y-4">
-            {/* ✅ KHUNG ẢNH CHÍNH (ĐÃ TÍCH HỢP KÍNH LÚP) */}
+            {/* KHUNG ẢNH CHÍNH (ĐÃ TÍCH HỢP KÍNH LÚP) */}
             <div 
               className="relative aspect-square w-full overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm cursor-zoom-in group"
               onMouseEnter={() => setIsZooming(true)}
               onMouseLeave={() => setIsZooming(false)}
               onMouseMove={handleMouseMove}
               onClick={() => {
-                setIsZooming(false);       // 👈 tắt zoom trước
-                setOpenLightbox(true);     // 👈 mở modal
+                setIsZooming(false);       // tắt zoom trước
+                setOpenLightbox(true);     // mở modal
               }}
             >
               {!imageLoaded && <div className="absolute inset-0 z-10 animate-pulse bg-slate-100" />}
@@ -462,7 +461,7 @@ useEffect(() => {
                 <p className="mt-2 text-sm text-green-700">Bạn tiết kiệm được <span className="font-semibold">{formatVND(currentPrice - displayPrice)}</span></p>
               )}
 
-              {/* ✅ KHU VỰC CHỌN PHÂN LOẠI BIẾN THỂ (BẢN TỐI THƯỢNG: MÀU TRÊN DÒNG + MÀU TRONG NÚT) */}
+              {/* KHU VỰC CHỌN PHÂN LOẠI BIẾN THỂ */}
               {product.variants && product.variants.length > 0 && (
                 <div className="mt-6 border-t border-slate-200 pt-6 space-y-4">
                   
@@ -522,7 +521,7 @@ useEffect(() => {
                                         ${isOutOfStock ? 'opacity-50 cursor-not-allowed bg-slate-100 text-slate-400 border-slate-200' : ''}
                                       `}
                                     >
-                                      {/* ✅ ICON TRÒN BÊN TRONG NÚT */}
+                                      {/* ICON TRÒN BÊN TRONG NÚT */}
                                       {btnColorHex && (
                                         <span 
                                             className={`w-4 h-4 rounded-full shrink-0 ${needBtnBorder ? 'border border-slate-300' : ''}`}
@@ -646,137 +645,104 @@ useEffect(() => {
           </div>
         </div>
 
-        {/* Khối xem thêm sản phẩm */}
-        <div className="mt-8 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-            <div>
-              <h3 className="text-xl font-bold text-slate-900">Xem thêm sản phẩm khác</h3>
-              <p className="mt-1 text-slate-600">Khám phá thêm nhiều sản phẩm phù hợp trong cửa hàng của bạn.</p>
-            </div>
-            <Link href="/products" className="inline-flex items-center justify-center rounded-2xl bg-blue-600 px-5 py-3 font-semibold text-white transition hover:bg-blue-700">
-              Quay về danh sách sản phẩm
-            </Link>
-          </div>
-        </div>
+        {/* ======================================================= */}
+        {/* GỢI Ý SẢN PHẨM TƯƠNG TỰ (AI) */}
+        {/* ======================================================= */}
+        <SimilarProducts productId={product.id} />
+
         {/* Lightbox */}
         {openLightbox && allImages.length > 0 && (
-        <div
-        className="fixed inset-0 z-[100] bg-black/35"
-        onClick={closeLightbox}
-        >
-    <div
-      className="absolute left-1/2 top-1/2 w-[92vw] max-w-6xl -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-white shadow-2xl"
-      onClick={(e) => e.stopPropagation()}
-    >
-      {/* Nút đóng */}
-      <button
-        onClick={closeLightbox}
-        className="absolute right-4 top-4 z-20 flex h-11 w-11 items-center justify-center rounded-full bg-black/30 text-white shadow-sm transition hover:bg-white hover:text-slate-900"
-        title="Đóng"
-      >
-        <X size={26} strokeWidth={2.2} />
-      </button>
+          <div className="fixed inset-0 z-[100] bg-black/35" onClick={closeLightbox}>
+            <div className="absolute left-1/2 top-1/2 w-[92vw] max-w-6xl -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+              
+              {/* Nút đóng */}
+              <button onClick={closeLightbox} className="absolute right-4 top-4 z-20 flex h-11 w-11 items-center justify-center rounded-full bg-black/30 text-white shadow-sm transition hover:bg-white hover:text-slate-900" title="Đóng">
+                <X size={26} strokeWidth={2.2} />
+              </button>
 
-      <div className="grid grid-cols-1 gap-6 p-6 lg:grid-cols-[1fr_280px]">
-        {/* Ảnh lớn bên trái */}
-        <div className="relative flex min-h-[520px] items-center justify-center overflow-hidden rounded-2xl bg-slate-50 p-4">
-          {/* Nút zoom góc phải trên */}
-          <div className="absolute right-20 top-4 z-20 flex items-center gap-3">
-          <button
-            onClick={handleZoomIn}
-            disabled={isMaxZoom}
-            className={`flex h-11 w-11 items-center justify-center rounded-full transition
-              ${isMaxZoom 
-                ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                : "bg-white/90 text-slate-600 hover:bg-white hover:text-slate-900 shadow-sm"}
-            `}
-            title="Phóng to"
-          >
-            <ZoomIn size={24} strokeWidth={2.2} />
-          </button>
-          <button
-              onClick={handleZoomOut}
-              disabled={isMinZoom}
-              className={`flex h-11 w-11 items-center justify-center rounded-full transition
-                ${isMinZoom 
-                  ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                  : "bg-white/90 text-slate-600 hover:bg-white hover:text-slate-900 shadow-sm"}
-              `}
-              title="Thu nhỏ"
-            >
-              <ZoomOut size={24} strokeWidth={2.2} />
-            </button>
+              <div className="grid grid-cols-1 gap-6 p-6 lg:grid-cols-[1fr_280px]">
+                {/* Ảnh lớn bên trái */}
+                <div className="relative flex min-h-[520px] items-center justify-center overflow-hidden rounded-2xl bg-slate-50 p-4">
+                  {/* Nút zoom */}
+                  <div className="absolute right-20 top-4 z-20 flex items-center gap-3">
+                    <button onClick={handleZoomIn} disabled={isMaxZoom} className={`flex h-11 w-11 items-center justify-center rounded-full transition ${isMaxZoom ? "bg-gray-200 text-gray-400 cursor-not-allowed" : "bg-white/90 text-slate-600 hover:bg-white hover:text-slate-900 shadow-sm"}`} title="Phóng to">
+                      <ZoomIn size={24} strokeWidth={2.2} />
+                    </button>
+                    <button onClick={handleZoomOut} disabled={isMinZoom} className={`flex h-11 w-11 items-center justify-center rounded-full transition ${isMinZoom ? "bg-gray-200 text-gray-400 cursor-not-allowed" : "bg-white/90 text-slate-600 hover:bg-white hover:text-slate-900 shadow-sm"}`} title="Thu nhỏ">
+                      <ZoomOut size={24} strokeWidth={2.2} />
+                    </button>
+                  </div>
+
+                  <img src={allImages[photoIndex]} alt={`preview-${photoIndex}`} className="max-h-[75vh] w-auto max-w-full rounded-xl object-contain transition-transform duration-200" style={{ transform: `scale(${previewZoom})` }} />
+
+                  {allImages.length > 1 && (
+                    <>
+                      <button onClick={() => { setPreviewZoom(1); setPhotoIndex((prev) => prev === 0 ? allImages.length - 1 : prev - 1); }} className="absolute left-4 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-xl bg-slate-800/75 text-3xl text-white transition hover:bg-slate-900">‹</button>
+                      <button onClick={() => { setPreviewZoom(1); setPhotoIndex((prev) => prev === allImages.length - 1 ? 0 : prev + 1); }} className="absolute right-4 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-xl bg-slate-800/75 text-3xl text-white transition hover:bg-slate-900">›</button>
+                    </>
+                  )}
+                </div>
+
+                {/* Cột phải: tiêu đề + ảnh nhỏ ở góc trên */}
+                <div className="flex flex-col">
+                  <h3 className="line-clamp-2 pr-10 text-xl font-semibold text-slate-900">{product?.name}</h3>
+                  <div className="mt-5 grid grid-cols-3 gap-3">
+                    {allImages.map((img, idx) => (
+                      <button key={idx} onClick={() => { setPreviewZoom(1); setPhotoIndex(idx); }} className={`overflow-hidden rounded-xl border-2 bg-white transition ${photoIndex === idx ? "border-red-500 ring-2 ring-red-100" : "border-slate-200 hover:border-slate-400"}`}>
+                        <img src={img} alt={`thumb-${idx}`} className="aspect-square h-full w-full object-cover" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-
-          <img
-            src={allImages[photoIndex]}
-            alt={`preview-${photoIndex}`}
-            className="max-h-[75vh] w-auto max-w-full rounded-xl object-contain transition-transform duration-200"
-            style={{ transform: `scale(${previewZoom})` }}
-          />
-
-          {allImages.length > 1 && (
-            <>
-              <button
-                onClick={() => {
-                  setPreviewZoom(1);
-                  setPhotoIndex((prev) =>
-                    prev === 0 ? allImages.length - 1 : prev - 1
-                  );
-                }}  
-                className="absolute left-4 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-xl bg-slate-800/75 text-3xl text-white transition hover:bg-slate-900"
-              >
-                ‹
-              </button>
-
-              <button
-                onClick={() => {
-                  setPreviewZoom(1);
-                  setPhotoIndex((prev) =>
-                    prev === allImages.length - 1 ? 0 : prev + 1
-                  );
-                }}
-                className="absolute right-4 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-xl bg-slate-800/75 text-3xl text-white transition hover:bg-slate-900"
-              >
-                ›
-              </button>
-            </>
-          )}
-        </div>
-
-        {/* Cột phải: tiêu đề + ảnh nhỏ ở góc trên */}
-        <div className="flex flex-col">
-          <h3 className="line-clamp-2 pr-10 text-xl font-semibold text-slate-900">
-            {product?.name}
-          </h3>
-
-          <div className="mt-5 grid grid-cols-3 gap-3">
-            {allImages.map((img, idx) => (
-              <button
-                key={idx}
-                onClick={() => {
-                  setPreviewZoom(1);
-                  setPhotoIndex(idx);
-                }}
-                className={`overflow-hidden rounded-xl border-2 bg-white transition ${
-                  photoIndex === idx
-                    ? "border-red-500 ring-2 ring-red-100"
-                    : "border-slate-200 hover:border-slate-400"
-                }`}
-              >
-                <img
-                  src={img}
-                  alt={`thumb-${idx}`}
-                  className="aspect-square h-full w-full object-cover"
-                />
-              </button>
-            ))}
-          </div>
-        </div>
+        )}
       </div>
     </div>
-  </div>
-)}
+  );
+}
+
+// ========================================================
+// COMPONENT: SẢN PHẨM TƯƠNG TỰ (GỢI Ý TỪ API)
+// ========================================================
+function SimilarProducts({ productId }: { productId: number }) {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Hàm fix đường dẫn ảnh
+  const resolveImg = (url?: string) => {
+    if (!url) return "/placeholder-image.jpg";
+    if (url.startsWith("http")) return url;
+    const baseUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5270/api").replace("/api", "");
+    return `${baseUrl}${url.startsWith("/") ? "" : "/"}${url}`;
+  };
+
+  useEffect(() => {
+    fetchSimilarProducts(productId)
+      .then(res => {
+        // CHUẨN HÓA DATA: Ép cái productVariants của Backend thành variants cho Card nó hiểu
+        console.log("CHECK DATA TỪ BACKEND GỬI LÊN:", res.data);
+        const fixedProducts = res.data.map((p: any) => ({
+          ...p,
+          variants: p.productVariants
+        }));
+        setProducts(fixedProducts);
+      })
+      .catch(err => console.error("Lỗi tải sp tương tự:", err))
+      .finally(() => setLoading(false));
+  }, [productId]);
+
+  if (loading) return <div className="mt-8 h-40 animate-pulse rounded-3xl bg-slate-200"></div>;
+  if (products.length === 0) return null;
+
+  return (
+    <div className="mt-8 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm lg:p-8">
+      <h2 className="mb-6 text-2xl font-bold text-slate-900">Sản phẩm tương tự</h2>
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+        {products.map(p => (
+          <ProductCard key={p.id} product={p} />
+        ))}
       </div>
     </div>
   );

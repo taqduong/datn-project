@@ -10,6 +10,8 @@ import {
   type Category,
 } from "@/services/api";
 import ProductCard from "@/components/ProductCard";
+import ForYouProducts from "@/components/ForYouProducts";
+import RecentlyViewed from "@/components/RecentlyViewed";
 
 const benefits = [
   {
@@ -333,6 +335,11 @@ export default function HomePage() {
         )}
       </section>
 
+      {/* ======================================================= */}
+      {/* KHU VỰC AI GỢI Ý DÀNH RIÊNG CHO BẠN */}
+      {/* ======================================================= */}
+      <ForYouProducts />
+
       {/* Featured products */}
       <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
         <div className="mb-8 flex items-end justify-between gap-4">
@@ -375,6 +382,11 @@ export default function HomePage() {
           </div>
         )}
       </section>
+
+      {/* ======================================================= */}
+      {/* KHU VỰC SẢN PHẨM VỪA XEM (DẠNG THANH TRƯỢT) */}
+      {/* ======================================================= */}
+      <RecentlyViewed />
 
       {/* Promo banner & Newsletter */}
       <section className="mx-auto max-w-7xl px-4 py-12 pb-20 sm:px-6 lg:px-8">
