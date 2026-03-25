@@ -117,13 +117,17 @@ export default function ProductDetailPage() {
         setSelectedVariant(data.variants[0]);
       }
 
+      // FIX LỖI TRACKING 
       if (data?.id && trackedIdRef.current !== id) {
         trackedIdRef.current = id; 
-        if (data?.id && trackedIdRef.current !== id) {
-        trackedIdRef.current = id; 
-        logUserActivity({ productId: data.id, actionType: "View" }).catch(err => console.log(err));
+        
+        const token = localStorage.getItem("token");
+        if (token) {
+          logUserActivity({ productId: data.id, actionType: "View" })
+            .catch(err => console.error("Lỗi tracking View:", err));
+        }
       }
-      }
+
     } catch (error) {
       console.error("Lỗi khi tải chi tiết sản phẩm:", error);
       setProduct(null);

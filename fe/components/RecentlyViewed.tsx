@@ -9,6 +9,8 @@ export default function RecentlyViewed() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
+  
+  const [isHovered, setIsHovered] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -29,7 +31,31 @@ export default function RecentlyViewed() {
       .finally(() => setLoading(false));
   }, []);
 
-  // Hàm xử lý lướt sang trái/phải
+  // LOGIC MỚI: TỰ ĐỘNG TRƯỢT (AUTOPLAY)
+  useEffect(() => {
+    // Nếu chưa load xong, không có sản phẩm, hoặc khách đang di chuột vào -> KHÔNG trượt
+    if (products.length === 0 || isHovered) return;
+
+    const interval = setInterval(() => {
+      if (scrollRef.current) {
+        const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
+        
+        // Nếu đã cuộn sát mép bên phải (trừ hao 10px cho chắc)
+        if (scrollLeft + clientWidth >= scrollWidth - 10) {
+          // Cuộn ngược trở lại đầu tiên
+          scrollRef.current.scrollTo({ left: 0, behavior: "smooth" });
+        } else {
+          // Cuộn sang phải 1 khoảng bằng đúng chiều rộng 1 card (256px bao gồm cả gap)
+          scrollRef.current.scrollTo({ left: scrollLeft + 256, behavior: "smooth" });
+        }
+      }
+    }, 3000); // Tốc độ trượt: 3000ms = 3 giây trượt 1 lần
+
+    // Dọn dẹp interval khi component bị hủy hoặc khi khách di chuột vào
+    return () => clearInterval(interval);
+  }, [products.length, isHovered]);
+
+  // Hàm xử lý lướt sang trái/phải bằng nút bấm (giữ nguyên của sếp)
   const scroll = (direction: "left" | "right") => {
     if (scrollRef.current) {
       const { scrollLeft, clientWidth } = scrollRef.current;
@@ -66,9 +92,11 @@ export default function RecentlyViewed() {
         </div>
       </div>
 
-      {/* Container thanh trượt */}
+      {/* Container thanh trượt (Đã thêm sự kiện onMouseEnter, onMouseLeave) */}
       <div 
         ref={scrollRef}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
         className="flex gap-4 overflow-x-auto scrollbar-hide snap-x snap-mandatory pb-4"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
