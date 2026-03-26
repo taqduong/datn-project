@@ -169,6 +169,7 @@ export interface CheckoutPayload {
   buyNowProductId?: number; 
   buyNowQuantity?: number;  
   buyNowVariantId?: number;
+  discountAmount?: number;
 }
 
 export interface OrderDetailDto {
@@ -196,6 +197,9 @@ export interface OrderDto {
   note?: string;
   orderDetails: OrderDetailDto[];
   paymentMethod: string;
+  discountAmount?: number;
+  shippingFee?: number;
+  appliedVoucherCode?: string;
 }
 
 export interface AnalyticsSummary {
@@ -234,6 +238,22 @@ export interface ReviewResponse {
 export interface CanReviewResponse {
   canReview: boolean;
   reason?: string;
+}
+
+export interface VoucherDto {
+  id: number;
+  code: string;
+  title: string;
+  description: string;
+  isFreeship: boolean;
+  discountPercent?: number;
+  discountValue?: number;
+  maxDiscountAmount?: number;
+  minOrderValue: number;
+  expiryDate: string;
+  usageLimit: number;
+  usedCount: number;
+  isActive: boolean;
 }
 // ================= Categories API =================
 export const categoriesAPI = {
@@ -449,6 +469,13 @@ export const recommendationsAPI = {
     api.get<Product[]>("/recommendations/recently-viewed"),
 };
 
+// ================= Vouchers API (Admin) =================
+export const voucherAPI = {
+  getAllAdmin: () => api.get<VoucherDto[]>("/Voucher/admin"),
+  create: (data: Partial<VoucherDto>) => api.post("/Voucher", data),
+  update: (id: number, data: Partial<VoucherDto>) => api.put(`/Voucher/${id}`, data),
+  delete: (id: number) => api.delete(`/Voucher/${id}`)
+};
 
 // ================= Helper Exports =================
 export const fetchCategories = categoriesAPI.getAll;
@@ -504,7 +531,14 @@ export const fetchSimilarProducts = recommendationsAPI.getSimilar;
 export const fetchForYouProducts = recommendationsAPI.getForYou;
 export const fetchRecentlyViewed = recommendationsAPI.getRecentlyViewed;
 
+export const fetchAdminVouchers = voucherAPI.getAllAdmin;
+export const createAdminVoucher = voucherAPI.create;
+export const updateAdminVoucher = voucherAPI.update;
+export const deleteAdminVoucher = voucherAPI.delete;
+
 export default api;
+
+
 
 export const resolveImgUrl = (url?: string) => {
   if (!url) return "";

@@ -205,7 +205,6 @@ export default function OrdersPage() {
                   <div className="p-5 sm:p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-50/50">
                     <div className="flex flex-wrap items-center gap-3 sm:gap-4">
                       
-                      {/* 🚀 BOX CHỨA CÁC TAG TRẠNG THÁI */}
                       <div className="flex items-center gap-2">
                         {/* TAG 1: TRẠNG THÁI VẬN CHUYỂN */}
                         <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border font-semibold text-sm ${statusConfig.color}`}>
@@ -235,6 +234,12 @@ export default function OrdersPage() {
                     <div className="text-right">
                       <p className="text-sm text-slate-500 font-medium mb-1">Tổng thanh toán</p>
                       <p className="text-xl font-bold text-blue-600">{formatVND(order.totalAmount)}</p>
+                      {/* HIỂN THỊ SỐ TIỀN VOUCHER ĐƯỢC GIẢM NẾU CÓ */}
+                      {(order.discountAmount ?? 0) > 0 && (
+                        <p className="text-xs text-emerald-600 font-medium mt-0.5">
+                          (Đã giảm {formatVND(order.discountAmount!)})
+                        </p>
+                      )}
                     </div>
                   </div>
 
@@ -275,7 +280,7 @@ export default function OrdersPage() {
                       {order.orderDetails.slice(0, 2).map((item, idx) => (
                         <div key={idx} className="flex gap-4 items-center">
                           <img
-                            src={resolveImgUrl(item.imageUrl)} // 👈 Gọi hàm này ở đây là xong!
+                            src={resolveImgUrl(item.imageUrl)} 
                             alt={item.productName}
                             className="w-16 h-16 object-cover rounded-xl border border-slate-200 bg-white"
                           />

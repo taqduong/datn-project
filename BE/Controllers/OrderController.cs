@@ -135,7 +135,7 @@ namespace BE.Controllers
             {
                 UserId = userId.Value,
                 OrderDate = DateTime.Now,
-                TotalAmount = totalAmount,
+                TotalAmount = Math.Max(0, totalAmount + request.ShippingFee - request.DiscountAmount),
                 Status = "Pending", 
                 PaymentMethod = request.PaymentMethod,
                 FullName = request.FullName,
@@ -145,6 +145,9 @@ namespace BE.Controllers
                 City = request.City,
                 Ward = request.Ward,
                 Note = request.Note,
+                DiscountAmount = request.DiscountAmount,
+                ShippingFee = request.ShippingFee,
+                AppliedVoucherCode = request.AppliedVoucherCode,
                 OrderDetails = orderDetails
             };
 
@@ -179,6 +182,9 @@ namespace BE.Controllers
                     City = o.City ?? "",       
                     Ward = o.Ward ?? "",       
                     Note = o.Note ?? "",
+                    DiscountAmount = o.DiscountAmount,
+                    ShippingFee = o.ShippingFee,
+                    AppliedVoucherCode = o.AppliedVoucherCode,
                     OrderDetails = o.OrderDetails.Select(od => new OrderDetailDto
                     {
                         ProductId = od.ProductId,
@@ -235,6 +241,9 @@ namespace BE.Controllers
                     City = o.City ?? "",
                     Ward = o.Ward ?? "",
                     Note = o.Note ?? "",
+                    DiscountAmount = o.DiscountAmount,
+                    ShippingFee = o.ShippingFee,
+                    AppliedVoucherCode = o.AppliedVoucherCode,
                     OrderDetails = o.OrderDetails.Select(od => new OrderDetailDto
                     {
                         ProductId = od.ProductId,
@@ -292,6 +301,9 @@ namespace BE.Controllers
                 City = order.City ?? "",
                 Ward = order.Ward ?? "",
                 Note = order.Note ?? "",
+                DiscountAmount = order.DiscountAmount,
+                ShippingFee = order.ShippingFee,
+                AppliedVoucherCode = order.AppliedVoucherCode,
                 OrderDetails = order.OrderDetails.Select(od => new OrderDetailDto
                 {
                     ProductId = od.ProductId,
@@ -421,6 +433,9 @@ namespace BE.Controllers
         public int? BuyNowProductId { get; set; }
         public int? BuyNowQuantity { get; set; }
         public int? BuyNowVariantId { get; set; }
+        public decimal DiscountAmount { get; set; } = 0;
+        public string? AppliedVoucherCode { get; set; } 
+        public decimal ShippingFee { get; set; } = 30000;
     }
 
     public class UpdateStatusDto
@@ -464,5 +479,8 @@ namespace BE.Controllers
         public string City { get; set; } = "";
         public string Ward { get; set; } = "";
         public string Note { get; set; } = "";
+        public decimal DiscountAmount { get; set; } = 0;
+        public decimal ShippingFee { get; set; } = 0;
+        public string? AppliedVoucherCode { get; set; }
     }
 }

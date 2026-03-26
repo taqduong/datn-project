@@ -34,6 +34,8 @@ public partial class ShopDbContext : DbContext
 
     public virtual DbSet<UserActivity> UserActivities { get; set; }
 
+    public virtual DbSet<Voucher> Vouchers { get; set; }
+
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

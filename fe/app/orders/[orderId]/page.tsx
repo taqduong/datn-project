@@ -18,23 +18,19 @@ export default function OrderDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // ✅ STATE LƯU ĐƠN HÀNG ĐỂ XUẤT HÓA ĐƠN
   const [printOrder, setPrintOrder] = useState<OrderDto | null>(null);
   const [isExporting, setIsExporting] = useState(false);
 
-  // ==================== BẮT ĐẦU CODE XUẤT PDF ====================
   const handleExportPDF = async () => {
     if (!order) return;
     setIsExporting(true);
     setPrintOrder(order);
     
-    // Đợi DOM render khuôn Hóa đơn ẩn
     setTimeout(async () => {
       try {
         const element = document.getElementById("invoice-template");
         if (!element) throw new Error("Không tìm thấy template hóa đơn");
         
-        // Dynamic import để tránh lỗi SSR của Next.js
         const html2pdf = (await import("html2pdf.js")).default;
         
         const opt: any = {
@@ -55,9 +51,7 @@ export default function OrderDetailPage() {
       }
     }, 100);
   };
-  // ==================== KẾT THÚC CODE XUẤT PDF ====================
 
-  // ✅ Tách hàm load dữ liệu ra để gọi lại sau khi Hủy đơn
   const loadOrderDetail = useCallback(async () => {
     if (!orderId) return;
     try {
@@ -76,7 +70,6 @@ export default function OrderDetailPage() {
     loadOrderDetail();
   }, [loadOrderDetail]);
 
-  // ✅ Hàm xử lý Hủy đơn hàng
   const handleCancelOrder = async () => {
     if (!window.confirm("Sếp có chắc chắn muốn hủy đơn hàng này không? Quá trình này không thể hoàn tác.")) {
       return;
@@ -86,7 +79,6 @@ export default function OrderDetailPage() {
       if (orderId) {
         await cancelOrder(orderId);
         alert("Hủy đơn hàng thành công! ");
-        // Load lại dữ liệu để cập nhật trạng thái "Đã hủy"
         await loadOrderDetail(); 
       }
     } catch (error: any) {
@@ -143,14 +135,8 @@ export default function OrderDetailPage() {
   }
 
   const statusConfig = getStatusConfig(order.status);
-  const subTotal = order.totalAmount; 
-
-  // Chỉ cho phép hủy khi đơn Pending hoặc Processing
-  const canCancel = 
-    order.status.toLowerCase() === 'pending' ||
-    order.status.toLowerCase() === 'processing';
-
-  // LOGIC KIỂM TRA ĐƠN ĐÃ HOÀN THÀNH ĐỂ HIỆN NÚT ĐÁNH GIÁ
+  const subTotal = order.orderDetails.reduce((sum, item) => sum + item.price * item.quantity, 0); 
+  const canCancel = order.status.toLowerCase() === 'pending' || order.status.toLowerCase() === 'processing';
   const isCompleted = order.status.toLowerCase() === 'completed';
 
   return (
@@ -175,29 +161,22 @@ export default function OrderDetailPage() {
           </div>
           
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-            
-            {/* 🚀 TAG 1: TRẠNG THÁI VẬN CHUYỂN */}
             <div className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border font-bold text-sm ${statusConfig.color}`}>
-              {statusConfig.icon} 
-              {statusConfig.text}
+              {statusConfig.icon} {statusConfig.text}
             </div>
 
-            {/* 🚀 TAG 2: ĐÃ THANH TOÁN */}
             {order.paymentMethod === 'VNPay_Paid' && (
               <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl border font-bold text-sm bg-emerald-100 text-emerald-700 border-emerald-200">
                 <CheckCircle2 className="w-5 h-5" /> Đã thanh toán
               </div>
             )}
 
-            {/* 🚀 TAG 3: CHƯA THANH TOÁN */}
             {order.paymentMethod?.toLowerCase() === 'vnpay' && order.status.toLowerCase() === 'pending' && (
               <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl border font-bold text-sm bg-orange-100 text-orange-700 border-orange-200 animate-pulse">
                 <AlertCircle className="w-5 h-5" /> Chưa thanh toán
               </div>
             )}
             
-            {/* ✅ NÚT XUẤT HÓA ĐƠN PDF */}
-            {/* ✅ CHỈ XUẤT HÓA ĐƠN KHI ĐƠN ĐÃ HOÀN THÀNH */}
             {isCompleted && (
               <button
                 onClick={handleExportPDF}
@@ -220,7 +199,7 @@ export default function OrderDetailPage() {
         {/* Khung chia 2 cột */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           
-          {/* CỘT TRÁI: Sản phẩm & Thanh toán */}
+          {/* CỘT TRÁI */}
           <div className="lg:col-span-2 space-y-8">
             <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
               <div className="p-6 border-b border-slate-100 flex items-center gap-3 bg-slate-50/50">
@@ -232,7 +211,7 @@ export default function OrderDetailPage() {
                 {order.orderDetails.map((item, idx) => (
                   <div key={idx} className="p-6 flex gap-5 hover:bg-slate-50 transition-colors">
                     <img
-                      src={resolveImgUrl(item.imageUrl)} // 👈 Gọi hàm "vạn năng" vào đây
+                      src={resolveImgUrl(item.imageUrl)} 
                       alt={item.productName}
                       className="w-20 h-20 object-cover rounded-2xl border border-slate-200 bg-white"
                       onError={(e) => (e.currentTarget.src = "https://placehold.co/400x400?text=No+Image")}
@@ -257,7 +236,6 @@ export default function OrderDetailPage() {
                         </p>
                       </div>
 
-                     {/* 🔽 CHÈN NÚT ĐÁNH GIÁ BẮT ĐẦU TỪ ĐÂY 🔽 */}
                       {isCompleted && (
                         <div className="mt-4 flex justify-end border-t border-slate-100 pt-4">
                           <button
@@ -268,14 +246,12 @@ export default function OrderDetailPage() {
                           </button>
                         </div>
                       )}
-                      {/* 🔼 KẾT THÚC CHÈN 🔼 */}
-
                     </div>
                   </div>
                 ))}
               </div>
 
-              {/* Box: Tổng kết tiền */}
+              {/* BOX TỔNG KẾT TIỀN */}
               <div className="p-6 bg-slate-50/80 border-t border-slate-100">
                 <div className="space-y-3 w-full md:w-1/2 ml-auto">
                   <div className="flex justify-between text-slate-600">
@@ -284,8 +260,19 @@ export default function OrderDetailPage() {
                   </div>
                   <div className="flex justify-between text-slate-600">
                     <span>Phí vận chuyển</span>
-                    <span className="font-medium text-emerald-600">Miễn phí</span>
+                    {order.shippingFee === 0 ? (
+                      <span className="font-medium text-emerald-600">Miễn phí</span>
+                    ) : (
+                      <span className="font-medium text-slate-800">{formatVND(order.shippingFee ?? 30000)}</span>
+                    )}
                   </div>
+                  {/* Hiển thị Voucher */}
+                  {(order.discountAmount ?? 0) > 0 && (
+                    <div className="flex justify-between items-center text-emerald-600">
+                      <span>Voucher {order.appliedVoucherCode && `(${order.appliedVoucherCode})`}</span>
+                      <span className="font-bold">-{formatVND(order.discountAmount!)}</span>
+                    </div>
+                  )}
                   <div className="border-t border-slate-200 pt-3 mt-3 flex justify-between items-center">
                     <span className="text-lg font-bold text-slate-800">Tổng cộng</span>
                     <span className="text-3xl font-black text-red-600">{formatVND(order.totalAmount)}</span>
@@ -295,10 +282,8 @@ export default function OrderDetailPage() {
             </div>
           </div>
 
-          {/* CỘT PHẢI: Thông tin khách & Giao hàng */}
+          {/* CỘT PHẢI */}
           <div className="lg:col-span-1 space-y-6">
-            
-            {/* Box: Thông tin nhận hàng */}
             <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6">
               <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2 border-b border-slate-100 pb-4">
                 <MapPin className="text-blue-600" /> Thông tin giao hàng
@@ -326,9 +311,7 @@ export default function OrderDetailPage() {
                   <div>
                     <p className="text-slate-500 mb-0.5">Địa chỉ</p>
                     <p className="font-medium text-slate-900 leading-relaxed">
-                      {[order.address, order.ward, order.city]
-                        .filter(Boolean)
-                        .join(", ")}     
+                      {[order.address, order.ward, order.city].filter(Boolean).join(", ")}    
                     </p>
                   </div>
                 </div>
@@ -345,13 +328,11 @@ export default function OrderDetailPage() {
               </div>
             </div>
               
-              {/* Box: Phương thức thanh toán */}
             <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6">
               <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2 border-b border-slate-100 pb-4">
                 <CreditCard className="text-blue-600" /> Phương thức thanh toán
               </h3>
               
-              {/* 🚀 DÙNG INCLUDES ĐỂ BẮT CẢ 'vnpay' LẪN 'VNPay_Paid' */}
               {order?.paymentMethod?.toLowerCase().includes('vnpay') ? (
                 <div className="flex flex-col sm:flex-row sm:items-start gap-4 p-4 rounded-2xl bg-blue-50/50 border border-blue-100 animate-in fade-in duration-500">
                   <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center border border-blue-100 p-2 shrink-0 shadow-inner">
@@ -359,15 +340,11 @@ export default function OrderDetailPage() {
                   </div>
                   <div className="flex-1">
                     <p className="font-bold text-slate-900 text-lg mb-1">Thanh toán qua VNPAY</p>
-                    
-                    {/* 🚀 LOGIC RẼ NHÁNH MỚI: DỰA VÀO PAYMENT METHOD ĐỂ KIỂM TRA ĐÃ THANH TOÁN HAY CHƯA */}
                     {order.paymentMethod.toLowerCase() === 'vnpay' && order.status.toLowerCase() === 'pending' ? (
                       <div className="mt-3 space-y-3">
                         <p className="text-sm text-red-600 font-bold animate-pulse flex items-center gap-1.5">
                           <AlertCircle size={16} /> Giao dịch thất bại hoặc chưa thanh toán!
                         </p>
-                        
-                        {/* 🔘 NÚT THANH TOÁN LẠI */}
                         <button 
                           onClick={async () => {
                             try {
@@ -375,9 +352,7 @@ export default function OrderDetailPage() {
                               const token = localStorage.getItem("token");
                               
                               const res = await fetch(`${baseUrl}/Payment/retry-payment/${order.orderId}`, {
-                                headers: {
-                                  'Authorization': `Bearer ${token}`
-                                }
+                                headers: { 'Authorization': `Bearer ${token}` }
                               });
                               
                               if (!res.ok) throw new Error("Cấp lại link thất bại.");
@@ -397,7 +372,6 @@ export default function OrderDetailPage() {
                         </button>
                       </div>
                     ) : (
-                      // NẾU CÓ CHỮ _PAID THÌ SẼ RƠI VÀO ĐÂY
                       <p className="text-sm text-emerald-600 font-bold italic mt-2">✓ Giao dịch đã thanh toán thành công</p>
                     )}
                   </div>
@@ -415,22 +389,20 @@ export default function OrderDetailPage() {
               )}
             </div>
 
-            {/* ✅ NÚT HỦY ĐƠN ĐẶT Ở ĐÂY (CHỈ HIỂN THỊ KHI ĐƠN CHƯA DUYỆT) */}
             {canCancel && (
               <button 
                 onClick={handleCancelOrder}
                 className="w-full mt-2 flex items-center justify-center gap-2 bg-white text-red-600 border border-red-200 font-semibold py-3.5 rounded-2xl shadow-sm transition hover:bg-red-50 hover:border-red-300"
               >
-                <XCircle size={18} />
-                Hủy đơn hàng này
+                <XCircle size={18} /> Hủy đơn hàng này
               </button>
             )}
-
           </div>
         </div>
       </div>
+
       {/* ========================================================================= */}
-      {/* KHU VỰC ẨN: GIAO DIỆN HÓA ĐƠN A4 (KHỔ NGANG - LANDSCAPE) */}
+      {/* KHU VỰC ẨN: GIAO DIỆN HÓA ĐƠN PDF ĐÃ ĐƯỢC CHÈN VOUCHER */}
       {/* ========================================================================= */}
       {printOrder && (
         <div className="fixed -left-2499.75 top-0" style={{ zIndex: -1000 }}>
@@ -469,7 +441,7 @@ export default function OrderDetailPage() {
                     <td style={{ color: '#64748b', fontWeight: 'bold' }}>Điện thoại:</td>
                     <td>{printOrder.phone}</td>
                     <td style={{ color: '#64748b', fontWeight: 'bold' }}>Địa chỉ:</td>
-                    <td>{printOrder.address}, {printOrder.ward}, {printOrder.district}, {printOrder.city}</td>
+                    <td>{[printOrder.address, printOrder.ward, printOrder.city].filter(Boolean).join(", ")}</td>
                   </tr>
                 </tbody>
               </table>
@@ -509,14 +481,26 @@ export default function OrderDetailPage() {
             <table style={{ width: '100%', marginBottom: '40px' }}>
               <tbody>
                 <tr>
-                  <td style={{ width: '60%' }}></td>
-                  <td style={{ width: '40%' }}>
+                  <td style={{ width: '50%' }}></td>
+                  <td style={{ width: '50%' }}>
                     <div style={{ backgroundColor: '#f8fafc', padding: '20px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px', paddingBottom: '15px', borderBottom: '1px solid #cbd5e1', fontSize: '14px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '14px' }}>
                         <span style={{ color: '#64748b', fontWeight: 'bold' }}>Tạm tính:</span>
-                        <span>{formatVND(printOrder.totalAmount)}</span>
+                        <span>{formatVND(subTotal)}</span>
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '18px', fontWeight: 'bold', color: '#dc2626' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '14px' }}>
+                        <span style={{ color: '#64748b', fontWeight: 'bold' }}>Phí vận chuyển:</span>
+                        <span>{printOrder.shippingFee === 0 ? "Miễn phí" : formatVND(printOrder.shippingFee ?? 30000)}</span>
+                      </div>
+                      
+                      {(printOrder.discountAmount ?? 0) > 0 && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px', fontSize: '14px', color: '#059669' }}>
+                          <span style={{ fontWeight: 'bold' }}>Voucher giảm giá {printOrder.appliedVoucherCode && `(${printOrder.appliedVoucherCode})`}:</span>
+                          <span style={{ fontWeight: 'bold' }}>-{formatVND(printOrder.discountAmount!)}</span>
+                        </div>
+                      )}
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #cbd5e1', paddingTop: '15px', fontSize: '18px', fontWeight: 'bold', color: '#dc2626' }}>
                         <span>Tổng thanh toán:</span>
                         <span>{formatVND(printOrder.totalAmount)}</span>
                       </div>
@@ -526,7 +510,7 @@ export default function OrderDetailPage() {
               </tbody>
             </table>
 
-            {/* Chữ ký (Đã chống cắt chữ và thêm khoảng trống) */}
+            {/* Chữ ký */}
             <div style={{ marginTop: '100px', pageBreakInside: 'avoid' }}>
               <table style={{ width: '100%', textAlign: 'center' }}>
                 <tbody>

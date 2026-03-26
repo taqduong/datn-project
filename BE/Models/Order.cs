@@ -20,6 +20,16 @@ public partial class Order
     [Column(TypeName = "decimal(18, 2)")]
     public decimal TotalAmount { get; set; }
 
+    // ===== Thông tin giảm giá & Phí vận chuyển =====
+    [StringLength(50)]
+    public string? AppliedVoucherCode { get; set; } // Lưu lại mã Voucher khách đã nhập (VD: "FREESHIP")
+
+    [Column(TypeName = "decimal(18, 2)")]
+    public decimal DiscountAmount { get; set; } = 0; // Số tiền được giảm
+
+    [Column(TypeName = "decimal(18, 2)")]
+    public decimal ShippingFee { get; set; } = 30000; // Phí ship (Mặc định 30k, nếu freeship thì sẽ thành 0)
+
     [Required]
     [StringLength(50)]
     public string Status { get; set; } = "Pending";

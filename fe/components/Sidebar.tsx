@@ -13,6 +13,7 @@ import {
   ChevronRight,
   ChartArea,
   Home,
+  Ticket,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 
@@ -54,6 +55,12 @@ export default function Sidebar() {
         label: "Đơn hàng",
         description: "Quản lý đơn hàng",
         icon: ShoppingBag,
+      },
+      {
+        href: "/admin/vouchers",
+        label: "Mã ưu đãi",
+        description: "Quản lý khuyến mãi",
+        icon: Ticket,
       },
       {
         href: "/admin/users",
@@ -132,7 +139,7 @@ export default function Sidebar() {
               Trang quản trị
             </p>
             <p className="mt-1 text-sm text-slate-600">
-              Quản lý sản phẩm, danh mục, đơn hàng và người dùng.
+              Quản lý sản phẩm, danh mục, đơn hàng, mã ưu đãi và người dùng.
             </p>
           </div>
         )}
