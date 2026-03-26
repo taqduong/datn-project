@@ -37,6 +37,29 @@ export default function RegisterPage() {
       return
     }
 
+    // 1. KIỂM TRA SĐT (10 số, đầu 03, 05, 07, 08, 09)
+    const phoneRegex = /^(0[3|5|7|8|9])+([0-9]{8})$/;
+    if (!phoneRegex.test(formData.phone)) {
+      setError('Số điện thoại phải gồm 10 số và bắt đầu bằng 03, 05, 07, 08 hoặc 09')
+      setIsLoading(false)
+      return
+    }
+
+    // 2. KIỂM TRA MẬT KHẨU (Khó như sếp yêu cầu)
+    const passRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*]).{8,}$/;
+    if (!passRegex.test(formData.password)) {
+      setError('Mật khẩu phải từ 8 ký tự, gồm chữ hoa, chữ thường, số và ký tự đặc biệt (!@#$%^&*)')
+      setIsLoading(false)
+      return
+    }
+
+    // 3. KIỂM TRA XÁC NHẬN MẬT KHẨU
+    if (formData.password !== formData.confirmPassword) {
+      setError('Mật khẩu nhập lại không khớp!')
+      setIsLoading(false)
+      return
+    }
+
     try {
       const ageNumber = Number(formData.age)
       const payload = {
@@ -141,7 +164,7 @@ export default function RegisterPage() {
                     <Mail className="absolute left-3 top-3 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={18} />
                     <input
                       type="email"
-                      placeholder="tqd309@gmail.com"
+                      placeholder="abc@gmail.com"
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                       className="w-full pl-9 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all"
@@ -154,7 +177,7 @@ export default function RegisterPage() {
                     <Phone className="absolute left-3 top-3 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={18} />
                     <input
                       type="tel"
-                      placeholder="0941429190"
+                      placeholder="0912345678"
                       value={formData.phone}
                       onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                       className="w-full pl-9 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all"
@@ -188,7 +211,7 @@ export default function RegisterPage() {
                 <Lock className="absolute left-3 top-3.5 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={18} />
                 <input
                   type={showPassword ? 'text' : 'password'}
-                  placeholder="Mật khẩu (tối thiểu 6 ký tự)"
+                  placeholder="Mật khẩu (từ 8 ký tự, gồm chữ, số, ký tự đặc biệt)"
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   className="w-full pl-9 pr-12 py-3 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all"
@@ -204,6 +227,7 @@ export default function RegisterPage() {
                   type={showConfirmPassword ? 'text' : 'password'}
                   placeholder="Xác nhận lại mật khẩu"
                   value={formData.confirmPassword}
+                  required
                   onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
                   className="w-full pl-9 pr-12 py-3 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all"
                 />

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using BE.Models;
 using BE.Data;
+using System.ComponentModel.DataAnnotations;
 
 namespace BE.Controllers
 {
@@ -27,7 +28,8 @@ namespace BE.Controllers
                 Username = request.Username,
                 Password = BCrypt.Net.BCrypt.HashPassword(request.Password),
                 FullName = request.FullName,
-                Role = "nhanvien",
+                // Role = "nhanvien",
+                Role = !string.IsNullOrWhiteSpace(request.Role) ? request.Role : "nhanvien",
                 Phone = request.Phone,
                 Email = request.Email,
                 IsActive = true,
@@ -144,19 +146,43 @@ namespace BE.Controllers
     public class CreateUserRequest
     {
         public string Username { get; set; } = string.Empty;
+
+        // ĐIỀU KIỆN MẬT KHẨU: Tối thiểu 8 ký tự, có hoa, thường, số, ký tự đặc biệt
+        [Required(ErrorMessage = "Vui lòng nhập mật khẩu.")]
+        [RegularExpression(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*]).{8,}$", 
+            ErrorMessage = "Mật khẩu phải từ 8 ký tự, gồm chữ hoa, thường, số và ký tự đặc biệt.")]
         public string Password { get; set; } = string.Empty;
+
         public string FullName { get; set; } = string.Empty;
+
+        // ĐIỀU KIỆN SĐT: 10 số, bắt đầu bằng các đầu số mạng VN (03,05,07,08,09)
+        [Required(ErrorMessage = "Vui lòng nhập số điện thoại.")]
+        [RegularExpression(@"^(0[3|5|7|8|9])+([0-9]{8})$", 
+            ErrorMessage = "Số điện thoại không hợp lệ (phải 10 số và đúng đầu số VN).")]
         public string Phone { get; set; } = string.Empty;
+
+        // ĐIỀU KIỆN EMAIL: Phải đúng chuẩn @domain.com
+        [Required(ErrorMessage = "Vui lòng nhập email.")]
+        [EmailAddress(ErrorMessage = "Email không đúng định dạng.")]
         public string Email { get; set; } = string.Empty;
+
         public string? Gender { get; set; }
         public int? Age { get; set; }
+        public string? Role { get; set; }
     }
 
     public class UpdateUserRequest
     {
         public string? FullName { get; set; }
+
+        // Tương tự như CreateUserRequest nhưng không bắt buộc phải nhập lại nếu không muốn đổi
+        [EmailAddress(ErrorMessage = "Email không đúng định dạng.")]
         public string? Email { get; set; }
+
+        [RegularExpression(@"^(0[3|5|7|8|9])+([0-9]{8})$", 
+            ErrorMessage = "Số điện thoại không hợp lệ (phải 10 số và đúng đầu số VN).")]
         public string? Phone { get; set; }
+
         public string? Gender { get; set; }
         public int? Age { get; set; }
     }

@@ -36,8 +36,10 @@ api.interceptors.response.use(
         // 2. Phát tín hiệu cho các Component (như Navbar) biết để cập nhật lại giao diện (ẩn avatar đi)
         window.dispatchEvent(new Event("userUpdated"));
       }
+      // DÒNG NÀY ĐỂ BỊT MIỆNG BẢNG ĐỎ KHI HẾT HẠN TOKEN
+      return Promise.resolve({ data: [] });
     }
-    // Trả lỗi về cho component tự xử lý tiếp (ví dụ: catch(err) { set giỏ hàng = 0 })
+    // Giữ nguyên dòng này cho các lỗi khác (500, 404, 400...)
     return Promise.reject(error);
   }
 );
@@ -104,6 +106,7 @@ export interface RegisterPayload {
   email: string;
   gender?: string;
   age?: number;
+  role?: string;
 }
 
 export interface LoginPayload {

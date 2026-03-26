@@ -30,7 +30,7 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem("user") || "{}");
     // Kiểm tra quyền
-    if (user?.role !== "nhanvien") {
+    if (user?.role !== "nhanvien" && user?.role !== "admin") {
       router.replace("/404");
       return; 
     } 

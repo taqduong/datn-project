@@ -176,7 +176,7 @@ export default function Navbar() {
             <Link href="/" className="text-sm font-medium text-slate-700 transition hover:text-blue-600">Trang chủ</Link>
             <Link href="/products" className="text-sm font-medium text-slate-700 transition hover:text-blue-600">Sản phẩm</Link>
             <Link href="/orders" className="text-sm font-medium text-slate-700 transition hover:text-blue-600">Đơn hàng</Link>
-            {role === "nhanvien" && (
+            {(role === "nhanvien" || role === "admin") && (
               <Link href="/admin" className="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1.5 text-sm font-semibold text-blue-600 transition hover:bg-blue-100">
                 <LayoutDashboard className="h-4 w-4" /> Quản trị
               </Link>
