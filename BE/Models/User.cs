@@ -41,6 +41,11 @@ namespace BE.Models
 
         public string? Avatar { get; set; }  // Để Avatar có thể nhận giá trị null 
 
+        [StringLength(255)]
+        [Unicode(false)]
+        public string? ResetPasswordToken { get; set; }
+        public DateTime? ResetTokenExpires { get; set; }
+
         [InverseProperty("User")]
         public virtual ICollection<Cart> Carts { get; set; } = new List<Cart>();
 

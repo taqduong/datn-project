@@ -114,11 +114,19 @@ export interface LoginPayload {
   password: string;
 }
 
+export interface ForgotPasswordPayload {
+  email: string;
+}
+
+export interface ResetPasswordPayload {
+  token: string | null; // Token lấy từ URL có thể null
+  newPassword: string;
+}
+
 export interface ChangePasswordPayload {
   oldPassword: string;
   newPassword: string;
 }
-
 export interface AuthUser {
   id?: number;
   username: string;
@@ -329,6 +337,12 @@ export const authAPI = {
   register: (data: RegisterPayload) =>
     api.post("/users/register", data),
 
+  forgotPassword: (data: ForgotPasswordPayload) =>
+    api.post("/users/forgot-password", data),
+
+  resetPassword: (data: ResetPasswordPayload) =>
+    api.post("/users/reset-password", data),
+
   changePassword: (data: ChangePasswordPayload) =>
     api.put("/auth/change-password", data),
 
@@ -538,6 +552,9 @@ export const fetchAdminVouchers = voucherAPI.getAllAdmin;
 export const createAdminVoucher = voucherAPI.create;
 export const updateAdminVoucher = voucherAPI.update;
 export const deleteAdminVoucher = voucherAPI.delete;
+
+export const forgotPassword = authAPI.forgotPassword;
+export const resetPassword = authAPI.resetPassword;
 
 export default api;
 

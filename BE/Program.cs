@@ -37,9 +37,12 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
         options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
     });
-// ==========================================================
+
+// Đăng ký các Service của ứng dụng (Dependency Injection)
+builder.Services.AddScoped<BE.Services.IEmailService, BE.Services.EmailService>();
+
+
 // CONFIGURATION: Authentication & JWT Middleware
-// ==========================================================
 var jwtSettings = builder.Configuration.GetSection("Jwt");
 var key = Encoding.UTF8.GetBytes(jwtSettings["Key"] ?? throw new InvalidOperationException("JWT Key is missing"));
 
