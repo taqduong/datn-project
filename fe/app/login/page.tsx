@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Mail, Lock, Eye, EyeOff, Store, CheckCircle, ArrowRight } from 'lucide-react'
@@ -9,6 +9,7 @@ import { authAPI } from '@/services/api'
 export default function LoginPage() {
   const router = useRouter()
   const [showPassword, setShowPassword] = useState(false)
+  const [rememberMe, setRememberMe] = useState(false)
   const [formData, setFormData] = useState({
     username: '',
     password: ''
@@ -16,6 +17,18 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+
+  useEffect(() => {
+    const savedUser = localStorage.getItem('rememberedUser')
+    if (savedUser) {
+      const parsedUser = JSON.parse(savedUser)
+      setFormData({
+        username: parsedUser.username || '',
+        password: parsedUser.password || '' 
+      })
+      setRememberMe(true)
+    }
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -33,9 +46,14 @@ export default function LoginPage() {
       const res = await authAPI.login({username: formData.username, password: formData.password})
       const { token, user } = res.data as { token: string; user: any }
       
-      localStorage.setItem('token', token)
-      const { password, ...safeUser } = user
-      localStorage.setItem('user', JSON.stringify(safeUser))
+      if (rememberMe) {
+        localStorage.setItem('rememberedUser', JSON.stringify({
+          username: formData.username,
+          password: formData.password 
+        }))
+      } else {
+        localStorage.removeItem('rememberedUser')
+      }
 
       // ✅ NAVBAR CẬP NHẬT LẠI SỐ LƯỢNG:
       window.dispatchEvent(new Event('cartUpdated'));
@@ -136,8 +154,21 @@ export default function LoginPage() {
 
             <div className="flex items-center justify-between pt-1">
               <label className="flex items-center cursor-pointer group">
-                <input type="checkbox" className="peer sr-only" disabled={isLoading || success} />
-                <div className="w-5 h-5 border-2 border-slate-300 rounded bg-white peer-checked:bg-blue-600 peer-checked:border-blue-600 transition-colors"></div>
+                <input 
+                  type="checkbox" 
+                  className="peer sr-only" 
+                  disabled={isLoading || success} 
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                />
+                <div className="w-5 h-5 border-2 border-slate-300 rounded bg-white peer-checked:bg-blue-600 peer-checked:border-blue-600 transition-colors flex items-center justify-center">
+                   {/* Dấu tích ✓ sẽ hiện ra khi checkbox được chọn */}
+                   {rememberMe && (
+                     <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                     </svg>
+                   )}
+                </div>
                 <span className="ml-2.5 text-sm font-medium text-slate-600 group-hover:text-slate-900">Ghi nhớ tôi</span>
               </label>
               <Link href="/forgot-password" className="text-sm font-bold text-blue-600 hover:text-indigo-600">

@@ -4,7 +4,7 @@ import React, { useMemo, useState, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { toast } from "react-hot-toast";
-import { Eye, EyeOff, LockKeyhole, ShieldCheck, ArrowLeft } from "lucide-react";
+import { Eye, EyeOff, LockKeyhole, ShieldCheck, ArrowLeft, AlertCircle } from "lucide-react"; 
 import { resetPassword } from "@/services/api";
 
 function ResetPasswordForm() {
@@ -17,6 +17,9 @@ function ResetPasswordForm() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  
+  // THÊM BIẾN LƯU TRỮ LỖI
+  const [errorMessage, setErrorMessage] = useState(""); 
 
   const passwordChecks = useMemo(
     () => [
@@ -36,6 +39,10 @@ function ResetPasswordForm() {
         label: "Có ít nhất 1 chữ số",
         valid: /\d/.test(newPassword),
       },
+      {
+      label: "Có ít nhất 1 ký tự đặc biệt (!@#$%^&*)",
+      valid: /[!@#$%^&*]/.test(newPassword),
+      },
     ],
     [newPassword]
   );
@@ -45,6 +52,9 @@ function ResetPasswordForm() {
 
   const handleReset = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Xóa lỗi cũ mỗi lần bấm nút
+    setErrorMessage(""); 
 
     if (!token) {
       toast.error("Không tìm thấy mã xác thực.");
@@ -68,9 +78,10 @@ function ResetPasswordForm() {
       toast.success("Đặt lại mật khẩu thành công!");
       router.push("/login");
     } catch (err: any) {
-      toast.error(
-        err?.response?.data?.message || "Liên kết không hợp lệ hoặc đã hết hạn."
-      );
+      // BẮT LỖI TỪ BACKEND VÀ HIỂN THỊ LÊN GIAO DIỆN
+      const errorMsg = err?.response?.data?.message || "Liên kết không hợp lệ hoặc đã hết hạn (quá 15 phút).";
+      setErrorMessage(errorMsg);
+      toast.error(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -175,6 +186,14 @@ function ResetPasswordForm() {
               Nhập mật khẩu mới của bạn bên dưới để hoàn tất quá trình khôi phục tài khoản.
             </p>
 
+            {/* GIAO DIỆN KHUNG BÁO LỖI (CHỈ HIỆN KHI CÓ LỖI) */}
+            {errorMessage && (
+              <div className="mt-6 flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-red-600 shadow-sm">
+                <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0" />
+                <p className="text-sm font-medium leading-relaxed">{errorMessage}</p>
+              </div>
+            )}
+
             <form onSubmit={handleReset} className="mt-8 space-y-5">
               <div>
                 <label className="mb-2 block text-sm font-medium text-slate-700">
@@ -244,7 +263,7 @@ function ResetPasswordForm() {
 
               <div className="rounded-2xl bg-slate-50 p-4">
                 <p className="mb-3 text-sm font-medium text-slate-700">
-                  Mật khẩu nên có:
+                  Mật khẩu phải có:
                 </p>
                 <div className="space-y-2">
                   {passwordChecks.map((item) => (
