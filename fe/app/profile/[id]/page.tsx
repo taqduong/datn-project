@@ -569,7 +569,7 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
                     {/* Gender & Age Row */}
                     <div className="grid grid-cols-2 gap-4">
                       {/* Gender */}
-                      <div>
+                      <div className="relative"> 
                         <label className="block text-sm font-semibold text-zinc-900 mb-2">Giới tính</label>
                         <select
                           value={isEditing ? editData?.gender || '' : userData?.gender || ''}
@@ -584,8 +584,11 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
                           <option value="">-- Chọn --</option>
                           <option value="male">Nam</option>
                           <option value="female">Nữ</option>
-                          <option value="other">Khác</option>
                         </select>
+                        {/* Biểu tượng mũi tên cho select */}
+                        <div className="pointer-events-none absolute inset-y-0 right-0 top-7 flex items-center px-4 text-zinc-500">
+                           <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </div>
                       </div>
 
                       {/* Age */}

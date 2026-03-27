@@ -287,7 +287,6 @@ export default function UserPage() {
                   >
                     <option value="male">Nam</option>
                     <option value="female">Nữ</option>
-                    <option value="other">Khác</option>
                   </select>
                 </div>
               </div>

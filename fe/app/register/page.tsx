@@ -188,8 +188,8 @@ export default function RegisterPage() {
 
             <div>
               <label className="block text-sm font-bold text-slate-700 mb-2 ml-1 uppercase tracking-wide">Giới tính</label>
-              <div className="grid grid-cols-3 gap-3">
-                {['male', 'female', 'other'].map((g) => (
+              <div className="grid grid-cols-2 gap-3"> 
+                {['male', 'female'].map((g) => (   
                   <button
                     key={g}
                     type="button"
@@ -200,7 +200,7 @@ export default function RegisterPage() {
                         : 'bg-white border-slate-300 text-slate-600 hover:border-blue-400'
                     }`}
                   >
-                    {g === 'male' ? 'Nam' : g === 'female' ? 'Nữ' : 'Khác'}
+                    {g === 'male' ? 'Nam' : 'Nữ'}      
                   </button>
                 ))}
               </div>

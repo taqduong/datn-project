@@ -166,6 +166,7 @@ namespace BE.Controllers
         [EmailAddress(ErrorMessage = "Email không đúng định dạng.")]
         public string Email { get; set; } = string.Empty;
 
+        [RegularExpression("^(male|female)$", ErrorMessage = "Giới tính không hợp lệ (chỉ nhận male hoặc female).")]
         public string? Gender { get; set; }
         public int? Age { get; set; }
         public string? Role { get; set; }
@@ -183,6 +184,7 @@ namespace BE.Controllers
             ErrorMessage = "Số điện thoại không hợp lệ (phải 10 số và đúng đầu số VN).")]
         public string? Phone { get; set; }
 
+        [RegularExpression("^(male|female)$", ErrorMessage = "Giới tính không hợp lệ (chỉ nhận male hoặc female).")]
         public string? Gender { get; set; }
         public int? Age { get; set; }
     }
