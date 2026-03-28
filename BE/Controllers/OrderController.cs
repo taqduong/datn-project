@@ -200,8 +200,8 @@ namespace BE.Controllers
                         Product = new ProductMiniDto
                         {
                             Id = od.Product.Id,
-                            Name = od.Product.Name,
-                            ImageUrl = od.Product.ImageUrl ?? ""
+                            Name = od.Product != null && od.Product.Name != null ? od.Product.Name : "",
+                            ImageUrl = od.Product != null && od.Product.ImageUrl != null ? od.Product.ImageUrl : ""
                         }
                     }).ToList()
                 })
@@ -259,8 +259,8 @@ namespace BE.Controllers
                         Product = new ProductMiniDto
                         {
                             Id = od.Product.Id,
-                            Name = od.Product.Name,
-                            ImageUrl = od.Product.ImageUrl ?? ""
+                            Name = od.Product != null && od.Product.Name != null ? od.Product.Name : "",
+                            ImageUrl = od.Product != null && od.Product.ImageUrl != null ? od.Product.ImageUrl : ""
                         }
                     }).ToList()
                 })

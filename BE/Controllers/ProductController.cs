@@ -193,9 +193,10 @@ namespace BE.Controllers
             if (!ModelState.IsValid)
                 return ValidationProblem(ModelState);
 
-            // 🚀 Bổ sung Include(p => p.ProductImages) để lấy cả ảnh phụ
+            // SỬA LỖI 500: Phải Include(p => p.ProductVariants) để EF Core biết đường tracking
             var product = await _context.Products
                 .Include(p => p.ProductImages) 
+                .Include(p => p.ProductVariants) // BỔ SUNG DÒNG NÀY VÀO ĐÂY
                 .FirstOrDefaultAsync(p => p.Id == id);
 
             if (product == null)
@@ -227,18 +228,16 @@ namespace BE.Controllers
 
             if (!string.IsNullOrWhiteSpace(dto.ImageUrl))
             {
-                // Dọn dẹp: Nếu link có http://... thì chỉ lấy phần /uploads/...
                 product.ImageUrl = dto.ImageUrl.Contains("/uploads/") 
                                 ? "/uploads/" + dto.ImageUrl.Split("/uploads/")[1] 
                                 : dto.ImageUrl;
             }
 
             // =========================================================
-            // 🚀 LOGIC XÓA ẢNH PHỤ CŨ (NẾU REACT GỬI YÊU CẦU XÓA)
+            // LOGIC XÓA ẢNH PHỤ CŨ (NẾU REACT GỬI YÊU CẦU XÓA)
             // =========================================================
             if (dto.RetainedAdditionalImages != null)
             {
-                // Lọc ra những ảnh ĐANG CÓ TRONG DB nhưng KHÔNG CÓ trong danh sách React gửi lên (tức là bị xóa)
                 var imagesToDelete = product.ProductImages
                     .Where(img => !dto.RetainedAdditionalImages.Contains(img.ImageUrl))
                     .ToList();
@@ -249,31 +248,63 @@ namespace BE.Controllers
                 }
             }
 
-            await _context.SaveChangesAsync();
-
-            // LOGIC CẬP NHẬT BIẾN THỂ (DÁN VÀO SAU KHI LƯU PRODUCT MẸ)
+            // =========================================================
+            // SỬA LỖI 500: LOGIC CẬP NHẬT BIẾN THỂ THÔNG MINH
+            // =========================================================
             if (dto.Variants != null)
             {
-                // 1. Xóa sạch biến thể cũ của sản phẩm này để ghi đè cái mới (Cách đơn giản nhất)
-                var oldVariants = _context.ProductVariants.Where(v => v.ProductId == id);
-                _context.ProductVariants.RemoveRange(oldVariants);
+                // 1. Lọc ra danh sách ID biến thể mà Frontend gửi lên
+                var incomingVariantIds = dto.Variants
+                    .Where(v => v.Id.HasValue && v.Id.Value > 0)
+                    .Select(v => v.Id.Value)
+                    .ToList();
 
-                // 2. Thêm lại danh sách biến thể mới từ React gửi lên
-                foreach (var v in dto.Variants)
+                // 2. Tìm những biến thể đang có trong DB nhưng KHÔNG CÓ mặt trong mảng React gửi lên -> Tức là bị xóa
+                var variantsToRemove = product.ProductVariants
+                    .Where(v => !incomingVariantIds.Contains(v.Id))
+                    .ToList();
+                _context.ProductVariants.RemoveRange(variantsToRemove);
+
+                // 3. Xử lý Thêm mới (Id null) và Cập nhật (Có Id)
+                foreach (var incomingVariant in dto.Variants)
                 {
-                    _context.ProductVariants.Add(new ProductVariant
+                    if (incomingVariant.Id.HasValue && incomingVariant.Id.Value > 0)
                     {
-                        ProductId = id,
-                        VariantName = v.VariantName,
-                        Color = v.Color,
-                        Price = v.Price,
-                        Stock = v.Stock,
-                        ImageUrl = v.ImageUrl
-                    });
+                        // Cập nhật biến thể đã tồn tại
+                        var existingVariant = product.ProductVariants.FirstOrDefault(v => v.Id == incomingVariant.Id.Value);
+                        if (existingVariant != null)
+                        {
+                            existingVariant.VariantName = incomingVariant.VariantName;
+                            existingVariant.Color = incomingVariant.Color;
+                            existingVariant.Price = incomingVariant.Price;
+                            existingVariant.Stock = incomingVariant.Stock;
+                            // Nếu có up ảnh mới cho biến thể thì cập nhật, không thì giữ nguyên ảnh cũ
+                            if (!string.IsNullOrWhiteSpace(incomingVariant.ImageUrl))
+                            {
+                                existingVariant.ImageUrl = incomingVariant.ImageUrl;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // Thêm biến thể mới toanh
+                        product.ProductVariants.Add(new ProductVariant
+                        {
+                            ProductId = id,
+                            VariantName = incomingVariant.VariantName,
+                            Color = incomingVariant.Color,
+                            Price = incomingVariant.Price,
+                            Stock = incomingVariant.Stock,
+                            ImageUrl = incomingVariant.ImageUrl
+                        });
+                    }
                 }
-                await _context.SaveChangesAsync();
             }
 
+            // Gọi SaveChangesAsync một lần duy nhất để lưu tất cả (Sản phẩm + Ảnh + Biến thể)
+            await _context.SaveChangesAsync();
+
+            // Trả về DTO
             var result = await _context.Products
                 .Include(p => p.ProductVariants)
                 .Where(p => p.Id == id)
@@ -289,11 +320,10 @@ namespace BE.Controllers
                         : p.Price,
                     Stock = p.Stock,
                     CategoryId = p.CategoryId,
-                    CategoryName = p.Category.Name,
+                    CategoryName = p.Category != null ? p.Category.Name : null,
                     ImageUrl = p.ImageUrl,
                     CreatedAt = p.CreatedAt,
                     AdditionalImages = p.ProductImages.Select(pi => pi.ImageUrl).ToList(),
-
                     Variants = p.ProductVariants.Select(v => new ProductVariantDto
                     {
                         Id = v.Id,
@@ -302,14 +332,10 @@ namespace BE.Controllers
                         Price = v.Price,
                         Stock = v.Stock,
                         ImageUrl = v.ImageUrl
-                    }).ToList(),
-
-                    SoldCount = p.OrderDetails.Where(od => od.Order != null && od.Order.Status == "Completed").Sum(od => (int?)od.Quantity) ?? 0,
-                    TotalReviews = p.Reviews.Count(),
-                    AverageRating = p.Reviews.Any() ? Math.Round(p.Reviews.Average(r => (double)r.Rating), 1) : 0
+                    }).ToList()
                 })
                 .AsNoTracking()
-                .FirstAsync();
+                .FirstOrDefaultAsync();
 
             return Ok(result);
         }

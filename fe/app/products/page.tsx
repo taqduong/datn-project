@@ -74,10 +74,19 @@ export default function ProductsPage() {
     loadData();
   }, [keyword]);
 
+  // LOGIC TÍNH GIÁ ĐỘNG (BẢN UPDATE CHO BIẾN THỂ)
   const getDisplayPrice = (product: Product) => {
-    return product.priceAfterDiscount && product.priceAfterDiscount > 0
-      ? product.priceAfterDiscount
-      : product.price;
+    const discountRate = (product.discount || 0) / 100;
+    let minPrice = product.price || 0;
+
+    // Nếu sản phẩm có biến thể, phải chui vào trong móc cái giá nhỏ nhất ra
+    if (product.variants && product.variants.length > 0) {
+      const prices = product.variants.map((v: any) => v.price || 0);
+      minPrice = Math.min(...prices);
+    }
+
+    // Trả về giá ĐÃ TRỪ KHUYẾN MÃI (nếu có)
+    return minPrice * (1 - discountRate);
   };
 
   const formatVND = (value: number) =>

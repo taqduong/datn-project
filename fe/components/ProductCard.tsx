@@ -1,13 +1,13 @@
 'use client'
 
 import Link from "next/link";
-import { ShoppingCart, Heart, Star, ListPlus, X } from "lucide-react"; // Đã thêm icon X cho modal
+import { ShoppingCart, Heart, Star, ListPlus, X, Truck } from "lucide-react"; 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { addToCart, addToWishlist, trackProductAddToCart } from "@/services/api";
-import Modal from "@/components/Modal"; // ✅ QUAN TRỌNG: Import cái Modal sếp đã làm ở các turns trước
+import Modal from "@/components/Modal"; // 
 
-// ✅ THÊM TRƯỜNG variants VÀO INTERFACE
+// THÊM TRƯỜNG variants VÀO INTERFACE
 export interface Product {
   id: number;
   name: string;
@@ -28,13 +28,13 @@ export default function ProductCard({ product }: { product: Product }) {
   const [isWishlisting, setIsWishlisting] = useState(false);
   const router = useRouter();
 
-  // ✅ 1. STATE MỚI QUẢN LÝ MODAL CHỌN BIẾN THỂ (QUICK ADD)
+  // 1. STATE MỚI QUẢN LÝ MODAL CHỌN BIẾN THỂ (QUICK ADD)
   const [showVariantModal, setShowVariantModal] = useState(false);
   const [selectedVariant, setSelectedVariant] = useState<any | null>(null);
 
   const [quantity, setQuantity] = useState(1);
 
-  // ✅ LOGIC XỬ LÝ BIẾN THỂ (TÍNH KHOẢNG GIÁ & TỔNG TỒN KHO)
+  // LOGIC XỬ LÝ BIẾN THỂ (TÍNH KHOẢNG GIÁ & TỔNG TỒN KHO)
   const hasVariants = product.variants && product.variants.length > 0;
   
   const totalStock = hasVariants
@@ -278,6 +278,14 @@ export default function ProductCard({ product }: { product: Product }) {
                       ? `${formatVND(minPrice)} - ${formatVND(maxPrice)}` 
                       : formatVND(minPrice)}
                   </span>
+                )}
+
+                {/* TAG FREESHIP HIỂN THỊ Ở ĐÂY (NẾU GIÁ MIN SAU GIẢM >= 100K và SẢN PHẨM CÒN HÀNG ) */}
+                {minPriceAfterDiscount >= 100000 && totalStock > 0 && (
+                  <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-blue-600 px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm transition group-hover:scale-105">
+                    <Truck size={13} className="text-white" />
+                    <span>Freeship</span>
+                  </div>
                 )}
               </div>
             </div>

@@ -214,7 +214,13 @@ export default function ProductDetailPage() {
       router.push("/login");
       return;
     }
-    // (Lưu ý: Logic Checkout sau này sếp sẽ cần truyền thêm VariantId vào URL nhé)
+
+    // CHỐT CHẶN: NẾU CÓ PHÂN LOẠI MÀ CHƯA CHỌN THÌ CHẶN LẠI NGAY
+    if (product.variants && product.variants.length > 0 && !selectedVariant) {
+      alert("⚠️ Vui lòng chọn Phân loại (Màu sắc/Kích thước) trước khi mua!");
+      return;
+    }
+
     router.push(`/checkout?buyNowId=${product.id}&qty=${quantity}${selectedVariant ? `&variantId=${selectedVariant.id}` : ''}`);
   };
 
@@ -226,10 +232,18 @@ export default function ProductDetailPage() {
       router.push("/login");
       return;
     }
+
+    // CHỐT CHẶN: BẮT BUỘC PHẢI CHỌN MÀU/SIZE
+    if (product.variants && product.variants.length > 0 && !selectedVariant) {
+      alert("⚠️ Vui lòng chọn Phân loại (Màu sắc/Kích thước) trước khi thêm vào giỏ!");
+      return;
+    }
+
     try {
       setIsAdding(true);
-      // (Lưu ý: API AddToCart sếp có thể cần sửa lại để nhận thêm VariantId sau)
-      await addToCart(product.id, quantity); 
+      // SỬA LỖI: TRUYỀN THÊM CÁI selectedVariant.id XUỐNG API 
+      await addToCart(product.id, quantity, selectedVariant?.id); 
+      
       logUserActivity({ productId: product.id, actionType: "AddToCart" }).catch(err => console.log(err));
       window.dispatchEvent(new Event('cartUpdated')); 
       alert(`Đã thêm ${product.name} ${selectedVariant ? `(${selectedVariant.variantName})` : ''} vào giỏ hàng!`);

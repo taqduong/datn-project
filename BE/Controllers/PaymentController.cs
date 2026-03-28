@@ -15,8 +15,8 @@ namespace BE.Controllers
         private readonly IConfiguration _configuration;
         private readonly ShopDbContext _context; // ✅ 1. Thêm biến kết nối DB
 
-        // ✅ 2. Sửa Constructor để nạp cả Configuration và Context
-        public List<OrderDetail> OrderDetails { get; set; }
+        // 2. Sửa Constructor để nạp cả Configuration và Context
+        public List<OrderDetail> OrderDetails { get; set; } = new ();
 
         public PaymentController(IConfiguration configuration, ShopDbContext context)
         {

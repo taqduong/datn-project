@@ -132,8 +132,12 @@ namespace BE.Controllers
                 if (aiRecommendedIds.Any())
                 {
                     products = await productsQuery.Where(p => aiRecommendedIds.Contains(p.Id)).ToListAsync();
-                    // Xếp lại đúng thứ tự AI chỉ định
-                    products = aiRecommendedIds.Select(id => products.FirstOrDefault(p => p.Id == id)).Where(p => p != null).ToList();
+                    // Xếp lại đúng thứ tự AI chỉ định và loại bỏ cảnh báo null
+                    products = aiRecommendedIds
+                        .Select(id => products.FirstOrDefault(p => p.Id == id))
+                        .Where(p => p != null)
+                        .Select(p => p!) // Dấu '!' này sẽ ép kiểu Product? thành Product
+                        .ToList();
                 }
                 else
                 {
