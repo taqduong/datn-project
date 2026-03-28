@@ -43,6 +43,34 @@ export default function ProductDetailPage() {
   const [openLightbox, setOpenLightbox] = useState(false);
   const [previewZoom, setPreviewZoom] = useState(1);
 
+
+  // STATE QUẢN LÝ KÉO ẢNH (DRAG & PAN) TRONG LIGHTBOX
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 }); // Tọa độ di chuyển ảnh
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 }); // Tọa độ lúc bắt đầu click
+
+  const handleLightboxMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (previewZoom <= 1) return; // Chỉ cho phép nắm kéo khi đã phóng to ảnh
+    e.preventDefault(); 
+    setIsDragging(true);
+    setDragStart({
+      x: e.clientX - dragPosition.x,
+      y: e.clientY - dragPosition.y,
+    });
+  };
+
+  const handleLightboxMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isDragging || previewZoom <= 1) return;
+    setDragPosition({
+      x: e.clientX - dragStart.x,
+      y: e.clientY - dragStart.y,
+    });
+  };
+
+  const handleLightboxMouseUp = () => {
+    setIsDragging(false);
+  };
+
   const isMaxZoom = previewZoom >= 4;
   const isMinZoom = previewZoom <= 1;
 
@@ -492,7 +520,7 @@ export default function ProductDetailPage() {
                               "đỏ": "#ef4444", "cam": "#f97316", "vàng": "#eab308",
                               "xanh dương": "#3b82f6", "xanh lá cây": "#22c55e", "tím": "#a855f7",
                               "đen": "#000000", "trắng": "#ffffff", "xanh": "#3b82f6",
-                              "xanh lá": "#22c55e", "xám": "#6b7280", "hồng": "#ec4899"
+                              "xanh lá": "#22c55e", "xám": "#6b7280", "hồng": "#ec4899", "bạc": "#c0c0c0"
                           };
                           return map[cleanName] || null;
                       };
@@ -526,7 +554,7 @@ export default function ProductDetailPage() {
                                   const isOutOfStock = v.stock <= 0;
                                   
                                   // Tính mã màu riêng cho TỪNG NÚT MỘT
-                                  const btnColorHex = getHexColor(v.color);
+                                  const btnColorHex = getHexColor(v.variantName);
                                   const needBtnBorder = btnColorHex === '#ffffff';
 
                                   return (
@@ -568,8 +596,25 @@ export default function ProductDetailPage() {
 
               <div className="mt-6 border-t border-slate-200 pt-6">
                 <h2 className="text-lg font-semibold text-slate-900">Mô tả sản phẩm</h2>
-                <p className="mt-3 whitespace-pre-line leading-7 text-slate-600">{product.description || "Sản phẩm chưa có mô tả chi tiết."}</p>
-              </div>
+              
+                {product.description ? (
+                  <div className="mt-4 space-y-3 text-slate-600 leading-7 text-justify">
+                    {product.description.split('. ').filter(Boolean).map((sentence, index) => {
+                      // Thêm lại dấu chấm nếu lúc cắt bị mất
+                      const text = sentence.trim() + (sentence.endsWith('.') ? '' : '.');
+                      return (
+                        <div key={index} className="flex items-start gap-2.5">
+                          {/* Dấu tích xanh siêu uy tín */}
+                          <span className="text-blue-500 font-bold mt-0.5">✓</span>
+                          <span>{text}</span>
+                        </div>
+                    );
+                    })}
+                  </div>
+              ) : (
+                <p className="mt-3 text-slate-500 italic">Sản phẩm chưa có mô tả chi tiết.</p>
+              )}
+            </div>
             </div>
 
             <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -674,29 +719,52 @@ export default function ProductDetailPage() {
             <div className="absolute left-1/2 top-1/2 w-[92vw] max-w-6xl -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
               
               {/* Nút đóng */}
-              <button onClick={closeLightbox} className="absolute right-4 top-4 z-20 flex h-11 w-11 items-center justify-center rounded-full bg-black/30 text-white shadow-sm transition hover:bg-white hover:text-slate-900" title="Đóng">
-                <X size={26} strokeWidth={2.2} />
+              <button onClick={closeLightbox} className="absolute right-4 top-4 z-20 flex h-10 w-10 items-center justify-center rounded-full bg-black/20 text-white shadow-sm transition hover:bg-white hover:text-slate-900" title="Đóng">
+                <X size={22} strokeWidth={1.5} />
               </button>
 
               <div className="grid grid-cols-1 gap-6 p-6 lg:grid-cols-[1fr_280px]">
-                {/* Ảnh lớn bên trái */}
-                <div className="relative flex min-h-[520px] items-center justify-center overflow-hidden rounded-2xl bg-slate-50 p-4">
-                  {/* Nút zoom */}
+                {/* Ảnh lớn bên trái (CHẾ ĐỘ NẮM KÉO PAN & ZOOM) */}
+                <div 
+                  className={`relative flex min-h-[520px] items-center justify-center overflow-hidden rounded-2xl bg-slate-50 p-4 select-none ${previewZoom > 1 ? (isDragging ? 'cursor-grabbing' : 'cursor-grab') : 'cursor-default'}`}
+                  onMouseDown={handleLightboxMouseDown}
+                  onMouseMove={handleLightboxMouseMove}
+                  onMouseUp={handleLightboxMouseUp}
+                  onMouseLeave={handleLightboxMouseUp} // Đưa chuột ra ngoài rìa tự động thả
+                >
+                  {/* Nút zoom in/out thủ công */}
                   <div className="absolute right-20 top-4 z-20 flex items-center gap-3">
                     <button onClick={handleZoomIn} disabled={isMaxZoom} className={`flex h-11 w-11 items-center justify-center rounded-full transition ${isMaxZoom ? "bg-gray-200 text-gray-400 cursor-not-allowed" : "bg-white/90 text-slate-600 hover:bg-white hover:text-slate-900 shadow-sm"}`} title="Phóng to">
                       <ZoomIn size={24} strokeWidth={2.2} />
                     </button>
-                    <button onClick={handleZoomOut} disabled={isMinZoom} className={`flex h-11 w-11 items-center justify-center rounded-full transition ${isMinZoom ? "bg-gray-200 text-gray-400 cursor-not-allowed" : "bg-white/90 text-slate-600 hover:bg-white hover:text-slate-900 shadow-sm"}`} title="Thu nhỏ">
+                    <button 
+                      onClick={() => { 
+                        handleZoomOut(); 
+                        if (previewZoom - 0.6 <= 1) setDragPosition({ x: 0, y: 0 }); // Reset vị trí nếu thu nhỏ về gốc
+                      }} 
+                      disabled={isMinZoom} 
+                      className={`flex h-11 w-11 items-center justify-center rounded-full transition ${isMinZoom ? "bg-gray-200 text-gray-400 cursor-not-allowed" : "bg-white/90 text-slate-600 hover:bg-white hover:text-slate-900 shadow-sm"}`} title="Thu nhỏ"
+                    >
                       <ZoomOut size={24} strokeWidth={2.2} />
                     </button>
                   </div>
 
-                  <img src={allImages[photoIndex]} alt={`preview-${photoIndex}`} className="max-h-[75vh] w-auto max-w-full rounded-xl object-contain transition-transform duration-200" style={{ transform: `scale(${previewZoom})` }} />
+                  <img 
+                    src={allImages[photoIndex]} 
+                    alt={`preview-${photoIndex}`} 
+                    draggable={false} // RẤT QUAN TRỌNG: Chặn trình duyệt tạo ra cái ảnh mờ mờ khi kéo thả
+                    // Mẹo: Khi đang kéo (isDragging) thì tắt hiệu ứng transition đi để chuột không bị "lag/delay", kéo mượt như mobile
+                    className={`max-h-[75vh] w-auto max-w-full rounded-xl object-contain ${!isDragging ? 'transition-transform duration-200' : ''}`} 
+                    style={{ 
+                      // 🚀 Áp dụng tọa độ kéo và độ phóng to
+                      transform: `translate(${dragPosition.x}px, ${dragPosition.y}px) scale(${previewZoom})`, 
+                    }} 
+                  />
 
                   {allImages.length > 1 && (
                     <>
-                      <button onClick={() => { setPreviewZoom(1); setPhotoIndex((prev) => prev === 0 ? allImages.length - 1 : prev - 1); }} className="absolute left-4 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-xl bg-slate-800/75 text-3xl text-white transition hover:bg-slate-900">‹</button>
-                      <button onClick={() => { setPreviewZoom(1); setPhotoIndex((prev) => prev === allImages.length - 1 ? 0 : prev + 1); }} className="absolute right-4 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-xl bg-slate-800/75 text-3xl text-white transition hover:bg-slate-900">›</button>
+                      <button onClick={(e) => { e.stopPropagation(); setPreviewZoom(1); setDragPosition({x:0, y:0}); setPhotoIndex((prev) => prev === 0 ? allImages.length - 1 : prev - 1); }} className="absolute left-4 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-xl bg-slate-800/75 text-3xl text-white transition hover:bg-slate-900">‹</button>
+                      <button onClick={(e) => { e.stopPropagation(); setPreviewZoom(1); setDragPosition({x:0, y:0}); setPhotoIndex((prev) => prev === allImages.length - 1 ? 0 : prev + 1); }} className="absolute right-4 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-xl bg-slate-800/75 text-3xl text-white transition hover:bg-slate-900">›</button>
                     </>
                   )}
                 </div>

@@ -78,7 +78,8 @@ public class FileController : ControllerBase
             if (!allowedExtensions.Contains(extension))
                 return BadRequest(new { message = $"File {file.FileName} không đúng định dạng." });
 
-            var fileName = $"{Guid.NewGuid()}{extension}";
+            var originalName = Path.GetFileNameWithoutExtension(file.FileName);
+            var fileName = $"{originalName}_{DateTime.Now:yyyyMMddHHmmss}{extension}";
             var filePath = Path.Combine(uploadPath, fileName);
 
             using (var stream = new FileStream(filePath, FileMode.Create))

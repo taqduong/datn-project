@@ -228,13 +228,25 @@ namespace BE.Controllers
 
             if (!string.IsNullOrWhiteSpace(dto.ImageUrl))
             {
-                product.ImageUrl = dto.ImageUrl.Contains("/uploads/") 
+                var newImageUrl = dto.ImageUrl.Contains("/uploads/") 
                                 ? "/uploads/" + dto.ImageUrl.Split("/uploads/")[1] 
                                 : dto.ImageUrl;
+
+                // ==========================================
+                // DỌN RÁC: Xóa ảnh bìa cũ trên ổ cứng
+                // ==========================================
+                if (!string.IsNullOrEmpty(product.ImageUrl) && product.ImageUrl != newImageUrl)
+                {
+                    var oldFileName = Path.GetFileName(product.ImageUrl);
+                    var oldFilePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "products", oldFileName);
+                    if (System.IO.File.Exists(oldFilePath)) System.IO.File.Delete(oldFilePath);
+                }
+
+                product.ImageUrl = newImageUrl;
             }
 
             // =========================================================
-            // LOGIC XÓA ẢNH PHỤ CŨ (NẾU REACT GỬI YÊU CẦU XÓA)
+            // LOGIC XÓA ẢNH PHỤ CŨ (KẾT HỢP DỌN RÁC Ổ CỨNG)
             // =========================================================
             if (dto.RetainedAdditionalImages != null)
             {
@@ -244,12 +256,19 @@ namespace BE.Controllers
 
                 if (imagesToDelete.Any())
                 {
+                    // DỌN RÁC: Xóa các file ảnh phụ bị loại bỏ
+                    foreach (var img in imagesToDelete)
+                    {
+                        var oldFileName = Path.GetFileName(img.ImageUrl);
+                        var oldFilePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "products", oldFileName);
+                        if (System.IO.File.Exists(oldFilePath)) System.IO.File.Delete(oldFilePath);
+                    }
                     _context.ProductImages.RemoveRange(imagesToDelete);
                 }
             }
 
             // =========================================================
-            // SỬA LỖI 500: LOGIC CẬP NHẬT BIẾN THỂ THÔNG MINH
+            // SỬA LỖI 500: LOGIC CẬP NHẬT BIẾN THỂ THÔNG MINH (CÓ DỌN RÁC)
             // =========================================================
             if (dto.Variants != null)
             {
@@ -259,13 +278,24 @@ namespace BE.Controllers
                     .Select(v => v.Id.Value)
                     .ToList();
 
-                // 2. Tìm những biến thể đang có trong DB nhưng KHÔNG CÓ mặt trong mảng React gửi lên -> Tức là bị xóa
+                // 2. Tìm những biến thể bị xóa
                 var variantsToRemove = product.ProductVariants
                     .Where(v => !incomingVariantIds.Contains(v.Id))
                     .ToList();
+                
+                // DỌN RÁC LỚP 1: Xóa file ảnh của những biến thể bị bấm nút Thùng rác xóa đi
+                foreach (var vToRemove in variantsToRemove)
+                {
+                    if (!string.IsNullOrEmpty(vToRemove.ImageUrl))
+                    {
+                        var oldVarFileName = Path.GetFileName(vToRemove.ImageUrl);
+                        var oldVarFilePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "products", oldVarFileName);
+                        if (System.IO.File.Exists(oldVarFilePath)) System.IO.File.Delete(oldVarFilePath);
+                    }
+                }
                 _context.ProductVariants.RemoveRange(variantsToRemove);
 
-                // 3. Xử lý Thêm mới (Id null) và Cập nhật (Có Id)
+                // 3. Xử lý Thêm mới và Cập nhật
                 foreach (var incomingVariant in dto.Variants)
                 {
                     if (incomingVariant.Id.HasValue && incomingVariant.Id.Value > 0)
@@ -278,9 +308,17 @@ namespace BE.Controllers
                             existingVariant.Color = incomingVariant.Color;
                             existingVariant.Price = incomingVariant.Price;
                             existingVariant.Stock = incomingVariant.Stock;
-                            // Nếu có up ảnh mới cho biến thể thì cập nhật, không thì giữ nguyên ảnh cũ
+                            
+                            // Nếu có up ảnh mới cho biến thể
                             if (!string.IsNullOrWhiteSpace(incomingVariant.ImageUrl))
                             {
+                                // DỌN RÁC LỚP 2: Nếu ảnh mới khác ảnh cũ -> Xóa ảnh cũ trên ổ cứng
+                                if (!string.IsNullOrEmpty(existingVariant.ImageUrl) && existingVariant.ImageUrl != incomingVariant.ImageUrl)
+                                {
+                                    var oldVarFileName = Path.GetFileName(existingVariant.ImageUrl);
+                                    var oldVarFilePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "products", oldVarFileName);
+                                    if (System.IO.File.Exists(oldVarFilePath)) System.IO.File.Delete(oldVarFilePath);
+                                }
                                 existingVariant.ImageUrl = incomingVariant.ImageUrl;
                             }
                         }
@@ -344,16 +382,54 @@ namespace BE.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
-            var product = await _context.Products.FirstOrDefaultAsync(p => p.Id == id);
+            // Sửa Include để lôi cổ cả ảnh phụ và biến thể ra xử lý
+            var product = await _context.Products
+                .Include(p => p.ProductImages)
+                .Include(p => p.ProductVariants)
+                .FirstOrDefaultAsync(p => p.Id == id);
+
             if (product == null)
                 return NotFound();
 
+            // 1. DỌN RÁC: Xóa ảnh bìa
+            if (!string.IsNullOrEmpty(product.ImageUrl))
+            {
+                var coverFileName = Path.GetFileName(product.ImageUrl);
+                var coverFilePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "products", coverFileName);
+                if (System.IO.File.Exists(coverFilePath)) System.IO.File.Delete(coverFilePath);
+            }
+
+            // 2. DỌN RÁC: Xóa các ảnh phụ
+            if (product.ProductImages != null && product.ProductImages.Any())
+            {
+                foreach (var img in product.ProductImages)
+                {
+                    var imgFileName = Path.GetFileName(img.ImageUrl);
+                    var imgFilePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "products", imgFileName);
+                    if (System.IO.File.Exists(imgFilePath)) System.IO.File.Delete(imgFilePath);
+                }
+            }
+
+            // 3. DỌN RÁC: Xóa ảnh của các biến thể
+            if (product.ProductVariants != null && product.ProductVariants.Any())
+            {
+                foreach (var variant in product.ProductVariants)
+                {
+                    if (!string.IsNullOrEmpty(variant.ImageUrl))
+                    {
+                        var varFileName = Path.GetFileName(variant.ImageUrl);
+                        var varFilePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "products", varFileName);
+                        if (System.IO.File.Exists(varFilePath)) System.IO.File.Delete(varFilePath);
+                    }
+                }
+            }
+
+            // Cuối cùng mới xóa Data trong DB
             _context.Products.Remove(product);
             await _context.SaveChangesAsync();
 
-            return Ok(new { message = "Xóa sản phẩm thành công." });
+            return Ok(new { message = "Xóa sản phẩm và dọn rác thành công." });
         }
-
         // =========================================================================
         // API MỚI: UPLOAD NHIỀU ẢNH PHỤ
         // =========================================================================
@@ -379,7 +455,8 @@ namespace BE.Controllers
                     var extension = Path.GetExtension(file.FileName).ToLower();
                     if (!new[] { ".jpg", ".jpeg", ".png", ".webp" }.Contains(extension)) continue;
 
-                    var fileName = $"{Guid.NewGuid()}{extension}";
+                    var originalName = Path.GetFileNameWithoutExtension(file.FileName);
+                    var fileName = $"{originalName}_{DateTime.Now:yyyyMMddHHmmss}{extension}";
                     var filePath = Path.Combine(uploadPath, fileName);
 
                     using (var stream = new FileStream(filePath, FileMode.Create))
