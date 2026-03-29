@@ -364,10 +364,10 @@ export default function ProductDetailPage() {
         </div>
 
         {/* Cột chính: Ảnh + Thông tin */}
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1.05fr_0.95fr]">
+        <div className="grid grid-cols-1 gap-10 lg:grid-cols-[470px_1fr] xl:grid-cols-[550px_1fr] items-start">
           
           {/* Cột trái: Ảnh */}
-          <div className="space-y-4">
+          <div className="space-y-4 lg:sticky lg:top-24">
             {/* KHUNG ẢNH CHÍNH (ĐÃ TÍCH HỢP KÍNH LÚP) */}
             <div 
               className="relative aspect-square w-full overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm cursor-zoom-in group"
@@ -386,12 +386,10 @@ export default function ProductDetailPage() {
                   src={resolveImgUrl(activeImage)}
                   alt={product.name}
                   onLoad={() => setImageLoaded(true)}
-                  // Thêm hiệu ứng transform mượt mà
-                  className="h-full w-full object-cover transition-transform duration-100 ease-out"
+                  // Đổi object-cover thành object-contain để hiển thị trọn vẹn ảnh
+                  className="h-full w-full object-contain transition-transform duration-100 ease-out"
                   style={{
-                    // Phóng to gấp 2.5 lần khi hover
-                    transform: isZooming ? "scale(2.5)" : "scale(1)",
-                    // Tâm phóng to di chuyển theo chuột
+                    transform: isZooming ? "scale(2.0)" : "scale(1)",
                     transformOrigin: isZooming ? `${zoomPosition.x}% ${zoomPosition.y}%` : "center center",
                   }}
                 />
@@ -410,41 +408,21 @@ export default function ProductDetailPage() {
             </div>
 
             <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-              {/* Ảnh bìa */}
-              {product.imageUrl && (
-                <button
-                  type="button"
-                  onClick={() => setActiveImage(product.imageUrl!)}
-                  className={`relative h-20 w-20 shrink-0 overflow-hidden rounded-xl border-2 transition-all ${activeImage === product.imageUrl ? "border-blue-600 ring-2 ring-blue-100" : "border-transparent opacity-60 hover:opacity-100"}`}
-                >
-                  <img src={resolveImgUrl(product.imageUrl)} className="h-full w-full object-cover" alt="thumb-main" />
-                </button>
-              )}
-              
-              {/* Ảnh của các phân loại (Biến thể) */}
-              {product.variants?.map((v, idx) => v.imageUrl ? (
-                <button
-                  key={`var-${idx}`}
-                  type="button"
-                  onClick={() => { setActiveImage(v.imageUrl!); setSelectedVariant(v); }}
-                  className={`relative h-20 w-20 shrink-0 overflow-hidden rounded-xl border-2 transition-all ${activeImage === v.imageUrl ? "border-blue-600 ring-2 ring-blue-100" : "border-transparent opacity-60 hover:opacity-100"}`}
-                  title={v.variantName}
-                >
-                  <img src={resolveImgUrl(v.imageUrl)} className="h-full w-full object-cover" alt={`thumb-var-${idx}`} />
-                </button>
-              ) : null)}
-
-              {/* Ảnh phụ khác */}
-              {product.additionalImages?.map((imgUrl, idx) => (
-                <button
-                  key={`add-${idx}`}
-                  type="button"
-                  onClick={() => setActiveImage(imgUrl)}
-                  className={`relative h-20 w-20 shrink-0 overflow-hidden rounded-xl border-2 transition-all ${activeImage === imgUrl ? "border-blue-600 ring-2 ring-blue-100" : "border-transparent opacity-60 hover:opacity-100"}`}
-                >
-                  <img src={resolveImgUrl(imgUrl)} className="h-full w-full object-cover" alt={`thumb-sub-${idx}`} />
-                </button>
-              ))}
+              {allImages.map((imgUrl, idx) => {
+                // Kiểm tra xem ảnh này có đang được chọn làm ảnh to không
+                const isActive = resolveImgUrl(activeImage) === imgUrl;
+                
+                return (
+                  <button
+                    key={`thumb-gallery-${idx}`}
+                    type="button"
+                    onClick={() => setActiveImage(imgUrl)}
+                    className={`relative h-20 w-20 shrink-0 overflow-hidden rounded-xl border-2 transition-all ${isActive ? "border-blue-600 ring-2 ring-blue-100" : "border-transparent opacity-60 hover:opacity-100"}`}
+                  >
+                    <img src={imgUrl} className="h-full w-full object-cover" alt={`thumb-${idx}`} />
+                  </button>
+                );
+              })}
             </div>
 
             <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -520,7 +498,8 @@ export default function ProductDetailPage() {
                               "đỏ": "#ef4444", "cam": "#f97316", "vàng": "#eab308",
                               "xanh dương": "#3b82f6", "xanh lá cây": "#22c55e", "tím": "#a855f7",
                               "đen": "#000000", "trắng": "#ffffff", "xanh": "#3b82f6",
-                              "xanh lá": "#22c55e", "xám": "#6b7280", "hồng": "#ec4899", "bạc": "#c0c0c0"
+                              "xanh lá": "#22c55e", "xám": "#6b7280", "hồng": "#ec4899", "bạc": "#c0c0c0",
+                              "nâu": "#8b4513", "kem": "#f5f5dc"
                           };
                           return map[cleanName] || null;
                       };
