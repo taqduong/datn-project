@@ -382,7 +382,6 @@ namespace BE.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
-            // Sửa Include để lôi cổ cả ảnh phụ và biến thể ra xử lý
             var product = await _context.Products
                 .Include(p => p.ProductImages)
                 .Include(p => p.ProductVariants)
@@ -391,7 +390,7 @@ namespace BE.Controllers
             if (product == null)
                 return NotFound();
 
-            // 1. DỌN RÁC: Xóa ảnh bìa
+            // 1. DỌN RÁC Ổ CỨNG: Xóa ảnh bìa
             if (!string.IsNullOrEmpty(product.ImageUrl))
             {
                 var coverFileName = Path.GetFileName(product.ImageUrl);
@@ -399,7 +398,7 @@ namespace BE.Controllers
                 if (System.IO.File.Exists(coverFilePath)) System.IO.File.Delete(coverFilePath);
             }
 
-            // 2. DỌN RÁC: Xóa các ảnh phụ
+            // 2. DỌN RÁC Ổ CỨNG VÀ DATABASE: Các ảnh phụ
             if (product.ProductImages != null && product.ProductImages.Any())
             {
                 foreach (var img in product.ProductImages)
@@ -408,9 +407,10 @@ namespace BE.Controllers
                     var imgFilePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "products", imgFileName);
                     if (System.IO.File.Exists(imgFilePath)) System.IO.File.Delete(imgFilePath);
                 }
+                _context.ProductImages.RemoveRange(product.ProductImages);
             }
 
-            // 3. DỌN RÁC: Xóa ảnh của các biến thể
+            // 3. DỌN RÁC Ổ CỨNG VÀ DATABASE: Ảnh của các biến thể
             if (product.ProductVariants != null && product.ProductVariants.Any())
             {
                 foreach (var variant in product.ProductVariants)
@@ -422,9 +422,29 @@ namespace BE.Controllers
                         if (System.IO.File.Exists(varFilePath)) System.IO.File.Delete(varFilePath);
                     }
                 }
+                _context.ProductVariants.RemoveRange(product.ProductVariants);
             }
 
-            // Cuối cùng mới xóa Data trong DB
+            // 4. DỌN DẸP GIỎ HÀNG & YÊU THÍCH
+            var carts = await _context.Carts.Where(c => c.ProductId == id).ToListAsync();
+            if (carts.Any()) _context.Carts.RemoveRange(carts);
+
+            var wishlists = await _context.Wishlists.Where(w => w.ProductId == id).ToListAsync();
+            if (wishlists.Any()) _context.Wishlists.RemoveRange(wishlists);
+
+            // ==========================================
+            // 5. TRẢM NỐT CÁC BẢNG: ĐÁNH GIÁ, ĐƠN HÀNG, THỐNG KÊ
+            // ==========================================
+            var reviews = await _context.Reviews.Where(r => r.ProductId == id).ToListAsync();
+            if (reviews.Any()) _context.Reviews.RemoveRange(reviews);
+
+            var orderDetails = await _context.OrderDetails.Where(od => od.ProductId == id).ToListAsync();
+            if (orderDetails.Any()) _context.OrderDetails.RemoveRange(orderDetails);
+
+            var analytics = await _context.ProductAnalytics.FirstOrDefaultAsync(a => a.ProductId == id);
+            if (analytics != null) _context.ProductAnalytics.Remove(analytics);
+
+            // 6. Cuối cùng mới xóa Data Product trong DB
             _context.Products.Remove(product);
             await _context.SaveChangesAsync();
 

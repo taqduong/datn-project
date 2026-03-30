@@ -140,11 +140,6 @@ export default function ProductDetailPage() {
       
       if (data?.imageUrl) setActiveImage(data.imageUrl);
 
-      // Tự động chọn biến thể đầu tiên nếu có
-      if (data?.variants && data.variants.length > 0) {
-        setSelectedVariant(data.variants[0]);
-      }
-
       // FIX LỖI TRACKING 
       if (data?.id && trackedIdRef.current !== id) {
         trackedIdRef.current = id; 
@@ -198,18 +193,70 @@ export default function ProductDetailPage() {
     return count.toString();
   };
 
-  // LOGIC TÍNH TOÁN GIÁ & TỒN KHO LINH HOẠT THEO BIẾN THỂ
-  const currentPrice = selectedVariant ? selectedVariant.price : (product?.price || 0);
-  const currentStock = selectedVariant ? selectedVariant.stock : (product?.stock || 0);
-  
-  // Tính giá sau giảm (dùng % giảm chung của sản phẩm)
+  // =========================================================================
+  // LOGIC TÍNH TOÁN GIÁ & TỒN KHO LINH HOẠT THEO BIẾN THỂ (FIX LỖI HIỂN THỊ 0Đ)
+  // =========================================================================
+  const hasVariants = product?.variants && product.variants.length > 0;
   const currentDiscount = product?.discount || 0;
-  const currentPriceAfterDiscount = currentDiscount > 0 
-    ? Math.max(0, Math.round(currentPrice * (1 - currentDiscount / 100))) 
-    : currentPrice;
+  
+  let displayPriceElement;
+  let currentStock = 0;
 
-  // Quyết định số tiền hiện lên màn hình
-  const displayPrice = currentDiscount > 0 ? currentPriceAfterDiscount : currentPrice;
+  if (selectedVariant) {
+    currentStock = selectedVariant.stock;
+    const price = selectedVariant.price;
+    const priceAfterDiscount = currentDiscount > 0 ? Math.round(price * (1 - currentDiscount / 100)) : price;
+    
+    displayPriceElement = (
+      <div className="mt-5 flex flex-wrap items-end gap-3">
+        <div className="text-3xl font-bold text-slate-900 sm:text-4xl">{formatVND(priceAfterDiscount)}</div>
+        {currentDiscount > 0 && (
+          <div className="pb-1 text-lg text-slate-400 line-through">{formatVND(price)}</div>
+        )}
+      </div>
+    );
+  } else if (hasVariants) {
+    currentStock = product.variants!.reduce((total: number, v: any) => total + v.stock, 0);
+    const prices = product.variants!.map((v: any) => v.price);
+    const minPrice = Math.min(...prices);
+    const maxPrice = Math.max(...prices);
+
+    const minAfterDiscount = currentDiscount > 0 ? Math.round(minPrice * (1 - currentDiscount / 100)) : minPrice;
+    const maxAfterDiscount = currentDiscount > 0 ? Math.round(maxPrice * (1 - currentDiscount / 100)) : maxPrice;
+
+    displayPriceElement = (
+      <div className="mt-5 flex flex-wrap items-end gap-3">
+        <div className="text-3xl font-bold text-slate-900 sm:text-4xl">
+          {minAfterDiscount === maxAfterDiscount 
+            ? formatVND(minAfterDiscount) 
+            : `${formatVND(minAfterDiscount)} - ${formatVND(maxAfterDiscount)}`}
+        </div>
+        {currentDiscount > 0 && (
+          <div className="pb-1 text-lg text-slate-400 line-through">
+            {minPrice === maxPrice ? formatVND(minPrice) : `${formatVND(minPrice)} - ${formatVND(maxPrice)}`}
+          </div>
+        )}
+      </div>
+    );
+  } else {
+    currentStock = product?.stock || 0;
+    const price = product?.price || 0;
+    const priceAfterDiscount = currentDiscount > 0 ? Math.round(price * (1 - currentDiscount / 100)) : price;
+    
+    displayPriceElement = (
+      <div className="mt-5 flex flex-wrap items-end gap-3">
+        <div className="text-3xl font-bold text-slate-900 sm:text-4xl">{formatVND(priceAfterDiscount)}</div>
+        {currentDiscount > 0 && (
+          <div className="pb-1 text-lg text-slate-400 line-through">{formatVND(price)}</div>
+        )}
+      </div>
+    );
+  }
+
+  const showSaving = currentDiscount > 0 && (!hasVariants || selectedVariant);
+  const savingAmount = selectedVariant 
+    ? selectedVariant.price - Math.round(selectedVariant.price * (1 - currentDiscount / 100))
+    : (product?.price || 0) - Math.round((product?.price || 0) * (1 - currentDiscount / 100));
 
   const stockStatus = useMemo(() => {
     if (!product) return null;
@@ -474,15 +521,10 @@ export default function ProductDetailPage() {
                 </div>
               )}
 
-              <div className="mt-5 flex flex-wrap items-end gap-3">
-                <div className="text-3xl font-bold text-slate-900 sm:text-4xl">{formatVND(displayPrice)}</div>
-                {currentDiscount > 0 && (
-                  <div className="pb-1 text-lg text-slate-400 line-through">{formatVND(currentPrice)}</div>
-                )}
-              </div>
+              {displayPriceElement}
 
-              {currentDiscount > 0 && (
-                <p className="mt-2 text-sm text-green-700">Bạn tiết kiệm được <span className="font-semibold">{formatVND(currentPrice - displayPrice)}</span></p>
+              {showSaving && (
+                <p className="mt-2 text-sm text-green-700">Bạn tiết kiệm được <span className="font-semibold">{formatVND(savingAmount)}</span></p>
               )}
 
               {/* KHU VỰC CHỌN PHÂN LOẠI BIẾN THỂ */}
@@ -499,7 +541,7 @@ export default function ProductDetailPage() {
                               "xanh dương": "#3b82f6", "xanh lá cây": "#22c55e", "tím": "#a855f7",
                               "đen": "#000000", "trắng": "#ffffff", "xanh": "#3b82f6",
                               "xanh lá": "#22c55e", "xám": "#6b7280", "hồng": "#ec4899", "bạc": "#c0c0c0",
-                              "nâu": "#8b4513", "kem": "#f5f5dc"
+                              "nâu": "#8b4513", "kem": "#f5f5dc", "vàng nhạt": "#fef08a"
                           };
                           return map[cleanName] || null;
                       };

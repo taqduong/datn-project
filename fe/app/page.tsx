@@ -297,17 +297,17 @@ export default function HomePage() {
         ) : (
           <div className="grid grid-cols-2 gap-5 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4">
             {featuredCategories.map((category) => {
-              // 1. Từ điển Icon chuẩn chỉ của sếp
+              // 1. Từ điển Icon 
               const iconMap: Record<string, string> = {
-                "Nhà bếp": "🍳",
-                "Phòng khách": "🛋️",
-                "Phòng ngủ": "🛏️",
-                "Phòng tắm": "🛁",
-                "Điện gia dụng": "🔌",
-                "Thiết bị thông minh": "📱",
-                "Đồ dã ngoại": "⛺",
-                "Áo nam": "👕",
-              };
+              "Điện gia dụng": "🔌",
+              "Điện lạnh": "❄️",
+              "Thiết bị nhà bếp": "🍳",
+              "Nội thất": "🛋️",
+              "Thiết bị thông minh & Giải trí": "📱",
+              "Chăm sóc sức khỏe": "🩺",
+              "Thiết bị phòng tắm": "🛁",
+              "Trang trí nhà cửa": "🖼️",
+            };
 
               // 2. Lấy icon ra (nếu không có trong từ điển thì dùng tạm cái thùng hàng 📦)
               const categoryIcon = iconMap[category.name] || "📦";

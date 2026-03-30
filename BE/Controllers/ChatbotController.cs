@@ -141,9 +141,45 @@ namespace BE.Controllers
                 }
                 else
                 {
-                    // Tìm theo từ khóa thông thường
+                    // 1. Tìm nguyên cả câu (nếu khách gõ chuẩn tên SP)
                     products = await productsQuery.Where(p => p.Name.ToLower().Contains(keyword)).Take(10).ToListAsync();
-                    if (!products.Any()) products = await productsQuery.Take(10).ToListAsync();
+
+                    // 2. FIX "BỆNH ĐẦN": Tìm kiếm mờ (Tách câu dài thành các từ khóa ngắn)
+                    // Ví dụ: "cho tôi mua tivi 65 inch" -> Tìm SP có chữ "tivi", "65", hoặc "inch"
+                    if (!products.Any())
+                    {
+                        var ignoreWords = new List<string> { "cho", "tôi", "mua", "con", "cái", "này", "kia", "nhé", "ạ", "với", "xem", "lấy", "đặt", "hàng" };
+                        var words = keyword.Split(new[] { ' ', ',', '.', '?' }, StringSplitOptions.RemoveEmptyEntries)
+                                           .Where(w => w.Length >= 2 && !ignoreWords.Contains(w))
+                                           .ToList();
+                        
+                        if (words.Any())
+                        {
+                            // Đưa list SP lên RAM để LINQ tìm kiếm mờ mượt mà hơn, tránh lỗi query EF Core
+                            var tempProducts = await productsQuery.ToListAsync();
+                            products = tempProducts.Where(p => words.Any(w => p.Name.ToLower().Contains(w))).Take(10).ToList();
+                        }
+                    }
+
+                    // 3. FIX LỖI MẤT TRÍ NHỚ: Lục lại câu hỏi ngay trước đó của khách
+                    if (!products.Any() && request.history != null && request.history.Any())
+                    {
+                        var actualLastMessage = request.history
+                            .Where(h => h.sender != "bot") // Lọc tin nhắn của user
+                            .Select(h => h.text?.ToLower().Trim())
+                            .LastOrDefault();
+
+                        if (!string.IsNullOrWhiteSpace(actualLastMessage))
+                        {
+                            products = await productsQuery.Where(p => p.Name.ToLower().Contains(actualLastMessage)).Take(10).ToListAsync();
+                        }
+                    }
+
+                    // 4. Vẫn không tìm thấy gì thì lấy 10 sản phẩm mới nhất làm dữ liệu
+                    if (!products.Any()) 
+                    {
+                        products = await productsQuery.OrderByDescending(p => p.Id).Take(10).ToListAsync();
+                    }
                 }
 
                 if (!products.Any())
@@ -200,15 +236,32 @@ namespace BE.Controllers
                 }).ToList();
 
                 // ==========================================
-                // TẠO PROMPT GỬI GEMINI
+                // TẠO PROMPT GỬI GEMINI VÀ LẤY VOUCHER TỪ DB
                 // ==========================================
                 var currentUser = secureUserId.HasValue ? await _context.Users.FindAsync(secureUserId.Value) : null;
                 string userInfoContext = currentUser != null
-                    ? $"KHÁCH HÀNG ĐANG CHAT: '{currentUser.FullName}', SĐT '{currentUser.Phone}'. Nếu là câu hỏi mang tính gợi ý, hãy xưng hô bằng tên khách hàng cho thân thiện."
+                    ? $"KHÁCH HÀNG ĐANG CHAT: Tên: '{currentUser.FullName}', SĐT: '{currentUser.Phone}'. Khi khách muốn đặt hàng, HÃY CHỦ ĐỘNG hỏi xem khách có muốn dùng Tên và SĐT này để nhận hàng không, hay muốn giao cho người khác."
                     : "TÌNH TRẠNG: KHÁCH CHƯA ĐĂNG NHẬP. NẾU KHÁCH CÓ BẤT KỲ Ý ĐỊNH MUA HOẶC ĐẶT HÀNG NÀO, BẮT BUỘC TRẢ LỜI ĐÚNG CÂU NÀY: 'Dạ, để HomeMart có thể lên đơn, bạn vui lòng Đăng nhập tài khoản ở góc trên màn hình nhé! 😊'. TUYỆT ĐỐI KHÔNG TẠO MÃ ORDER_INFO NẾU CHƯA ĐĂNG NHẬP.";
 
+                // --- GỌI DATABASE LẤY MÃ GIẢM GIÁ ---
+                var activeVouchers = await _context.Vouchers
+                    .Where(v => v.IsActive && v.ExpiryDate > DateTime.Now && v.UsedCount < v.UsageLimit)
+                    .ToListAsync();
+
+                string couponContext = "MÃ ƯU ĐÃI ĐANG CÓ SẴN: Hiện tại shop không có mã ưu đãi nào.";
+                if (activeVouchers.Any())
+                {
+                    var voucherLines = activeVouchers.Select(v => {
+                        string desc = v.IsFreeship ? "Miễn phí vận chuyển (tối đa 30k)" :
+                                      v.DiscountValue.HasValue ? $"Giảm {v.DiscountValue.Value:N0}đ" :
+                                      $"Giảm {v.DiscountPercent.Value * 100}% (tối đa {v.MaxDiscountAmount:N0}đ)";
+                        return $"'{v.Code}' ({desc}, Đơn tối thiểu {v.MinOrderValue:N0}đ)";
+                    });
+                    couponContext = "MÃ ƯU ĐÃI ĐANG CÓ SẴN (Hãy chủ động giới thiệu cho khách): " + string.Join("; ", voucherLines);
+                }
+
                 var prompt = $@"
-Bạn là nhân viên tư vấn bán hàng xuất sắc và nhiệt tình của HomeMart.
+Bạn là nhân viên tư vấn bán hàng xuất sắc và cực kỳ giỏi chốt sale của HomeMart.
 Nhiệm vụ của bạn là trả lời khách hàng bằng tiếng Việt, ngắn gọn, thân thiện, tự nhiên như người thật.
 
 Câu hỏi của khách:
@@ -217,22 +270,31 @@ Câu hỏi của khách:
 Danh sách sản phẩm hiện có trong shop:
 {productContext}
 
+{couponContext}
+
 {userInfoContext}
 
 {orderContext}
 
 QUY TẮC TƯ VẤN & CHỐT SALE:
-- Bạn ĐƯỢC PHÉP trả lời mọi câu hỏi kiến thức chung, tâm sự... của khách hàng.
-- NẾU KHÁCH HỎI VỀ ĐƠN HÀNG: Dùng thông tin 'THÔNG TIN ĐƠN HÀNG CỦA KHÁCH' để trả lời chính xác tình trạng đơn hàng của họ.
-- Khi khách hỏi về HÀNG HÓA/GỢI Ý: CHỈ tư vấn dựa trên danh sách sản phẩm ở trên. Tuyệt đối không bịa thêm sản phẩm.
-- NẾU SẢN PHẨM CÓ PHÂN LOẠI (Màu sắc/Size): BẮT BUỘC liệt kê các phân loại đang có để khách chọn.
-- Kỹ năng Sale: Chủ động hỏi mồi khách để chốt đơn (Ví dụ: Bạn thích màu nào? Mua số lượng bao nhiêu ạ?).
+- NẾU KHÁCH HỎI VỀ ĐƠN HÀNG: Dùng thông tin 'THÔNG TIN ĐƠN HÀNG CỦA KHÁCH' để trả lời.
+- Khi khách hỏi về HÀNG HÓA: CHỈ tư vấn dựa trên danh sách sản phẩm ở trên. Tuyệt đối không bịa thêm sản phẩm.
+- NẾU SẢN PHẨM CÓ PHÂN LOẠI: BẮT BUỘC liệt kê các phân loại đang có để khách chọn.
+- KỸ NĂNG CHỐT SALE (RẤT QUAN TRỌNG): Sau khi giới thiệu sản phẩm xong, TUYỆT ĐỐI KHÔNG được im lặng. BẮT BUỘC phải đặt câu hỏi mồi để giục khách mua hàng. (Ví dụ: 'Dương ưng màu nào để em lên đơn ạ?', 'Dương có muốn chốt luôn mã này để em báo kho đóng gói không ạ?').
 
 QUY TẮC TỰ ĐỘNG LÊN ĐƠN HÀNG (QUAN TRỌNG NHẤT):
-Nếu khách hàng đã chốt mua và cung cấp đủ thông tin bao gồm: Sản phẩm, Phân loại (nếu có), Số lượng, và Địa chỉ.
-Hãy trả lời xác nhận lịch sự, và BẮT BUỘC chèn đoạn mã JSON sau ở cuối câu:
-[ORDER_INFO: {{ ""productId"": 1, ""variantName"": ""Màu Đỏ"", ""quantity"": 1, ""address"": ""Hà Nội"" }}]
-Lưu ý: Không tạo mã này nếu thiếu thông tin, hãy hỏi thêm. Nếu ko có phân loại, điền """".
+Khi khách hàng ngỏ ý muốn mua/đặt hàng, bạn PHẢI thu thập ĐỦ 6 thông tin sau:
+1. Sản phẩm (và Phân loại nếu có)
+2. Số lượng
+3. Địa chỉ nhận hàng (Tuyệt đối KHÔNG tự bịa địa chỉ. Nếu khách chưa cho địa chỉ cụ thể thì BẮT BUỘC phải hỏi khách).
+4. Tên người nhận (Phải hỏi xác nhận có dùng tên '{currentUser?.FullName}' không hay đổi tên khác)
+5. Số điện thoại (Phải hỏi xác nhận có dùng SĐT '{currentUser?.Phone}' không hay đổi số khác)
+6. Mã giảm giá (BẮT BUỘC chủ động giới thiệu các mã đang có ở trên và hỏi khách muốn dùng mã nào không. Nếu khách không dùng thì để trống).
+
+Nếu thiếu 1 trong 6 thông tin trên, hãy chủ động hỏi lại khách một cách khéo léo.
+Khi ĐÃ ĐỦ thông tin và khách CHỐT MUA, hãy cảm ơn và BẮT BUỘC chèn đoạn mã JSON sau ở cuối câu:
+[ORDER_INFO: {{ ""productId"": 1, ""variantName"": ""Màu Đỏ"", ""quantity"": 1, ""address"": ""Hà Nội"", ""fullName"": ""Tên người nhận"", ""phone"": ""SĐT người nhận"", ""couponCode"": ""FREESHIP"" }}]
+Lưu ý: Không tạo mã ORDER_INFO nếu thiếu thông tin hoặc khách chưa chốt. Nếu sản phẩm ko có phân loại hoặc khách ko dùng mã, điền """".
 ".Trim();
 
                 // GỌI API GEMINI
@@ -260,7 +322,7 @@ Lưu ý: Không tạo mã này nếu thiếu thông tin, hãy hỏi thêm. Nếu
                 // ==========================================
                 // XỬ LÝ LÊN ĐƠN HÀNG [ORDER_INFO] 
                 // ==========================================
-                var orderMatch = System.Text.RegularExpressions.Regex.Match(aiText, @"\[ORDER_INFO:\s*(\{.*?\})\s*\]");
+                var orderMatch = System.Text.RegularExpressions.Regex.Match(aiText, @"\[ORDER_INFO:\s*(\{.*?\})\s*\]", System.Text.RegularExpressions.RegexOptions.Singleline);
                 if (orderMatch.Success && secureUserId.HasValue)
                 {
                     var jsonString = orderMatch.Groups[1].Value;
@@ -303,18 +365,72 @@ Lưu ý: Không tạo mã này nếu thiếu thông tin, hãy hỏi thêm. Nếu
                                     decimal finalPrice = product.Discount.HasValue ? Math.Round(unitPrice * (1 - (decimal)product.Discount.Value / 100), 0) : unitPrice;
                                     var fallbackUser = await _context.Users.FindAsync(secureUserId.Value);
 
+                                    // --- BẮT ĐẦU XỬ LÝ VOUCHER & TÍNH TIỀN ---
+                                    decimal subTotal = finalPrice * orderData.quantity; // Tạm tính tiền hàng
+                                    decimal shippingFee = 30000; // Mặc định phí ship 30k
+                                    decimal discountAmount = 0;  // Tiền được giảm
+                                    string appliedCouponMessage = "";
+                                    string? appliedVoucherCode = null;
+
+                                    if (!string.IsNullOrWhiteSpace(orderData.couponCode))
+                                    {
+                                        var validVoucher = await _context.Vouchers.FirstOrDefaultAsync(v => 
+                                            v.Code.ToLower() == orderData.couponCode.ToLower() && 
+                                            v.IsActive && 
+                                            v.ExpiryDate > DateTime.Now && 
+                                            v.UsedCount < v.UsageLimit);
+
+                                        if (validVoucher != null)
+                                        {
+                                            if (subTotal >= validVoucher.MinOrderValue)
+                                            {
+                                                appliedVoucherCode = validVoucher.Code; // Giữ lại tên mã
+
+                                                if (validVoucher.IsFreeship) 
+                                                {
+                                                    shippingFee = 0; // Trừ thẳng phí ship về 0
+                                                    appliedCouponMessage = $"\n🎁 Đã áp dụng mã: **{validVoucher.Code}** (Miễn phí vận chuyển)";
+                                                }
+                                                else 
+                                                {
+                                                    if (validVoucher.DiscountValue.HasValue) discountAmount = validVoucher.DiscountValue.Value;
+                                                    else if (validVoucher.DiscountPercent.HasValue)
+                                                    {
+                                                        discountAmount = subTotal * validVoucher.DiscountPercent.Value;
+                                                        if (validVoucher.MaxDiscountAmount.HasValue && discountAmount > validVoucher.MaxDiscountAmount.Value)
+                                                            discountAmount = validVoucher.MaxDiscountAmount.Value;
+                                                    }
+                                                    appliedCouponMessage = $"\n🎁 Đã áp dụng mã: **{validVoucher.Code}** (Giảm {discountAmount:N0}đ)";
+                                                }
+                                                
+                                                validVoucher.UsedCount += 1; // Tăng lượt dùng lên 1
+                                            }
+                                            else appliedCouponMessage = $"\n⚠️ Mã '{orderData.couponCode}' chưa được áp vì đơn cần tối thiểu {validVoucher.MinOrderValue:N0}đ.";
+                                        }
+                                        else appliedCouponMessage = $"\n⚠️ Mã '{orderData.couponCode}' không tồn tại, hết hạn hoặc đã hết lượt.";
+                                    }
+
+                                    // Chốt hạ tổng tiền = Tiền hàng + Ship - Giảm giá
+                                    decimal totalAmount = subTotal + shippingFee - discountAmount;
+                                    if (totalAmount < 0) totalAmount = 0; // Chống âm tiền
+
                                     using var transaction = await _context.Database.BeginTransactionAsync();
                                     try
                                     {
                                         var newOrder = new BE.Models.Order
                                         {
                                             UserId = secureUserId.Value,
-                                            FullName = fallbackUser?.FullName ?? "Khách hàng",
-                                            Phone = fallbackUser?.Phone ?? "",
+                                            FullName = !string.IsNullOrWhiteSpace(orderData.fullName) ? orderData.fullName : (fallbackUser?.FullName ?? "Khách hàng"),
+                                            Phone = !string.IsNullOrWhiteSpace(orderData.phone) ? orderData.phone : (fallbackUser?.Phone ?? ""),
                                             Address = orderData.address,
-                                            TotalAmount = finalPrice * orderData.quantity,
                                             Status = "Pending",
-                                            OrderDate = DateTime.Now
+                                            OrderDate = DateTime.Now,
+                                            
+                                            // ===== BƠM ĐỦ DỮ LIỆU VOUCHER CHO FRONTEND ĐỌC =====
+                                            TotalAmount = totalAmount, 
+                                            AppliedVoucherCode = appliedVoucherCode, 
+                                            DiscountAmount = discountAmount,
+                                            ShippingFee = shippingFee
                                         };
                                         _context.Orders.Add(newOrder);
                                         await _context.SaveChangesAsync();
@@ -337,8 +453,8 @@ Lưu ý: Không tạo mã này nếu thiếu thông tin, hãy hỏi thêm. Nếu
                                         await _context.SaveChangesAsync();
                                         await transaction.CommitAsync();
 
-                                        aiText += $"\n\n🎉 **Hệ thống đã tự động lên đơn thành công!** Mã đơn hàng: **#{newOrder.OrderId}**. Tổng: **{newOrder.TotalAmount:N0}đ**.";
-                                        suggestions.Clear(); // Xóa gợi ý khi mua xong
+                                        aiText += $"\n\n🎉 **Hệ thống đã tự động lên đơn thành công!** Mã đơn hàng: **#{newOrder.OrderId}**. Tổng thanh toán: **{newOrder.TotalAmount:N0}đ**.{appliedCouponMessage}";
+                                        suggestions.Clear(); 
                                     }
                                     catch (Exception)
                                     {
@@ -431,5 +547,8 @@ Lưu ý: Không tạo mã này nếu thiếu thông tin, hãy hỏi thêm. Nếu
         public string? variantName { get; set; }
         public int quantity { get; set; }
         public string? address { get; set; }
+        public string? fullName { get; set; } // Bổ sung Tên người nhận
+        public string? phone { get; set; } // Bổ sung SĐT người nhận
+        public string? couponCode { get; set; }
     }
 }
