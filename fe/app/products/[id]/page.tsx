@@ -35,7 +35,7 @@ export default function ProductDetailPage() {
   const [zoomPercent, setZoomPercent] = useState({ x: 50, y: 50 });
   const imageWrapperRef = useRef<HTMLDivElement | null>(null);
   const MAGNIFIER_SIZE = 180;
-  const ZOOM_LEVEL = 2.8;
+  const ZOOM_LEVEL = 1.8;
   const FLOAT_ZOOM_WIDTH = 537;
 
   const handleImageHover = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -287,9 +287,10 @@ export default function ProductDetailPage() {
     setSelectedVariant(variant);
     setQuantity(1);
     setShowMagnifier(false);
-    setImageLoaded(false);
 
-    if (variant.imageUrl) {
+    // Chỉ đổi ảnh và reset loading nếu ảnh mới khác ảnh đang hiển thị
+    if (variant.imageUrl && variant.imageUrl !== activeImage) {
+      setImageLoaded(false);
       setActiveImage(variant.imageUrl);
     }
   };
@@ -507,8 +508,11 @@ export default function ProductDetailPage() {
                     key={`thumb-gallery-${idx}`}
                     type="button"
                     onClick={() => {
-                      setActiveImage(imgUrl);
-                      setImageLoaded(false);
+                      // Chỉ đổi ảnh và reset loading nếu bấm vào ảnh khác
+                      if (activeImage !== imgUrl) {
+                        setActiveImage(imgUrl);
+                        setImageLoaded(false);
+                      }
                       setShowMagnifier(false);
                     }}
                     className={`relative h-20 w-20 shrink-0 overflow-hidden rounded-xl border-2 transition-all ${

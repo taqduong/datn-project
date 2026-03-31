@@ -43,7 +43,7 @@ export default function ReviewPage() {
       // ✅ GỬI KÈM orderId TRONG PAYLOAD
       await addReview({ 
         productId: Number(productId), 
-        orderId: Number(orderId), // 🚀 QUAN TRỌNG NHẤT LÀ DÒNG NÀY
+        orderId: Number(orderId), // QUAN TRỌNG NHẤT LÀ DÒNG NÀY
         rating, 
         comment 
       }); 

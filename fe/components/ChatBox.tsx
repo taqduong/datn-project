@@ -344,7 +344,7 @@ export default function ChatBox() {
           text: m.text,
         }));
 
-      // 🚀 1. LẤY ID NGƯỜI DÙNG TỪ LOCALSTORAGE
+      //  1. LẤY ID NGƯỜI DÙNG TỪ LOCALSTORAGE
       let currentUserId = undefined;
       if (typeof window !== "undefined") {
         const userStr = localStorage.getItem("user");
@@ -358,7 +358,7 @@ export default function ChatBox() {
         }
       }
 
-      // 🚀 2. TRUYỀN ID XUỐNG API (THÊM currentUserId VÀO CUỐI)
+      //  2. TRUYỀN ID XUỐNG API (THÊM currentUserId VÀO CUỐI)
       const response = (await fetchChatbotAnswer(newText, chatHistory, currentUserId)) as ChatbotApiResponse;
       const normalized = normalizeApiResponse(response);
 

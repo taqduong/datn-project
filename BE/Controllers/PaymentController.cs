@@ -92,7 +92,7 @@ namespace BE.Controllers
                         var order = await _context.Orders.FirstOrDefaultAsync(o => o.OrderId == orderId);
                         if (order != null)
                         {
-                            // 🚀 KHÔNG ĐỔI STATUS NỮA, GIỮ NGUYÊN PENDING ĐỂ CHỜ ADMIN DUYỆT
+                            // KHÔNG ĐỔI STATUS NỮA, GIỮ NGUYÊN PENDING ĐỂ CHỜ ADMIN DUYỆT
                             // order.Status = "Paid"; // <- Bỏ dòng này
 
                             // Chỉ cập nhật phương thức để đánh dấu là đã quẹt thẻ thành công

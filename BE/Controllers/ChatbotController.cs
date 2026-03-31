@@ -61,7 +61,7 @@ namespace BE.Controllers
                 }
 
                 // =========================================================================
-                // 🚀 TÍNH NĂNG MỚI 1: TRA CỨU ĐƠN HÀNG (ORDER TRACKING)
+                // TÍNH NĂNG MỚI 1: TRA CỨU ĐƠN HÀNG (ORDER TRACKING)
                 // =========================================================================
                 string orderContext = "";
                 bool isAskingAboutOrder = keyword.Contains("đơn hàng") || keyword.Contains("mã đơn") || keyword.Contains("đơn của tôi");
@@ -87,7 +87,7 @@ namespace BE.Controllers
                 }
 
                 // =========================================================================
-                // 🚀 TÍNH NĂNG MỚI 2: GỢI Ý CÁ NHÂN HÓA BẰNG PYTHON AI
+                // TÍNH NĂNG MỚI 2: GỢI Ý CÁ NHÂN HÓA BẰNG PYTHON AI
                 // =========================================================================
                 List<int> aiRecommendedIds = new List<int>();
                 bool isAskingForRecommendation = keyword.Contains("gợi ý") || keyword.Contains("hợp với tôi") || keyword.Contains("tư vấn cho tôi");

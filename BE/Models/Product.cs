@@ -14,7 +14,7 @@ public partial class Product
     [StringLength(150)]
     public string Name { get; set; } = string.Empty;
 
-    [StringLength(1000)]
+    [Column(TypeName = "nvarchar(max)")]
     public string? Description { get; set; }
 
     [Column(TypeName = "decimal(18,2)")]

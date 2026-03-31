@@ -55,7 +55,7 @@ export default function ProductsPage() {
     }
   };
 
-  // 🚀 THÊM ĐOẠN NÀY ĐỂ TỰ ĐỘNG CHỌN DANH MỤC NẾU CÓ URL
+  // THÊM ĐOẠN NÀY ĐỂ TỰ ĐỘNG CHỌN DANH MỤC NẾU CÓ URL
   useEffect(() => {
     if (categoryIdFromUrl) {
       setSelectedCategory(Number(categoryIdFromUrl)); // Ép kiểu string sang number

@@ -31,7 +31,7 @@ function CheckoutContent() {
   const [showVoucherModal, setShowVoucherModal] = useState(false);
   const [voucherCodeInput, setVoucherCodeInput] = useState("");
   
-  // 🚀 STATE LƯU DANH SÁCH MÃ TỪ DATABASE
+  // STATE LƯU DANH SÁCH MÃ TỪ DATABASE
   const [vouchersList, setVouchersList] = useState<any[]>([]);
 
   const [appliedFreeshipVoucher, setAppliedFreeshipVoucher] = useState<any>(null);
