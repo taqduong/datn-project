@@ -73,7 +73,7 @@ export default function HomePage() {
         const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
         return timeB - timeA;
       })
-      .slice(0, 6);
+      .slice(0, 8);
   }, [products]);
 
   const featuredCategories = useMemo(() => {

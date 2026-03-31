@@ -781,18 +781,24 @@ namespace BE.Controllers
                                 var variantParts = variantsStr.Split('|', StringSplitOptions.RemoveEmptyEntries);
                                 foreach (var part in variantParts)
                                 {
-                                    var props = part.Split(':', StringSplitOptions.RemoveEmptyEntries);
+                                    // SỬA Ở ĐÂY: Chỉ dùng Split(':'), TUYỆT ĐỐI KHÔNG dùng RemoveEmptyEntries
+                                    var props = part.Split(':'); 
+                                    
                                     if (props.Length >= 4)
                                     {
                                         decimal.TryParse(props[2].Trim(), out decimal vPrice);
                                         int.TryParse(props[3].Trim(), out int vStock);
+                                        
+                                        // Nếu ô màu trống (::) thì gán luôn là null cho sạch Database
+                                        var vColor = string.IsNullOrWhiteSpace(props[1]) ? null : props[1].Trim();
+
                                         var vImage = props.Length >= 5 && !string.IsNullOrWhiteSpace(props[4]) 
-                                                     ? $"/uploads/products/{props[4].Trim()}" : null;
+                                                    ? $"/uploads/products/{props[4].Trim()}" : null;
 
                                         variants.Add(new ProductVariant
                                         {
                                             VariantName = props[0].Trim(),
-                                            Color = props[1].Trim(),
+                                            Color = vColor,
                                             Price = vPrice,
                                             Stock = vStock,
                                             ImageUrl = vImage
