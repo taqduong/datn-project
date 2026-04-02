@@ -87,7 +87,7 @@ export default function AdminOrdersPage() {
   const addressParts = [order.address, order.ward, order.city].filter(p => p && p.trim() !== "");
   const displayAddress = addressParts.length > 0 ? addressParts.join(", ") : "Chưa có địa chỉ";
 
-  // ✅ CHỖ MỚI: Gom danh sách sản phẩm thành chuỗi (Ví dụ: - Áo thun (Màu Đỏ) x2)
+  // CHỖ MỚI: Gom danh sách sản phẩm thành chuỗi (Ví dụ: - Áo thun (Màu Đỏ) x2)
   const productInfo = order.orderDetails
     .map(item => `- ${item.productName}${item.variantName ? ` (${item.variantName})` : ""} x${item.quantity}`)
     .join("\n"); // Dùng dấu xuống dòng để trong 1 ô Excel hiện danh sách theo hàng dọc

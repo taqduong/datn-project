@@ -39,7 +39,6 @@ function PaymentResultContent() {
         const data = await res.json();
 
         if (res.ok && data.success) {
-          console.log("Tuyệt vời! Backend đã cập nhật trạng thái đơn hàng thành Paid!");
         } else {
           console.error("Backend báo lỗi xác thực:", data.message);
         }

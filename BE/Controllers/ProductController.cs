@@ -47,7 +47,9 @@ namespace BE.Controllers
                     Variants = p.ProductVariants.Select(v => new ProductVariantDto
                     {
                         Id = v.Id, VariantName = v.VariantName, Color = v.Color,
-                        Price = v.Price, Stock = v.Stock, ImageUrl = v.ImageUrl
+                        Price = v.Price, Stock = v.Stock, ImageUrl = v.ImageUrl,
+                        Discount = v.Discount, // THÊM
+                        PriceAfterDiscount = Math.Round(v.Price * (1 - (decimal)(v.Discount ?? p.Discount ?? 0) / 100), 0) // CÔNG THỨC MỚI
                     }).ToList(),
                     
                     // BƯỚC 2: CÔNG THỨC ĐẾM LƯỢT BÁN
@@ -90,7 +92,9 @@ namespace BE.Controllers
                     Variants = p.ProductVariants.Select(v => new ProductVariantDto
                     {
                         Id = v.Id, VariantName = v.VariantName, Color = v.Color,
-                        Price = v.Price, Stock = v.Stock, ImageUrl = v.ImageUrl
+                        Price = v.Price, Stock = v.Stock, ImageUrl = v.ImageUrl,
+                        Discount = v.Discount, // THÊM
+                        PriceAfterDiscount = Math.Round(v.Price * (1 - (decimal)(v.Discount ?? p.Discount ?? 0) / 100), 0) // CÔNG THỨC MỚI
                     }).ToList(),
 
                     SoldCount = p.OrderDetails.Where(od => od.Order != null && od.Order.Status == "Completed").Sum(od => (int?)od.Quantity) ?? 0,
@@ -140,7 +144,8 @@ namespace BE.Controllers
                         Color = v.Color,
                         Price = v.Price,
                         Stock = v.Stock,
-                        ImageUrl = v.ImageUrl
+                        ImageUrl = v.ImageUrl,
+                        Discount = v.Discount
                     });
                 }
                 await _context.SaveChangesAsync(); 
@@ -274,8 +279,8 @@ namespace BE.Controllers
             {
                 // 1. Lọc ra danh sách ID biến thể mà Frontend gửi lên
                 var incomingVariantIds = dto.Variants
-                    .Where(v => v.Id.HasValue && v.Id.Value > 0)
-                    .Select(v => v.Id.Value)
+                    .Where(v => v.Id.HasValue && v.Id > 0)
+                    .Select(v => v.Id.GetValueOrDefault()) // DÙNG GetValueOrDefault() ĐỂ C# để fix warning
                     .ToList();
 
                 // 2. Tìm những biến thể bị xóa
@@ -301,13 +306,14 @@ namespace BE.Controllers
                     if (incomingVariant.Id.HasValue && incomingVariant.Id.Value > 0)
                     {
                         // Cập nhật biến thể đã tồn tại
-                        var existingVariant = product.ProductVariants.FirstOrDefault(v => v.Id == incomingVariant.Id.Value);
+                        var existingVariant = product.ProductVariants.FirstOrDefault(v => v.Id == incomingVariant.Id.GetValueOrDefault());
                         if (existingVariant != null)
                         {
                             existingVariant.VariantName = incomingVariant.VariantName;
                             existingVariant.Color = incomingVariant.Color;
                             existingVariant.Price = incomingVariant.Price;
                             existingVariant.Stock = incomingVariant.Stock;
+                            existingVariant.Discount = incomingVariant.Discount;
                             
                             // Nếu có up ảnh mới cho biến thể
                             if (!string.IsNullOrWhiteSpace(incomingVariant.ImageUrl))
@@ -333,7 +339,8 @@ namespace BE.Controllers
                             Color = incomingVariant.Color,
                             Price = incomingVariant.Price,
                             Stock = incomingVariant.Stock,
-                            ImageUrl = incomingVariant.ImageUrl
+                            ImageUrl = incomingVariant.ImageUrl,
+                            Discount = incomingVariant.Discount
                         });
                     }
                 }
@@ -525,7 +532,9 @@ namespace BE.Controllers
                     Variants = p.ProductVariants.Select(v => new ProductVariantDto
                     {
                         Id = v.Id, VariantName = v.VariantName, Color = v.Color,
-                        Price = v.Price, Stock = v.Stock, ImageUrl = v.ImageUrl
+                        Price = v.Price, Stock = v.Stock, ImageUrl = v.ImageUrl,
+                        Discount = v.Discount, // THÊM
+                        PriceAfterDiscount = Math.Round(v.Price * (1 - (decimal)(v.Discount ?? p.Discount ?? 0) / 100), 0) // CÔNG THỨC MỚI
                     }).ToList(),
                     
                     SoldCount = p.OrderDetails.Where(od => od.Order != null && od.Order.Status == "Completed").Sum(od => (int?)od.Quantity) ?? 0,
@@ -568,7 +577,9 @@ namespace BE.Controllers
                     Variants = p.ProductVariants.Select(v => new ProductVariantDto
                     {
                         Id = v.Id, VariantName = v.VariantName, Color = v.Color,
-                        Price = v.Price, Stock = v.Stock, ImageUrl = v.ImageUrl
+                        Price = v.Price, Stock = v.Stock, ImageUrl = v.ImageUrl,
+                        Discount = v.Discount, // THÊM
+                        PriceAfterDiscount = Math.Round(v.Price * (1 - (decimal)(v.Discount ?? p.Discount ?? 0) / 100), 0) // CÔNG THỨC MỚI
                     }).ToList(),
 
                     SoldCount = p.OrderDetails.Where(od => od.Order != null && od.Order.Status == "Completed").Sum(od => (int?)od.Quantity) ?? 0,
@@ -792,8 +803,23 @@ namespace BE.Controllers
                                         // Nếu ô màu trống (::) thì gán luôn là null cho sạch Database
                                         var vColor = string.IsNullOrWhiteSpace(props[1]) ? null : props[1].Trim();
 
-                                        var vImage = props.Length >= 5 && !string.IsNullOrWhiteSpace(props[4]) 
-                                                    ? $"/uploads/products/{props[4].Trim()}" : null;
+                                        // ==========================================
+                                        // 1. LẤY GIẢM GIÁ TỪ EXCEL (VỊ TRÍ SỐ 5 - props[4])
+                                        // ==========================================
+                                        double? vDiscount = null;
+                                        if (props.Length >= 5 && !string.IsNullOrWhiteSpace(props[4]))
+                                        {
+                                            if (double.TryParse(props[4].Trim(), out double parsedDiscount))
+                                            {
+                                                vDiscount = parsedDiscount;
+                                            }
+                                        }
+
+                                        // ==========================================
+                                        // 2. LẤY ẢNH (BỊ ĐẨY XUỐNG VỊ TRÍ SỐ 6 - props[5])
+                                        // ==========================================
+                                        var vImage = props.Length >= 6 && !string.IsNullOrWhiteSpace(props[5]) 
+                                                    ? $"/uploads/products/{props[5].Trim()}" : null;
 
                                         variants.Add(new ProductVariant
                                         {
@@ -801,7 +827,9 @@ namespace BE.Controllers
                                             Color = vColor,
                                             Price = vPrice,
                                             Stock = vStock,
-                                            ImageUrl = vImage
+                                            ImageUrl = vImage,
+                                            // 3. NẾU BIẾN THỂ KHÔNG NHẬP GIẢM GIÁ -> LẤY GIẢM GIÁ CHUNG CỦA SẢN PHẨM MẸ
+                                            Discount = vDiscount ?? discount 
                                         });
                                     }
                                 }
@@ -905,6 +933,8 @@ namespace BE.Controllers
             public decimal Price { get; set; }
             public int Stock { get; set; }
             public string? ImageUrl { get; set; }
+            public double? Discount { get; set; }
+            public decimal PriceAfterDiscount { get; set; }
         }
 
         public class ProductVariantCreateDto
@@ -915,6 +945,7 @@ namespace BE.Controllers
             public decimal Price { get; set; }
             public int Stock { get; set; }
             public string? ImageUrl { get; set; }
+            public double? Discount { get; set; }
         }
     }
 }

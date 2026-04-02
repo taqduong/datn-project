@@ -127,7 +127,7 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
         localStorage.setItem('user', JSON.stringify(formattedUser));
 
       } catch (error) {
-        console.error('❌ Lỗi khi tải thông tin người dùng:', error);
+        console.error('Lỗi khi tải thông tin người dùng:', error);
         setUserData(null); // Nếu lỗi nặng cũng cho văng ra
       } finally {
         setLoading(false);
@@ -146,7 +146,7 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
         const res = await api.get('/Order')
         setOrders(res.data || [])
       } catch (err) {
-        console.error('❌ Lỗi khi lấy đơn hàng:', err)
+        console.error('Lỗi khi lấy đơn hàng:', err)
       } finally {
         setLoadingOrders(false)
       }
@@ -202,13 +202,13 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
         setIsEditing(false);
         setAvatar(null); // Dọn dẹp state
         setAvatarPreview(null);
-        alert('✅ Cập nhật thông tin thành công!');
+        alert('Cập nhật thông tin thành công!');
       } else {
-        alert('⚠️ Cập nhật thất bại, vui lòng thử lại!');
+        alert('Cập nhật thất bại, vui lòng thử lại!');
       }
     } catch (error) {
-      console.error('❌ Lỗi khi cập nhật thông tin:', error);
-      alert('❌ Có lỗi xảy ra khi cập nhật thông tin người dùng.');
+      console.error('Lỗi khi cập nhật thông tin:', error);
+      alert('Có lỗi xảy ra khi cập nhật thông tin người dùng.');
     }
   };
 // SỬA LẠI HÀM NÀY: Tự động lưu ảnh ngay khi vừa chọn xong!
@@ -234,11 +234,11 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
       // Reset cái input file để lần sau chọn lại ảnh cũ vẫn được
       e.target.value = '';
 
-      alert('✅ Đã cập nhật ảnh đại diện thành công!');
+      alert('Đã cập nhật ảnh đại diện thành công!');
 
     } catch (error) {
-      console.error('❌ Lỗi tải ảnh lên:', error);
-      alert('❌ Có lỗi xảy ra khi cập nhật ảnh đại diện.');
+      console.error('Lỗi tải ảnh lên:', error);
+      alert('Có lỗi xảy ra khi cập nhật ảnh đại diện.');
       setAvatarPreview(null); // Nếu lỗi thì gỡ cái ảnh xem trước đi
     }
   };
@@ -274,8 +274,7 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
       setIsChangingPwd(true);
       await changePassword({ oldPassword, newPassword }); // Gọi API
       
-      // ✅ SỬA TỪ ĐOẠN NÀY
-      alert("✅ Đổi mật khẩu thành công! Vui lòng đăng nhập lại với mật khẩu mới.");
+      alert("Đổi mật khẩu thành công! Vui lòng đăng nhập lại với mật khẩu mới.");
       
       // 1. Xóa vé VIP cũ
       localStorage.removeItem('token');

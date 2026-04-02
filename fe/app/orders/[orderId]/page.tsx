@@ -405,7 +405,7 @@ export default function OrderDetailPage() {
       {/* KHU VỰC ẨN: GIAO DIỆN HÓA ĐƠN PDF ĐÃ ĐƯỢC CHÈN VOUCHER */}
       {/* ========================================================================= */}
       {printOrder && (
-        <div className="fixed -left-2499.75 top-0" style={{ zIndex: -1000 }}>
+        <div style={{ position: 'absolute', left: '-9999px', top: '0' }}>
           <div id="invoice-template" style={{ width: '1050px', padding: '40px', backgroundColor: '#ffffff', color: '#1e293b', fontFamily: 'Arial, sans-serif' }}>
             
             {/* Header */}

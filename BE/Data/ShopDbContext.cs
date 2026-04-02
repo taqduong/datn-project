@@ -65,6 +65,15 @@ public partial class ShopDbContext : DbContext
             entity.Property(e => e.OrderDate).HasDefaultValueSql("GETDATE()");
         });
 
+        // ========================================================
+        // FIX LỖI "MULTIPLE CASCADE PATHS"
+        // ========================================================
+        modelBuilder.Entity<Review>()
+            .HasOne(r => r.OrderDetail)
+            .WithMany()
+            .HasForeignKey(r => r.OrderDetailId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         OnModelCreatingPartial(modelBuilder);
     }
 

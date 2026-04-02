@@ -37,7 +37,7 @@ export default function ProductsPage() {
       const categoriesRes = await fetchCategories();
       setCategories(categoriesRes.data);
 
-      // ✅ LOGIC TÌM KIẾM THÔNG MINH
+      // LOGIC TÌM KIẾM THÔNG MINH
       let productsRes;
       if (keyword) {
         // Nếu có từ khóa -> Gọi API Search
@@ -69,7 +69,7 @@ export default function ProductsPage() {
     loadData();
   }, [keyword]);
 
-  // ✅ QUAN TRỌNG: Phải thêm [keyword] vào đây để khi sếp gõ từ mới, trang tự tải lại
+  // QUAN TRỌNG: Phải thêm [keyword] vào đây để khi sếp gõ từ mới, trang tự tải lại
   useEffect(() => {
     loadData();
   }, [keyword]);

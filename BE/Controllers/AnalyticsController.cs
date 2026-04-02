@@ -85,7 +85,7 @@ namespace BE.Controllers
                     a.Views,
                     a.AddToCartCount,
                     
-                    // ✅ THAY THẾ SỐ LIỆU CŨ BẰNG CÔNG THỨC ĐẾM ĐỘNG (KHỚP 100% VỚI PRODUCT CARD)
+                    // THAY THẾ SỐ LIỆU CŨ BẰNG CÔNG THỨC ĐẾM ĐỘNG (KHỚP 100% VỚI PRODUCT CARD)
                     PurchaseCount = a.Product != null 
                         ? a.Product.OrderDetails
                             .Where(od => od.Order != null && od.Order.Status == "Completed")

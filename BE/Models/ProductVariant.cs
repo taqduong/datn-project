@@ -19,6 +19,12 @@ namespace BE.Models
         [Column(TypeName = "decimal(18,2)")]
         public decimal Price { get; set; } // Giá riêng của option này
 
+        // ========================================================
+        // TÍNH NĂNG MỚI: Giảm giá riêng cho từng biến thể
+        // (Cho phép null: Nếu null -> tự động lấy Discount của sản phẩm gốc)
+        // ========================================================
+        public double? Discount { get; set; } 
+
         public int Stock { get; set; } // Tồn kho riêng
 
         [StringLength(500)]

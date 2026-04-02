@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { Search, ShoppingCart, User, Menu, Heart, X, LogOut, LayoutDashboard, Store } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Search, ShoppingCart, User, Menu, Heart, X, LogOut, LayoutDashboard, Store, Clock } from "lucide-react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { searchProducts, fetchCart, fetchWishlist } from "@/services/api";
 type UserType = {
@@ -18,6 +18,7 @@ type CartItem = {
 
 export default function Navbar() {
   const router = useRouter();
+  const searchRef = useRef<HTMLDivElement>(null); // Để ẩn lịch sử khi click ra ngoài
 
   const [mounted, setMounted] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -27,8 +28,25 @@ export default function Navbar() {
   const [wishlistCount, setWishlistCount] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
 
+  const [searchHistory, setSearchHistory] = useState<string[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
+
   useEffect(() => {
     setMounted(true);
+    // Load lịch sử từ máy
+    const history = localStorage.getItem("searchHistory");
+    if (history) setSearchHistory(JSON.parse(history));
+  }, []);
+
+  // Đóng bảng lịch sử khi bấm chuột ra ngoài ô Search
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setShowHistory(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   const loadData = () => {
@@ -42,7 +60,7 @@ export default function Navbar() {
         setUser(null);
         setRole(null);
       }
-      // ✅ ĐÃ XÓA PHẦN CHECK LOCALSTORAGE CỦA WISHLIST Ở ĐÂY
+      // ĐÃ XÓA PHẦN CHECK LOCALSTORAGE CỦA WISHLIST Ở ĐÂY
     } catch (error) {
       console.error("Lỗi khi đọc localStorage:", error);
       setUser(null);
@@ -60,10 +78,10 @@ export default function Navbar() {
     try {
       const res = await fetchCart(); // Gọi API lấy giỏ hàng từ DB
       const data = Array.isArray(res.data) ? res.data : [];
-      // ✅ CHỈ CẦN ĐẾM SỐ LƯỢNG MÓN (Số dòng trong giỏ hàng)
+      // ĐẾM SỐ LƯỢNG MÓN (Số dòng trong giỏ hàng)
       setCartCount(data.length);
     } catch (error: any) {
-      // ✅ THÊM ĐOẠN NÀY: Nếu lỗi 401 (hết hạn Token) thì im lặng set về 0, không in lỗi đỏ
+      // Nếu lỗi 401 (hết hạn Token) thì im lặng set về 0, không in lỗi đỏ
       if (error.response?.status !== 401) {
         console.error("Lỗi đồng bộ số lượng giỏ hàng:", error);
       }
@@ -71,7 +89,7 @@ export default function Navbar() {
     }
   };
 
-  // ✅ Gọi API đếm số lượng Wishlist (Sửa lại cho đúng chuẩn API của sếp)
+  // Gọi API đếm số lượng Wishlist
   const fetchWishlistCount = async () => {
     const token = localStorage.getItem("token");
     if (!token) {
@@ -82,13 +100,13 @@ export default function Navbar() {
     try {
       const res = await fetchWishlist();
       
-      // ✅ SỬA Ở ĐÂY: API Wishlist nó bọc mảng trong cục data
+      //  API Wishlist nó bọc mảng trong cục data
       // Check xem res.data có tồn tại không, rồi check tiếp res.data.data có phải Mảng không
       let count = 0;
       if (res.data && Array.isArray(res.data.data)) {
         count = res.data.data.length; // Lấy length của mảng bên trong
       } else if (Array.isArray(res.data)) {
-        count = res.data.length; // Phòng hờ nếu sếp lỡ đổi Backend trả về mảng trực tiếp
+        count = res.data.length; 
       }
       
       setWishlistCount(count);
@@ -106,22 +124,22 @@ export default function Navbar() {
     
     loadData(); // Load User từ localStorage
     fetchCartCount(); // Chạy lấy số giỏ hàng
-    fetchWishlistCount(); // ✅ Chạy lấy số wishlist
+    fetchWishlistCount(); // Chạy lấy số wishlist
 
     window.addEventListener("storage", loadData);
     window.addEventListener("userUpdated", loadData as EventListener);
     
-    // ✅ Gắn tai nghe cho Cart
+    // Gắn tai nghe cho Cart
     window.addEventListener("cartUpdated", fetchCartCount); 
     
-    // ✅ Gắn tai nghe cho Wishlist (Hễ ai báo wishlistUpdated là gọi lại hàm đếm)
+    // Gắn tai nghe cho Wishlist (Hễ ai báo wishlistUpdated là gọi lại hàm đếm)
     window.addEventListener("wishlistUpdated", fetchWishlistCount);
 
     return () => {
       window.removeEventListener("storage", loadData);
       window.removeEventListener("userUpdated", loadData as EventListener);
       window.removeEventListener("cartUpdated", fetchCartCount); 
-      window.removeEventListener("wishlistUpdated", fetchWishlistCount); // ✅ Tháo tai nghe
+      window.removeEventListener("wishlistUpdated", fetchWishlistCount); 
     };
   }, [mounted]);
 
@@ -136,12 +154,32 @@ export default function Navbar() {
     window.location.href = "/login";
   };
 
-  const handleSearch = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const keyword = searchQuery.trim();
-    if (!keyword) return;
+  const saveToHistory = (keyword: string) => {
+    const newHistory = [keyword, ...searchHistory.filter((item) => item !== keyword)].slice(0, 8);
+    setSearchHistory(newHistory);
+    localStorage.setItem("searchHistory", JSON.stringify(newHistory));
+  };
+
+  const deleteHistoryItem = (e: React.MouseEvent, keyword: string) => {
+    e.stopPropagation(); // Không cho nhảy vào hàm tìm kiếm khi bấm nút X
+    const newHistory = searchHistory.filter((item) => item !== keyword);
+    setSearchHistory(newHistory);
+    localStorage.setItem("searchHistory", JSON.stringify(newHistory));
+  };
+
+  // SỬA LẠI HÀM NÀY ĐỂ NHẬN CẢ EVENT HOẶC STRING
+  const handleSearch = async (e?: React.FormEvent<HTMLFormElement> | string) => {
+    // Nếu là Event (khi nhấn Enter/nút Search) thì mới chặn reload trang
+    if (e && typeof e !== "string") e.preventDefault();
     
-    // Gọi API tìm kiếm sản phẩm
+    // Nếu truyền vào string (từ lịch sử) thì lấy luôn, không thì lấy từ searchQuery
+    const keyword = typeof e === "string" ? e : searchQuery.trim();
+    
+    if (!keyword) return;
+
+    saveToHistory(keyword); // Lưu lại lịch sử
+    setShowHistory(false);
+    
     try {
       const results = await searchProducts(keyword);
       if (results.data.length > 0) {
@@ -183,27 +221,42 @@ export default function Navbar() {
             )}
           </nav>
 
-          {/* Thanh tìm kiếm */}
-          <div className="hidden flex-1 md:block">
-            <form onSubmit={handleSearch} className="mx-auto max-w-xl">
+          {/* Thanh tìm kiếm cải tiến */}
+          <div className="hidden flex-1 md:block relative" ref={searchRef}>
+            <form onSubmit={handleSearch} className="mx-auto max-w-xl relative z-10">
               <div className="relative">
                 <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
                 <input
                   type="text"
                   value={searchQuery}
+                  onFocus={() => setShowHistory(true)} // Hiện bảng khi bấm vào ô
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Tìm kiếm sản phẩm..."
                   className="w-full rounded-full border border-slate-200 bg-slate-50 py-2.5 pl-11 pr-12 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100"
                 />
-                <button
-                  type="submit"
-                  className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-blue-500 text-white transition hover:bg-blue-600"
-                  aria-label="Tìm kiếm"
-                >
+                <button type="submit" className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-blue-500 text-white transition hover:bg-blue-600">
                   <Search className="h-4 w-4" />
                 </button>
               </div>
             </form>
+
+            {/* Dropdown Lịch sử hiển thị ở đây */}
+            {showHistory && searchHistory.length > 0 && (
+              <div className="absolute left-1/2 mt-2 w-full max-w-xl -translate-x-1/2 rounded-2xl border border-slate-200 bg-white py-2 shadow-xl z-50">
+                <div className="px-4 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">Lịch sử tìm kiếm</div>
+                {searchHistory.map((item, index) => (
+                  <div key={index} onClick={() => { setSearchQuery(item); handleSearch(item); }} className="group flex cursor-pointer items-center justify-between px-4 py-2 hover:bg-slate-50">
+                    <div className="flex items-center gap-3 text-sm text-slate-600">
+                      <Clock size={16} className="text-slate-400" />
+                      <span className="font-medium">{item}</span>
+                    </div>
+                    <button onClick={(e) => deleteHistoryItem(e, item)} className="rounded-lg p-1 text-slate-300 opacity-0 transition hover:bg-slate-200 hover:text-slate-600 group-hover:opacity-100">
+                      <X size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="ml-auto flex items-center gap-2 sm:gap-3">

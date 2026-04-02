@@ -109,7 +109,7 @@ namespace BE.Controllers
             return Ok(new { message = "Thêm hàng vào giỏ hàng thành công." });
         }
 
-        // ================== Lấy giỏ hàng (TRẢ GIÁ SAU GIẢM) ==================
+        // ================== Lấy giỏ hàng (CẬP NHẬT TÍNH TOÁN BIẾN THỂ) ==================
         [HttpGet("get")]
         [Authorize]
         public async Task<IActionResult> GetCart()
@@ -132,25 +132,42 @@ namespace BE.Controllers
                 var p = c.Product;
                 var v = c.ProductVariant; 
 
-                var basePrice = v != null ? v.Price : p.Price;
-                var imageUrl = v != null && !string.IsNullOrEmpty(v.ImageUrl) ? v.ImageUrl : p.ImageUrl;
-                var priceAfterDiscount = CalcPriceAfterDiscount(basePrice, p.Discount);
+                // Lấy thông tin giá trị gốc (Của SP Mẹ)
+                var basePrice = p.Price;
+                var baseDiscount = p.Discount;
+                var baseImageUrl = p.ImageUrl;
+
+                // Tính giá trị của Biến thể (nếu có), nếu biến thể ko có giảm giá thì lấy của Mẹ
+                var vPrice = v != null ? v.Price : (decimal?)null;
+                var vDiscount = v != null ? v.Discount : (double?)null;
+                var vImageUrl = v != null ? v.ImageUrl : null;
+
+                // Tính giá sau cùng để hiển thị nhanh nếu cần (ưu tiên biến thể > mẹ)
+                var activePrice = v != null ? v.Price : p.Price;
+                var activeDiscount = v?.Discount ?? p.Discount ?? 0;
+                var priceAfterDiscount = Math.Round(activePrice * (1 - (decimal)activeDiscount / 100), 0);
 
                 return new
                 {
                     cartItemId = c.CartItemId,
                     productId = c.ProductId,
                     variantId = c.VariantId, 
-                    quantity = c.Quantity,
                     variantName = v != null ? v.VariantName : null, 
+                    quantity = c.Quantity,
+                    
+                    // 3 TRƯỜNG DỮ LIỆU MỚI CHO FRONTEND
+                    variantPrice = vPrice,
+                    variantDiscount = vDiscount,
+                    variantImage = vImageUrl,
+
                     product = new
                     {
                         id = p.Id,
                         name = p.Name,
                         price = basePrice, 
-                        discount = p.Discount,
+                        discount = baseDiscount,
                         priceAfterDiscount = priceAfterDiscount,
-                        imageUrl = imageUrl 
+                        imageUrl = baseImageUrl 
                     }
                 };
             });

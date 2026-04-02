@@ -32,26 +32,27 @@ export default function RecentlyViewed() {
   }, []);
 
   // LOGIC MỚI: TỰ ĐỘNG TRƯỢT (AUTOPLAY)
+  // LOGIC MỚI: TỰ ĐỘNG TRƯỢT THEO ĐỘ RỘNG THỰC TẾ
   useEffect(() => {
-    // Nếu chưa load xong, không có sản phẩm, hoặc khách đang di chuột vào -> KHÔNG trượt
     if (products.length === 0 || isHovered) return;
 
     const interval = setInterval(() => {
       if (scrollRef.current) {
         const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
         
-        // Nếu đã cuộn sát mép bên phải (trừ hao 10px cho chắc)
+        // Lấy độ rộng của 1 thẻ con đầu tiên để biết khoảng cách cần trượt
+        const firstItem = scrollRef.current.children[0] as HTMLElement;
+        const itemWidth = firstItem?.offsetWidth + 16; // 16 là gap-4
+
         if (scrollLeft + clientWidth >= scrollWidth - 10) {
-          // Cuộn ngược trở lại đầu tiên
           scrollRef.current.scrollTo({ left: 0, behavior: "smooth" });
         } else {
-          // Cuộn sang phải 1 khoảng bằng đúng chiều rộng 1 card (256px bao gồm cả gap)
-          scrollRef.current.scrollTo({ left: scrollLeft + 256, behavior: "smooth" });
+          // Trượt đúng 1 khoảng bằng độ rộng 1 card
+          scrollRef.current.scrollTo({ left: scrollLeft + itemWidth, behavior: "smooth" });
         }
       }
-    }, 3000); // Tốc độ trượt: 3000ms = 3 giây trượt 1 lần
+    }, 3000);
 
-    // Dọn dẹp interval khi component bị hủy hoặc khi khách di chuột vào
     return () => clearInterval(interval);
   }, [products.length, isHovered]);
 
@@ -101,7 +102,7 @@ export default function RecentlyViewed() {
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
         {products.map((p) => (
-          <div key={p.id} className="min-w-[200px] w-[200px] sm:min-w-[240px] sm:w-[240px] snap-start">
+          <div key={p.id} className="min-w-[calc(50%-12px)] w-[calc(50%-12px)] md:min-w-[calc(33.333%-12px)] md:w-[calc(33.333%-12px)] lg:min-w-[calc(25%-12px)] lg:w-[calc(25%-12px)] snap-start">
             <ProductCard product={p} />
           </div>
         ))}

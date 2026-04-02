@@ -8,7 +8,8 @@ namespace BE.Models
 {
     [Index("CreatedAt", Name = "IX_Review_CreatedAt")]
     [Index("ProductId", Name = "IX_Review_ProductId")]
-    [Index("UserId", "ProductId", "OrderId", Name = "IX_Review_User_Product_Order_Unique", IsUnique = true)]// 1 User + 1 Product + 1 Order mới là duy nhất
+    // Thay đổi Index cũ thành cái này: 1 User + 1 OrderDetail mới là duy nhất
+    [Index("UserId", "OrderDetailId", Name = "IX_Review_User_OrderDetail_Unique", IsUnique = true)]
     public partial class Review
     {
         [Key]
@@ -33,7 +34,8 @@ namespace BE.Models
 
         public bool IsVerifiedPurchase { get; set; } // Tick xanh "Đã mua hàng"
 
-        public int OrderId { get; set; }
+        [Required]
+        public int OrderDetailId { get; set; }
 
         [ForeignKey("ProductId")]
         [InverseProperty("Reviews")]
@@ -42,5 +44,8 @@ namespace BE.Models
         [ForeignKey("UserId")]
         [InverseProperty("Reviews")]
         public virtual User User { get; set; } = null!;
+
+        [ForeignKey("OrderDetailId")]
+        public virtual OrderDetail OrderDetail { get; set; } = null!;
     }
 }

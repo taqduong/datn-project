@@ -53,24 +53,27 @@ function CheckoutContent() {
           const res = await fetchProductById(buyNowId);
           const p = res.data;
           
-          // 1. Xác định giá gốc (Là giá sản phẩm hoặc giá biến thể)
+          // 1. Xác định giá gốc và % Giảm giá
           let basePrice = p.price;
+          let baseDiscount = p.discount || 0; // Thêm dòng này để hứng % giảm giá
           let variantName = undefined;
+          let variantImageUrl = undefined; // Thêm dòng này để hứng ảnh
           
           if (variantId && p.variants) {
              const selectedVariant = p.variants.find((v: any) => v.id === Number(variantId));
              if (selectedVariant) {
-                 basePrice = selectedVariant.price; // Lấy giá biến thể
+                 basePrice = selectedVariant.price; 
+                 // Ưu tiên lấy % giảm của phân loại, nếu rỗng thì lấy của mẹ
+                 baseDiscount = selectedVariant.discount ?? p.discount ?? 0; 
                  variantName = selectedVariant.variantName;
+                 variantImageUrl = selectedVariant.imageUrl;
              }
           }
 
-          // 2. Ép phần trăm giảm giá vào giá gốc này (FIX LỖI TYPESCRIPT)
-          let priceToUse = basePrice; // Mặc định gán luôn bằng giá gốc cho an toàn
-          if (p.discount && p.discount > 0) {
-              priceToUse = basePrice * (1 - p.discount / 100);
-          } else if (p.priceAfterDiscount) {
-              priceToUse = p.priceAfterDiscount;
+          // 2. Ép phần trăm giảm giá vào giá gốc
+          let priceToUse = basePrice; 
+          if (baseDiscount > 0) {
+              priceToUse = Math.round(basePrice * (1 - baseDiscount / 100));
           }
 
           setCartItems([{
@@ -78,16 +81,22 @@ function CheckoutContent() {
             productId: p.id, 
             variantId: variantId ? Number(variantId) : undefined,
             variantName: variantName, 
+            
+            // ÉP 3 TRƯỜNG DỮ LIỆU CỦA BIẾN THỂ VÀO ĐÂY LUÔN
+            variantPrice: variantId ? basePrice : undefined,
+            variantDiscount: variantId ? baseDiscount : undefined,
+            variantImage: variantImageUrl,
+
             quantity: Number(qty),
             product: { 
                 id: p.id, 
                 name: p.name, 
-                price: basePrice, // Gán giá chưa giảm
+                price: p.price, // Giữ nguyên giá mẹ để lỡ cần dùng
                 discount: p.discount, 
-                priceAfterDiscount: priceToUse, // Giờ thì 100% nó là số (number) rồi
+                priceAfterDiscount: priceToUse, // <--- CÁI NÀY LÀ QUAN TRỌNG NHẤT, NÓ ĐÃ TÍNH CHUẨN RỒI
                 imageUrl: p.imageUrl 
             }
-          }]);
+          } as any]); // Ép kiểu any cho nhanh qua đoạn này nếu TS la làng
         } else {
           const res = await fetchCart();
           const items = Array.isArray(res.data) ? res.data : [];
@@ -188,15 +197,14 @@ function CheckoutContent() {
             exp: `Hết hạn: ${new Date(res.data.voucher.expiryDate).toLocaleString('vi-VN')}`
         };
 
+        // xóa khối lệnh if alert đi
         if (finalVoucher.isFreeship) {
-          if (subtotal >= 100000) {
-            alert("Đơn hàng của bạn đã được miễn phí vận chuyển tự động rồi nhé!"); return;
-          }
+          // Bỏ cái alert chặn người dùng ở đây, chỉ cần set state bật lên là được
           setAppliedFreeshipVoucher(finalVoucher);
         } else {
           setAppliedDiscountVoucher(finalVoucher);
         }
-        setVoucherCodeInput(""); 
+        setVoucherCodeInput("");
       }
     } catch (error: any) {
       // API C# trả lỗi 400 kèm câu chửi thì FE in nguyên câu chửi đó ra màn hình

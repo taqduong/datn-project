@@ -54,14 +54,16 @@ namespace BE.Controllers
                         w.Product.Discount,
                         w.Product.ImageUrl, // Dùng để hiển thị ảnh trên giao diện
                         w.Product.Stock,
-                        // LẤY THÊM DANH SÁCH BIẾN THỂ TRẢ VỀ CHO FRONTEND
+                        // LẤY ĐẦY ĐỦ THÔNG TIN BIẾN THỂ (BAO GỒM CẢ GIẢM GIÁ RIÊNG)
                         Variants = w.Product.ProductVariants.Select(v => new {
                             v.Id,
                             v.Price,
                             v.Stock,
                             v.Color,
                             v.VariantName,
-                            v.ImageUrl
+                            v.ImageUrl,
+                            // THÊM DÒNG NÀY ĐỂ FRONTEND TÍNH GIÁ ĐÚNG 👇
+                            Discount = v.Discount 
                         })
                     }
                 })

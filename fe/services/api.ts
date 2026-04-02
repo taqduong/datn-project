@@ -66,7 +66,18 @@ export interface Product {
   createdAt?: string;
   additionalImages?: string[];
   soldCount?: number;
-  variants?: any[];
+  variants?: ProductVariant[];
+}
+
+export interface ProductVariant {
+  id: number;
+  variantName: string;
+  color?: string;
+  price: number;
+  stock: number;
+  imageUrl?: string;
+  discount?: number; // % giảm giá riêng của biến thể (nếu có)
+  priceAfterDiscount: number; // Giá sau giảm cuối cùng (C# tính hộ rồi)
 }
 
 export interface CreateCategoryPayload {
@@ -82,6 +93,14 @@ export interface CreateProductPayload {
   stock: number;
   discount?: number;
   categoryId: number;
+  variants?: {
+    variantName: string;
+    color?: string;
+    price: number;
+    stock: number;
+    imageUrl?: string;
+    discount?: number; 
+  }[];
 }
 
 export interface UpdateProductPayload {
@@ -93,6 +112,14 @@ export interface UpdateProductPayload {
   discount?: number;
   categoryId?: number;
   retainedAdditionalImages?: string[];
+  variants?: {
+    variantName: string;
+    color?: string;
+    price: number;
+    stock: number;
+    imageUrl?: string;
+    discount?: number; 
+  }[];
 }
 
 export interface UploadImageResponse {
@@ -150,6 +177,9 @@ export interface CartItem {
   quantity: number;
   variantId?: number; 
   variantName?: string; 
+  variantPrice?: number;
+  variantDiscount?: number;
+  variantImage?: string;
   variantImageUrl?: string; 
   product: {
     id: number;
@@ -231,6 +261,7 @@ export interface ReviewDto {
   comment?: string;
   createdAt: string;
   isVerifiedPurchase: boolean;
+  variantName?: string;
 }
 
 export interface CreateReviewPayload {
@@ -578,8 +609,14 @@ export const fetchChatbotAnswer = async (message: string, history: any[] = [], u
     
     // res.data sẽ chứa { success: true, answer: "..." } từ C# trả về
     return res.data; 
-  } catch (error) {
-    console.error("Lỗi gọi Chatbot API:", error);
+  } catch (error: any) {
+    console.error("Lỗi gọi Chatbot API (Tổng quan):", error);
+    
+    // ĐOẠN NÀY LÀ QUAN TRỌNG NHẤT ĐỂ BẮT BỆNH C#
+    if (error.response && error.response.data) {
+      console.error("LỖI CHI TIẾT TỪ C# TRẢ VỀ:", error.response.data);
+    }
+
     // Quăng lỗi ra để catch() bên component ChatBox hiển thị câu "đang gặp sự cố kết nối..."
     throw error; 
   }

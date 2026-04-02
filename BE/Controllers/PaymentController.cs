@@ -13,7 +13,7 @@ namespace BE.Controllers
     public class PaymentController : ControllerBase
     {
         private readonly IConfiguration _configuration;
-        private readonly ShopDbContext _context; // ✅ 1. Thêm biến kết nối DB
+        private readonly ShopDbContext _context; // 1. Thêm biến kết nối DB
 
         // 2. Sửa Constructor để nạp cả Configuration và Context
         public List<OrderDetail> OrderDetails { get; set; } = new ();
@@ -48,7 +48,7 @@ namespace BE.Controllers
             pay.AddRequestData("vnp_IpAddr", ipAddr);
             pay.AddRequestData("vnp_Locale", "vn");
             
-            // ✅ Quan trọng: Lưu OrderId vào TxnRef để tí nữa Callback lấy ra tìm đơn hàng
+            // Quan trọng: Lưu OrderId vào TxnRef để tí nữa Callback lấy ra tìm đơn hàng
             pay.AddRequestData("vnp_OrderInfo", "ThanhToanDonHang_" + model.OrderId);
             pay.AddRequestData("vnp_OrderType", "other");
             pay.AddRequestData("vnp_ReturnUrl", urlCallBack ?? "");
@@ -159,7 +159,7 @@ namespace BE.Controllers
             pay.AddRequestData("vnp_OrderType", "other");
             pay.AddRequestData("vnp_ReturnUrl", urlCallBack ?? "");
             
-            // ✅ Quan trọng nhất: TxnRef vẫn phải là OrderId cũ để tí nữa Callback biết đường cập nhật
+            // Quan trọng nhất: TxnRef vẫn phải là OrderId cũ để tí nữa Callback biết đường cập nhật
             pay.AddRequestData("vnp_TxnRef", order.OrderId.ToString()); 
 
             var secretKey = _configuration["VnPay:HashSecret"]?.Trim() ?? "";

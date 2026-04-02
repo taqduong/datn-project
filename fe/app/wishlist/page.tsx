@@ -11,6 +11,7 @@ type Product = {
   name: string;
   price: number;
   discount: number;
+  priceAfterDiscount?: number;
   imageUrl?: string;
   imageUrls?: string | string[];
   stock: number;
@@ -29,7 +30,7 @@ export default function WishlistPage() {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  // ✅ STATE CHO MODAL THÊM VÀO GIỎ
+  // STATE CHO MODAL THÊM VÀO GIỎ
   const [showVariantModal, setShowVariantModal] = useState(false);
   const [selectedModalProduct, setSelectedModalProduct] = useState<Product | null>(null);
   const [selectedVariant, setSelectedVariant] = useState<any | null>(null);
@@ -148,9 +149,13 @@ export default function WishlistPage() {
     modalMinPrice = Math.min(...prices);
   }
 
-  const modalCurrentPrice = (modalHasVariants && selectedVariant) 
-    ? selectedVariant.price * (1 - modalDiscountRate)
-    : (selectedModalProduct?.price || 0) * (1 - modalDiscountRate);
+  // HÀM TÍNH GIÁ ĐỘNG CHO MODAL
+  const modalBasePrice = (modalHasVariants && selectedVariant) ? selectedVariant.price : (selectedModalProduct?.price || 0);
+  const modalActiveDiscount = (modalHasVariants && selectedVariant) 
+    ? (selectedVariant.discount ?? selectedModalProduct?.discount ?? 0)
+    : (selectedModalProduct?.discount || 0);
+  
+  const modalCurrentPrice = Math.round(modalBasePrice * (1 - modalActiveDiscount / 100));
 
   const maxStockLimit = modalHasVariants 
     ? (selectedVariant ? selectedVariant.stock : 0) 
@@ -225,25 +230,42 @@ export default function WishlistPage() {
               const p = item.product;
               const imageUrl = getImageUrl(p.imageUrls || p.imageUrl);
               
+              // ==========================================
+              // 1. LOGIC TÍNH GIÁ MỚI (ĐÃ FIX TRÙNG BIẾN)
+              // ==========================================
               const hasVariants = p.variants && p.variants.length > 0;
-              const discountRate = (p.discount || 0) / 100;
+              const generalDiscount = p.discount || 0;
+
+              let minOriginal = p.price || 0;
+              let maxOriginal = p.price || 0;
+              let minFinal = p.priceAfterDiscount ?? (p.price * (1 - generalDiscount / 100));
+              let maxFinal = minFinal;
+              let bestDiscount = generalDiscount;
+
+              if (hasVariants) {
+                const originalPrices = p.variants!.map((v: any) => v.price || 0);
+                minOriginal = Math.min(...originalPrices);
+                maxOriginal = Math.max(...originalPrices);
+
+                const finalPrices = p.variants!.map((v: any) => {
+                  const d = v.discount ?? generalDiscount;
+                  return Math.round(v.price * (1 - d / 100));
+                });
+                minFinal = Math.min(...finalPrices);
+                maxFinal = Math.max(...finalPrices);
+
+                const discounts = p.variants!.map((v: any) => v.discount ?? generalDiscount);
+                bestDiscount = Math.max(...discounts);
+              }
+
+              const isPriceRange = minFinal !== maxFinal;
               const totalStock = hasVariants
                 ? p.variants!.reduce((sum: number, v: any) => sum + (v.stock || 0), 0)
                 : (p.stock || 0);
 
-              let minPrice = p.price || 0;
-              let maxPrice = p.price || 0;
-
-              if (hasVariants) {
-                const prices = p.variants!.map((v: any) => v.price || 0);
-                minPrice = Math.min(...prices);
-                maxPrice = Math.max(...prices);
-              }
-
-              const minPriceAfterDiscount = minPrice * (1 - discountRate);
-              const maxPriceAfterDiscount = maxPrice * (1 - discountRate);
-              const isPriceRange = hasVariants && minPrice !== maxPrice;
-
+              // ==========================================
+              // 2. RENDER GIAO DIỆN
+              // ==========================================
               return (
                 <div
                   key={item.id}
@@ -257,9 +279,9 @@ export default function WishlistPage() {
                     <XCircle size={18} />
                   </button>
 
-                  {p.discount > 0 && (
+                  {bestDiscount > 0 && (
                     <div className="absolute top-4 left-4 z-20 bg-red-500 text-white text-xs font-black px-3 py-1.5 rounded-full shadow-md shadow-red-500/30 flex items-center gap-1">
-                      <Tag size={12} /> -{p.discount}%
+                      <Tag size={12} /> -{bestDiscount}%
                     </div>
                   )}
 
@@ -270,11 +292,9 @@ export default function WishlistPage() {
                     <img
                       src={imageUrl}
                       alt={p.name}
-                      // Nếu hết hàng thì làm mờ ảnh (opacity-60), còn hàng thì hover zoom
                       className={`absolute inset-0 w-full h-full object-contain p-4 transition-transform duration-500 mix-blend-multiply ${totalStock > 0 ? 'group-hover:scale-110' : 'opacity-60'}`}
                     />
                     
-                    {/* Tem Hết Hàng */}
                     {totalStock <= 0 && (
                       <div className="absolute right-4 bottom-4 z-20 rotate-[18deg] transform-gpu">
                         <div className="rounded-full border-[4px] border-red-600 px-4 py-2 text-sm font-extrabold uppercase tracking-wider text-red-600 bg-white/80 shadow-md">
@@ -298,20 +318,19 @@ export default function WishlistPage() {
                       <div className="flex flex-col flex-wrap items-baseline gap-1">
                         <span className="text-xl font-bold text-red-600">
                           {isPriceRange 
-                            ? `${formatVND(minPriceAfterDiscount)} - ${formatVND(maxPriceAfterDiscount)}` 
-                            : formatVND(minPriceAfterDiscount)}
+                            ? `${formatVND(minFinal)} - ${formatVND(maxFinal)}` 
+                            : formatVND(minFinal)}
                         </span>
-                        {p.discount > 0 && (
+                        {bestDiscount > 0 && (
                           <span className="text-xs font-semibold text-slate-400 line-through">
-                            {isPriceRange 
-                              ? `${formatVND(minPrice)} - ${formatVND(maxPrice)}` 
-                              : formatVND(minPrice)}
+                            {minOriginal !== maxOriginal 
+                              ? `${formatVND(minOriginal)} - ${formatVND(maxOriginal)}` 
+                              : formatVND(minOriginal)}
                           </span>
                         )}
                       </div>
 
                       <div className="flex items-center gap-2">
-                        {/* Nút Giỏ Hàng (Xám đi nếu hết hàng) */}
                         <button
                           disabled={totalStock <= 0}
                           onClick={(e) => {

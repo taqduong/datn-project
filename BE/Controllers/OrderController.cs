@@ -29,7 +29,7 @@ namespace BE.Controllers
             return int.TryParse(id, out var uid) ? uid : (int?)null;
         }
 
-        // ================== USER: THANH TOÁN & CHỐT ĐƠN ==================
+        // ================== USER: THANH TOÁN & CHỐT ĐƠN (ĐÃ FIX GIÁ) ==================
         [HttpPost("checkout")]
         [Authorize]
         public async Task<IActionResult> Checkout([FromBody] CheckoutRequestDto request)
@@ -47,6 +47,7 @@ namespace BE.Controllers
                 if (product == null) return BadRequest(new { message = "Sản phẩm không tồn tại." });
 
                 decimal basePrice = product.Price;
+                double? activeDiscount = product.Discount; // Mặc định lấy giảm giá mẹ
 
                 // NẾU CÓ BIẾN THỂ (MÀU/SIZE)
                 if (request.BuyNowVariantId.HasValue)
@@ -57,10 +58,12 @@ namespace BE.Controllers
                     if (variant.Stock < request.BuyNowQuantity.Value)
                         return BadRequest(new { message = $"Phân loại {variant.VariantName} không đủ số lượng." });
 
-                    variant.Stock -= request.BuyNowQuantity.Value; // Trừ kho biến thể
-                    basePrice = variant.Price; // Lấy giá của biến thể
+                    variant.Stock -= request.BuyNowQuantity.Value;
+                    basePrice = variant.Price;
+                    // ƯU TIÊN LẤY GIẢM GIÁ BIẾN THỂ (Nếu có), KHÔNG THÌ MỚI LẤY CỦA MẸ
+                    activeDiscount = variant.Discount ?? product.Discount; 
                 }
-                else // NẾU LÀ SẢN PHẨM GỐC
+                else
                 {
                     if (product.Stock < request.BuyNowQuantity.Value)
                         return BadRequest(new { message = $"Sản phẩm không đủ số lượng." });
@@ -68,8 +71,9 @@ namespace BE.Controllers
                     product.Stock -= request.BuyNowQuantity.Value;
                 }
 
-                decimal finalPrice = product.Discount.HasValue 
-                    ? Math.Round(basePrice * (1 - (decimal)product.Discount.Value / 100), 0) 
+                // TÍNH GIÁ CUỐI CÙNG DỰA TRÊN CHIẾT KHẤU ĐÃ XÁC ĐỊNH
+                decimal finalPrice = (activeDiscount.HasValue && activeDiscount.Value > 0)
+                    ? Math.Round(basePrice * (1 - (decimal)activeDiscount.Value / 100), 0)
                     : basePrice;
                     
                 totalAmount = finalPrice * request.BuyNowQuantity.Value;
@@ -77,7 +81,7 @@ namespace BE.Controllers
                 orderDetails.Add(new OrderDetail
                 {
                     ProductId = product.Id,
-                    VariantId = request.BuyNowVariantId, // Lưu ID biến thể
+                    VariantId = request.BuyNowVariantId,
                     Quantity = request.BuyNowQuantity.Value,
                     UnitPrice = finalPrice
                 });
@@ -87,7 +91,7 @@ namespace BE.Controllers
             {
                 var cartItems = await _context.Carts
                     .Include(c => c.Product)
-                    .Include(c => c.ProductVariant) // Lấy thêm thông tin Biến thể
+                    .Include(c => c.ProductVariant)
                     .Where(c => c.UserId == userId.Value)
                     .ToListAsync();
 
@@ -96,8 +100,8 @@ namespace BE.Controllers
                 foreach (var item in cartItems)
                 {
                     decimal basePrice = item.Product.Price;
+                    double? activeDiscount = item.Product.Discount;
 
-                    //  NẾU LÀ SẢN PHẨM CÓ BIẾN THỂ
                     if (item.VariantId.HasValue && item.ProductVariant != null)
                     {
                         if (item.ProductVariant.Stock < item.Quantity)
@@ -105,6 +109,8 @@ namespace BE.Controllers
 
                         item.ProductVariant.Stock -= item.Quantity;
                         basePrice = item.ProductVariant.Price;
+                        // ƯU TIÊN LẤY GIẢM GIÁ BIẾN THỂ
+                        activeDiscount = item.ProductVariant.Discount ?? item.Product.Discount;
                     }
                     else
                     {
@@ -114,8 +120,8 @@ namespace BE.Controllers
                         item.Product.Stock -= item.Quantity;
                     }
 
-                    decimal finalPrice = item.Product.Discount.HasValue 
-                        ? Math.Round(basePrice * (1 - (decimal)item.Product.Discount.Value / 100), 0) 
+                    decimal finalPrice = (activeDiscount.HasValue && activeDiscount.Value > 0)
+                        ? Math.Round(basePrice * (1 - (decimal)activeDiscount.Value / 100), 0) 
                         : basePrice;
 
                     totalAmount += finalPrice * item.Quantity;
@@ -123,7 +129,7 @@ namespace BE.Controllers
                     orderDetails.Add(new OrderDetail
                     {
                         ProductId = item.ProductId,
-                        VariantId = item.VariantId, // Lưu ID biến thể
+                        VariantId = item.VariantId,
                         Quantity = item.Quantity,
                         UnitPrice = finalPrice
                     });
@@ -135,6 +141,7 @@ namespace BE.Controllers
             {
                 UserId = userId.Value,
                 OrderDate = DateTime.Now,
+                // Tính tổng tiền đơn hàng bao gồm phí ship và trừ voucher
                 TotalAmount = Math.Max(0, totalAmount + request.ShippingFee - request.DiscountAmount),
                 Status = "Pending", 
                 PaymentMethod = request.PaymentMethod,

@@ -310,6 +310,9 @@ namespace BE.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<double?>("Discount")
+                        .HasColumnType("float");
+
                     b.Property<string>("ImageUrl")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
@@ -353,7 +356,7 @@ namespace BE.Migrations
                     b.Property<bool>("IsVerifiedPurchase")
                         .HasColumnType("bit");
 
-                    b.Property<int>("OrderId")
+                    b.Property<int>("OrderDetailId")
                         .HasColumnType("int");
 
                     b.Property<int>("ProductId")
@@ -370,11 +373,13 @@ namespace BE.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("OrderDetailId");
+
                     b.HasIndex(new[] { "CreatedAt" }, "IX_Review_CreatedAt");
 
                     b.HasIndex(new[] { "ProductId" }, "IX_Review_ProductId");
 
-                    b.HasIndex(new[] { "UserId", "ProductId", "OrderId" }, "IX_Review_User_Product_Order_Unique")
+                    b.HasIndex(new[] { "UserId", "OrderDetailId" }, "IX_Review_User_OrderDetail_Unique")
                         .IsUnique();
 
                     b.ToTable("Reviews");
@@ -673,6 +678,12 @@ namespace BE.Migrations
 
             modelBuilder.Entity("BE.Models.Review", b =>
                 {
+                    b.HasOne("BE.Models.OrderDetail", "OrderDetail")
+                        .WithMany()
+                        .HasForeignKey("OrderDetailId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("BE.Models.Product", "Product")
                         .WithMany("Reviews")
                         .HasForeignKey("ProductId")
@@ -684,6 +695,8 @@ namespace BE.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("OrderDetail");
 
                     b.Navigation("Product");
 

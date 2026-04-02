@@ -55,7 +55,7 @@ export default function LoginPage() {
         localStorage.removeItem('rememberedUser')
       }
 
-      // ✅ NAVBAR CẬP NHẬT LẠI SỐ LƯỢNG:
+      // NAVBAR CẬP NHẬT LẠI SỐ LƯỢNG:
       window.dispatchEvent(new Event('cartUpdated'));
       window.dispatchEvent(new Event('wishlistUpdated'));
 

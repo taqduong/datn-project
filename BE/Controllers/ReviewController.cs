@@ -19,13 +19,15 @@ namespace BE.Controllers
         }
 
         // =======================================================
-        // 1. LẤY DANH SÁCH ĐÁNH GIÁ CỦA 1 SẢN PHẨM (Ai cũng xem được)
+        // 1. LẤY DANH SÁCH ĐÁNH GIÁ CỦA 1 SẢN PHẨM (Kèm Phân loại)
         // =======================================================
         [HttpGet("product/{productId}")]
         public async Task<IActionResult> GetReviewsByProduct(int productId)
         {
             var reviews = await _context.Reviews
                 .Include(r => r.User)
+                .Include(r => r.OrderDetail)
+                    .ThenInclude(od => od.ProductVariant)
                 .Where(r => r.ProductId == productId)
                 .OrderByDescending(r => r.CreatedAt) // Mới nhất lên đầu
                 .Select(r => new ReviewDto
@@ -37,7 +39,8 @@ namespace BE.Controllers
                     Rating = r.Rating,
                     Comment = r.Comment,
                     CreatedAt = r.CreatedAt,
-                    IsVerifiedPurchase = r.IsVerifiedPurchase
+                    IsVerifiedPurchase = r.IsVerifiedPurchase,
+                    VariantName = r.OrderDetail.ProductVariant != null ? r.OrderDetail.ProductVariant.VariantName : null
                 })
                 .ToListAsync();
 
@@ -62,42 +65,37 @@ namespace BE.Controllers
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
 
-            // 1. Lấy ID của User đang đăng nhập từ Token
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("id");
             if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
                 return Unauthorized(new { message = "Không xác định được người dùng." });
 
-            // 2. Chặn Spam: Kiểm tra xem User này đã review Sản phẩm này chưa
-            var existingReview = await _context.Reviews
-                .FirstOrDefaultAsync(r => r.UserId == userId && r.ProductId == dto.ProductId && r.OrderId == dto.OrderId);
-            
-            if (existingReview != null)
-                return BadRequest(new { message = "Bạn đã đánh giá sản phẩm này rồi!" });
-
-            // 3. LOGIC VIP Ở ĐÂY: BẮT BUỘC ĐÃ MUA HÀNG THÀNH CÔNG MỚI CHO REVIEW
-            bool hasBought = await _context.OrderDetails
+            var orderDetail = await _context.OrderDetails
                 .Include(od => od.Order)
-                .AnyAsync(od => 
-                    od.Order != null && 
-                    od.Order.UserId == userId && 
+                .FirstOrDefaultAsync(od => 
+                    od.OrderId == dto.OrderId && 
                     od.ProductId == dto.ProductId && 
-                    od.Order.Status == "Completed"
+                    od.Order.UserId == userId && 
+                    (od.Order.Status == "Completed")
                 );
 
-            // NẾU CHƯA MUA -> ĐÁNH BẬT RA LUÔN (Bảo vệ API khỏi tool Postman/Swagger spam)
-            if (!hasBought)
+            if (orderDetail == null)
                 return BadRequest(new { message = "Bạn phải mua và nhận hàng thành công mới được đánh giá sản phẩm này!" });
 
-            // 4. Tạo Review mới và lưu vào DB
+            var existingReview = await _context.Reviews
+                .FirstOrDefaultAsync(r => r.UserId == userId && r.OrderDetailId == orderDetail.OrderDetailId);
+            
+            if (existingReview != null)
+                return BadRequest(new { message = "Bạn đã đánh giá phân loại này rồi!" });
+
             var review = new Review
             {
                 ProductId = dto.ProductId,
-                OrderId = dto.OrderId,
+                OrderDetailId = orderDetail.OrderDetailId, 
                 UserId = userId,
                 Rating = dto.Rating,
                 Comment = dto.Comment,
                 CreatedAt = DateTime.Now,
-                IsVerifiedPurchase = true // Đã lọt qua được cửa bảo vệ số 3 thì 100% là khách hàng thật, cho luôn tick xanh!
+                IsVerifiedPurchase = true 
             };
 
             _context.Reviews.Add(review);
@@ -107,7 +105,7 @@ namespace BE.Controllers
         }
 
         // =======================================================
-        // 3. KIỂM TRA ĐIỀU KIỆN ĐÁNH GIÁ (Dùng để ẩn/hiện form Review trên Frontend)
+        // 3. KIỂM TRA ĐIỀU KIỆN ĐÁNH GIÁ 
         // =======================================================
         [HttpGet("can-review/{productId}")]
         [Authorize]
@@ -117,22 +115,24 @@ namespace BE.Controllers
             if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
                 return Unauthorized();
 
-            // 1. Đã review rồi thì không cho review nữa
-            bool hasReviewed = await _context.Reviews.AnyAsync(r => r.UserId == userId && r.ProductId == productId);
-            if (hasReviewed) return Ok(new { canReview = false, reason = "Đã đánh giá" });
-
-            // 2. BẮT BUỘC PHẢI MUA HÀNG THÀNH CÔNG MỚI ĐƯỢC REVIEW
-            bool hasBought = await _context.OrderDetails
+            var boughtDetails = await _context.OrderDetails
                 .Include(od => od.Order)
-                .AnyAsync(od => od.Order != null && od.Order.UserId == userId && od.ProductId == productId && (od.Order.Status == "Completed" || od.Order.Status == "Hoàn thành"));
-            
-            if (!hasBought) return Ok(new { canReview = false, reason = "Chưa mua hàng" });
+                .Where(od => od.Order != null && od.Order.UserId == userId && od.ProductId == productId && (od.Order.Status == "Completed"))
+                .ToListAsync();
+
+            if (!boughtDetails.Any()) return Ok(new { canReview = false, reason = "Chưa mua hàng" });
+
+            var boughtDetailIds = boughtDetails.Select(od => od.OrderDetailId).ToList();
+            var reviewedCount = await _context.Reviews.CountAsync(r => r.UserId == userId && boughtDetailIds.Contains(r.OrderDetailId));
+
+            if (reviewedCount >= boughtDetails.Count) 
+                return Ok(new { canReview = false, reason = "Đã đánh giá hết các phân loại đã mua" });
 
             return Ok(new { canReview = true });
         }
 
         // =======================================================
-        // CÁC LỚP DTO (Data Transfer Object)
+        // CÁC LỚP DTO 
         // =======================================================
         public class ReviewDto
         {
@@ -141,17 +141,18 @@ namespace BE.Controllers
             public int UserId { get; set; }
             public string UserName { get; set; } = null!;
             public int Rating { get; set; }
-            public string? Comment { get; set; } = null!;
+            public string? Comment { get; set; }
             public DateTime CreatedAt { get; set; }
             public bool IsVerifiedPurchase { get; set; }
+            public string? VariantName { get; set; } 
         }
 
         public class CreateReviewDto
         {
             public int ProductId { get; set; }
             public int Rating { get; set; }
-            public string? Comment { get; set; } = null!;
-            public int OrderId { get; set; }
+            public string? Comment { get; set; }
+            public int OrderId { get; set; } 
         }
     }
 }

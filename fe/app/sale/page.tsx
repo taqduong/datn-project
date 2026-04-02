@@ -13,13 +13,25 @@ export default function SalePage() {
   useEffect(() => {
     const loadData = async () => {
       try {
+        setLoading(true);
         const res = await fetchProducts();
         const data = res.data as any[];
-        // ✅ Lọc ra những sản phẩm có % giảm giá > 0
-        const saleProducts = data.filter((p) => Number(p.discount) > 0);
+
+        // LOGIC MỚI: Lọc tất cả sản phẩm có giảm giá
+        const saleProducts = data.filter((p) => {
+          // 1. Kiểm tra giảm giá ở sản phẩm Mẹ
+          const hasGeneralDiscount = Number(p.discount) > 0;
+
+          // 2. Kiểm tra giảm giá ở từng Biến thể con
+          const hasVariantDiscount = p.variants?.some((v: any) => Number(v.discount) > 0);
+
+          // Chỉ cần 1 trong 2 có giảm giá là cho "lên sóng" trang Sale ngay
+          return hasGeneralDiscount || hasVariantDiscount;
+        });
+
         setProducts(saleProducts);
       } catch (err) {
-        console.error("❌ Lỗi khi tải sản phẩm giảm giá:", err);
+        console.error("Lỗi khi tải sản phẩm giảm giá:", err);
       } finally {
         setLoading(false);
       }

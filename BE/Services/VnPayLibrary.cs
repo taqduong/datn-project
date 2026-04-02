@@ -43,7 +43,7 @@ namespace BE.Services
             {
                 if (!string.IsNullOrEmpty(kv.Value))
                 {
-                    // ✅ ĐÃ ĐỔI SANG Uri.EscapeDataString CHUẨN VNPAY
+                    // ĐÃ ĐỔI SANG Uri.EscapeDataString CHUẨN VNPAY
                     data.Append(Uri.EscapeDataString(kv.Key) + "=" + Uri.EscapeDataString(kv.Value) + "&");
                 }
             }

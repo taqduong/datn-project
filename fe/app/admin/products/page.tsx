@@ -11,6 +11,7 @@ import api, {
   uploadProductImages,
   type Product,
   type Category,
+  UpdateProductPayload,
 } from "@/services/api";
 import Modal from "@/components/Modal";
 import toast from "react-hot-toast";
@@ -21,7 +22,7 @@ type ProductForm = {
   price: number;
   stock: number;
   imageUrl: string;
-  discount: number;
+  discount: number | "";
   categoryId: number;
 };
 
@@ -64,10 +65,11 @@ export default function ProductPage() {
   type VariantForm = {
     id?: number;
     variantName: string;
-    color: string;
+    color?: string;
     price: number;
     stock: number;
-    imageUrl: string;
+    imageUrl?: string;
+    discount: number | "";
   };
   const [hasVariants, setHasVariants] = useState(false);
   const [variants, setVariants] = useState<VariantForm[]>([]);
@@ -90,7 +92,7 @@ export default function ProductPage() {
 
   // HÀM XỬ LÝ BIẾN THỂ
   const handleAddVariant = () => {
-    setVariants([...variants, { variantName: "", color: "", price: 0, stock: 0, imageUrl: "" }]);
+    setVariants([...variants, { variantName: "", color: "", price: 0, stock: 0, imageUrl: "", discount: 0 }]);
   };
 
   const handleRemoveVariant = (indexToRemove: number) => {
@@ -99,8 +101,21 @@ export default function ProductPage() {
 
   const handleVariantChange = (index: number, field: keyof VariantForm, value: string | number) => {
     const updatedVariants = [...variants];
-    updatedVariants[index] = { ...updatedVariants[index], [field]: value };
+    updatedVariants[index] = { ...updatedVariants[index], [field]: value } as VariantForm;
     setVariants(updatedVariants);
+
+    // LOGIC MỚI: Nếu đang sửa ô giảm giá riêng lẻ
+    if (field === "discount") {
+      const firstDiscount = updatedVariants[0].discount;
+      const isAllSame = updatedVariants.every(v => v.discount === firstDiscount);
+
+      if (isAllSame) {
+        setForm(prev => ({ ...prev, discount: firstDiscount }));
+      } else {
+        // Nếu khác nhau thì để trống ô chung
+        setForm(prev => ({ ...prev, discount: "" })); 
+      }
+    }
   };
 
   const [searchKeyword, setSearchKeyword] = useState("");
@@ -121,17 +136,20 @@ export default function ProductPage() {
   // ==========================================
   const [isUploadingExcel, setIsUploadingExcel] = useState(false);
 
-  const clampDiscount = (d: number) => {
-    if (Number.isNaN(d)) return 0;
-    if (d < 0) return 0;
-    if (d > 99) return 99;
-    return Math.floor(d);
+  const clampDiscount = (d: number | "") => {
+    // Nếu là chuỗi rỗng hoặc không phải số, coi như bằng 0 để tính toán
+    if (d === "" || Number.isNaN(Number(d))) return 0;
+    
+    const val = Number(d);
+    if (val < 0) return 0;
+    if (val > 99) return 99;
+    return Math.floor(val);
   };
 
-  const finalPrice = (price: number, discount: number) => {
+  const finalPrice = (price: number, discount: number | "") => {
     const d = clampDiscount(discount);
     const base = Number.isFinite(price) && price > 0 ? price : 0;
-    return Math.max(0, Number((base * (1 - d / 100)).toFixed(2)));
+    return Math.max(0, Number((base * (1 - d / 100)).toFixed(0))); // .toFixed(0) để ra số nguyên VNĐ
   };
 
   const formatVND = (v: number) =>
@@ -212,21 +230,32 @@ export default function ProductPage() {
       stock: product.stock || 0,
       imageUrl: product.imageUrl || "",
       discount: product.discount || 0,
-      categoryId: product.categoryId || categories[0]?.id || 0,
+      categoryId: product.categoryId || (categories.length > 0 ? categories[0].id : 0),
     });
     setAdditionalFiles([]);
     setExistingImages(product.additionalImages || []);
     
-    // Ép kiểu (product as any) để lấy variants
-    const productVariants = product.variants || [];
+    // Lấy giảm giá của sản phẩm mẹ làm "phao cứu sinh"
+    const parentDiscount = product.discount || 0;
+
+    const productVariants: VariantForm[] = (product.variants || []).map(v => ({
+      id: v.id,
+      variantName: v.variantName,
+      color: v.color || "",
+      price: v.price,
+      stock: v.stock,
+      imageUrl: v.imageUrl || "",
+      // CHỈ CẦN SỬA ĐÚNG DÒNG NÀY:
+      // Ưu tiên lấy % của con (nếu có), không có thì lấy luôn % của mẹ, không nữa thì 0
+      discount: v.discount || parentDiscount || 0 
+    }));
+
     const productHasVariants = productVariants.length > 0;
-    
     setHasVariants(productHasVariants);
-    setVariants(productHasVariants ? productVariants : []);
+    setVariants(productVariants); 
 
     setModalOpen(true);
   };
-
   const closeModal = () => {
     setModalOpen(false);
     setEditingProduct(null);
@@ -239,7 +268,15 @@ export default function ProductPage() {
     const { name, value } = e.target;
 
     if (name === "discount") {
-      setForm((prev) => ({ ...prev, discount: clampDiscount(Number(value)) }));
+      const newDiscount = clampDiscount(Number(value));
+      setForm((prev) => ({ ...prev, discount: newDiscount }));
+
+      // LOGIC MỚI: Nếu có biến thể, ép tất cả con phải nghe lời mẹ
+      if (hasVariants) {
+        setVariants((prevVariants) =>
+          prevVariants.map((v) => ({ ...v, discount: newDiscount }))
+        );
+      }
       return;
     }
 
@@ -256,24 +293,39 @@ export default function ProductPage() {
     try {
       const basePayload = { 
         ...form, 
-        discount: clampDiscount(form.discount),
-        // Logic: Bật biến thể thì giá gốc/tồn kho bằng 0. Gửi kèm mảng variants
+        // Ép về number: Nếu rỗng thì gửi 0, nếu có số thì gửi số đã qua clamp
+        discount: form.discount === "" ? 0 : clampDiscount(form.discount),
         price: hasVariants ? 0 : form.price,
         stock: hasVariants ? 0 : form.stock,
-        variants: hasVariants ? variants : []
+        variants: hasVariants ? variants.map(v => ({
+          ...v,
+          // Ép v.discount về kiểu dữ liệu number để gửi xuống API
+          discount: v.discount === "" ? 0 : Number(v.discount) 
+        })) : []
       };
       
       let savedProductId = 0;
 
       if (editingProduct) {
-        const updatePayload = {
-          ...form, // Lấy thông tin form mới nhất
-          discount: clampDiscount(form.discount),
-          price: hasVariants ? 0 : form.price,
-          stock: hasVariants ? 0 : form.stock,
-          variants: hasVariants ? variants : [], // PHẢI GỬI MẢNG NÀY LÊN
-          retainedAdditionalImages: existingImages
-        };
+        const updatePayload: UpdateProductPayload = {
+      ...form,
+      // Ép giảm giá chung về số
+      discount: form.discount === "" ? 0 : clampDiscount(form.discount),
+      price: hasVariants ? 0 : form.price,
+      stock: hasVariants ? 0 : form.stock,
+      retainedAdditionalImages: existingImages,
+      // "LỌC SẠCH" BIẾN THỂ TRƯỚC KHI GỬI
+      variants: hasVariants ? variants.map(v => ({
+        id: v.id,
+        variantName: v.variantName,
+        color: v.color,
+        price: v.price,
+        stock: v.stock,
+        imageUrl: v.imageUrl,
+        // Cú chốt: Nếu UI để rỗng thì gửi 0, nếu có số thì ép về kiểu Number
+        discount: v.discount === "" ? 0 : Number(v.discount) 
+      })) : []
+    };
         
         await updateProduct(editingProduct.id, updatePayload);
         savedProductId = editingProduct.id;
@@ -494,7 +546,7 @@ export default function ProductPage() {
                   <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                     Danh mục
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                  <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-gray-500 w-32">
                     Giảm giá
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
@@ -608,14 +660,36 @@ export default function ProductPage() {
                         {product.categoryName || "Không có"}
                       </td>
 
-                      <td className="px-6 py-4">
-                        {(product.discount || 0) > 0 ? (
-                          <span className="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800">
-                            -{product.discount}%
-                          </span>
-                        ) : (
-                          <span className="text-xs text-gray-500">Không giảm</span>
-                        )}
+                      {/* Cột giảm giá */}
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {(() => {
+                          const generalDiscount = product.discount || 0;
+                          const variantDiscounts = product.variants?.map(v => v.discount || 0) || [];
+                          
+                          // TRƯỜNG HỢP 1: Có giảm giá chung
+                          if (generalDiscount > 0) {
+                            return (
+                              <span className="inline-flex items-center justify-center min-w-[60px] rounded-full bg-red-100 px-3 py-1 text-sm font-bold text-red-800 border border-red-200">
+                                -{generalDiscount}%
+                              </span>
+                            );
+                          }
+
+                          // TRƯỜNG HỢP 2: Có giảm giá riêng lẻ của các biến thể
+                          if (variantDiscounts.length > 0 && variantDiscounts.some(d => d > 0)) {
+                            const minD = Math.min(...variantDiscounts);
+                            const maxD = Math.max(...variantDiscounts);
+
+                            return (
+                              <span className="inline-flex items-center justify-center min-w-[60px] rounded-full bg-orange-100 px-3 py-1 text-sm font-bold text-orange-800 border border-orange-200">
+                                {minD === maxD ? `-${minD}%` : `${minD}% - ${maxD}%`}
+                              </span>
+                            );
+                          }
+
+                          // TRƯỜNG HỢP 3: Không giảm
+                          return <span className="inline-flex items-center justify-center min-w-[60px] rounded-full bg-gray-100 px-3 py-1 text-lg font-bold text-gray-400 border border-gray-200">-</span>
+                        })()}
                       </td>
 
                       <td className="px-6 py-4">
@@ -761,11 +835,12 @@ export default function ProductPage() {
                     <input 
                       type="number" 
                       name="discount" 
-                      value={form.discount} 
+                      // Nếu là chuỗi rỗng thì hiện rỗng, nếu là số 0 thì hiện 0
+                      value={form.discount === "" ? "" : form.discount} 
                       onChange={handleChange} 
                       min={0} 
                       max={99} 
-                      className="w-16 rounded border border-gray-300 p-1 text-black focus:border-blue-500 focus:outline-none" 
+                      className="w-16 rounded border border-gray-300 p-1 text-black" 
                     />
                   </div>
                 </div>
@@ -773,11 +848,11 @@ export default function ProductPage() {
                   <table className="w-full text-sm">
                     <thead className="bg-gray-100 text-gray-600">
                       <tr>
-                        {/* THÊM CỘT ẢNH CHO BIẾN THỂ Ở ĐÂY */}
-                        <th className="border p-2 text-center w-20">Ảnh</th> 
-                        <th className="border p-2 text-left">Tên Phân Loại (VD: Đỏ) *</th>
+                        <th className="border p-2 text-center w-20">Ảnh</th>
+                        <th className="border p-2 text-left">Tên Phân Loại *</th>
                         <th className="border p-2 text-left w-24">Màu sắc</th>
-                        <th className="border p-2 text-left w-32">Giá (VNĐ) *</th>
+                        <th className="border p-2 text-left w-28">Giá gốc *</th>
+                        <th className="border p-2 text-left w-20">Giảm (%)</th>
                         <th className="border p-2 text-left w-24">Kho *</th>
                         <th className="border p-2 text-center w-12">Xóa</th>
                       </tr>
@@ -785,18 +860,14 @@ export default function ProductPage() {
                     <tbody>
                       {variants.map((variant, index) => (
                         <tr key={index} className="border-b hover:bg-gray-50">
-                          {/* THÊM Ô UPLOAD ẢNH CHO TỪNG DÒNG (DÒNG 730 LÀ CHỖ NÀY ĐÂY) */}
                           <td className="p-2 text-center">
+                            {/* ... (Giữ nguyên logic upload ảnh biến thể của sếp) ... */}
                             <div className="relative mx-auto flex h-14 w-14 items-center justify-center overflow-hidden rounded border border-gray-200 bg-gray-50 group">
                               {variant.imageUrl ? (
                                 <>
                                   <img src={resolveImgUrl(variant.imageUrl)} alt="variant" className="h-full w-full object-cover" />
                                   <div className="absolute inset-0 hidden cursor-pointer items-center justify-center bg-black/50 text-white group-hover:flex">
-                                    <label className="cursor-pointer text-xs p-1" title="Sửa ảnh">
-                                      Sửa
-                                      <input type="file" className="hidden" accept="image/*" onChange={(e) => { if (e.target.files?.[0]) handleVariantImageUpload(index, e.target.files[0]); }} />
-                                    </label>
-                                    <button type="button" onClick={() => setVariantAsCover(index)} className="text-xs p-1 text-yellow-300" title="Làm ảnh bìa">Bìa</button>
+                                    <label className="cursor-pointer text-xs p-1">Sửa<input type="file" className="hidden" accept="image/*" onChange={(e) => { if (e.target.files?.[0]) handleVariantImageUpload(index, e.target.files[0]); }} /></label>
                                   </div>
                                 </>
                               ) : (
@@ -809,19 +880,35 @@ export default function ProductPage() {
                           </td>
 
                           <td className="p-2">
-                            <input type="text" value={variant.variantName} onChange={(e) => handleVariantChange(index, "variantName", e.target.value)} placeholder="Tên phân loại..." className="w-full rounded border p-2" required />
+                            <input type="text" value={variant.variantName} onChange={(e) => handleVariantChange(index, "variantName", e.target.value)} className="w-full rounded border p-2 text-black" required />
                           </td>
                           <td className="p-2">
-                            <input type="text" value={variant.color} onChange={(e) => handleVariantChange(index, "color", e.target.value)} placeholder="Màu..." className="w-full rounded border p-2" />
+                            <input type="text" value={variant.color} onChange={(e) => handleVariantChange(index, "color", e.target.value)} className="w-full rounded border p-2 text-black" />
                           </td>
                           <td className="p-2">
-                            <input type="number" value={variant.price} onChange={(e) => handleVariantChange(index, "price", Number(e.target.value))} min={0} className="w-full rounded border p-2" required />
+                            <input type="number" value={variant.price} onChange={(e) => handleVariantChange(index, "price", Number(e.target.value))} className="w-full rounded border p-2 text-black" required />
+                            {/* Hiện giá sau giảm nhẩm tính ở dưới cho Admin dễ nhìn */}
+                            <p className="text-[10px] text-green-600 font-bold">
+                              ~ {formatVND(variant.price * (1 - (variant.discount || form.discount || 0) / 100))}
+                            </p>
                           </td>
+
+                          {/* O Ô NHẬP GIẢM GIÁ RIÊNG CHO BIẾN THỂ */}
                           <td className="p-2">
-                            <input type="number" value={variant.stock} onChange={(e) => handleVariantChange(index, "stock", Number(e.target.value))} min={0} className="w-full rounded border p-2" required />
+                            <input 
+                              type="number" 
+                              value={variant.discount} 
+                              onChange={(e) => handleVariantChange(index, "discount", clampDiscount(Number(e.target.value)))} 
+                              placeholder="0"
+                              className="w-full rounded border p-2 text-black font-bold bg-yellow-50" 
+                            />
+                          </td>
+
+                          <td className="p-2">
+                            <input type="number" value={variant.stock} onChange={(e) => handleVariantChange(index, "stock", Number(e.target.value))} className="w-full rounded border p-2 text-black" required />
                           </td>
                           <td className="p-2 text-center">
-                            <button type="button" onClick={() => handleRemoveVariant(index)} className="rounded p-1 text-red-500 hover:bg-red-50">🗑️</button>
+                            <button type="button" onClick={() => handleRemoveVariant(index)} className="text-red-500">🗑️</button>
                           </td>
                         </tr>
                       ))}

@@ -41,21 +41,34 @@ export default function ProductCard({ product }: { product: Product }) {
     ? product.variants!.reduce((sum, v) => sum + (v.stock || 0), 0)
     : product.stock;
 
-  const discountRate = (product.discount || 0) / 100;
-  const hasDiscount = !!product.discount && product.discount > 0;
-
-  let minPrice = product.price;
-  let maxPrice = product.price;
+  // LOGIC TÍNH TOÁN GIÁ & GIẢM GIÁ MỚI NHẤT
+  let minOriginalPrice = product.price;
+  let maxOriginalPrice = product.price;
+  let minFinalPrice = product.priceAfterDiscount ?? (product.price * (1 - (product.discount || 0) / 100));
+  let maxFinalPrice = minFinalPrice;
+  let maxDiscount = product.discount || 0;
 
   if (hasVariants) {
-    const prices = product.variants!.map(v => v.price);
-    minPrice = Math.min(...prices);
-    maxPrice = Math.max(...prices);
+    const originalPrices = product.variants!.map(v => v.price);
+    minOriginalPrice = Math.min(...originalPrices);
+    maxOriginalPrice = Math.max(...originalPrices);
+
+    // Tính giá sau giảm của từng biến thể (ưu tiên giảm riêng, không có thì lấy giảm chung)
+    const finalPrices = product.variants!.map(v => {
+      const d = v.discount ?? product.discount ?? 0;
+      return v.price * (1 - d / 100);
+    });
+    minFinalPrice = Math.min(...finalPrices);
+    maxFinalPrice = Math.max(...finalPrices);
+
+    // Tìm mức giảm giá cao nhất để treo biển "Sale sập sàn"
+    const discounts = product.variants!.map(v => v.discount ?? product.discount ?? 0);
+    maxDiscount = Math.max(...discounts);
   }
 
-  const minPriceAfterDiscount = minPrice * (1 - discountRate);
-  const maxPriceAfterDiscount = maxPrice * (1 - discountRate);
-  const isPriceRange = minPrice !== maxPrice;
+  const isFinalPriceRange = minFinalPrice !== maxFinalPrice;
+  const isOriginalPriceRange = minOriginalPrice !== maxOriginalPrice;
+  const hasDiscount = maxDiscount > 0;
 
   // Hàm xử lý link ảnh
   const resolveImgUrl = (url?: string) => {
@@ -161,10 +174,11 @@ export default function ProductCard({ product }: { product: Product }) {
   };
 
   // HÀM TÍNH GIÁ ĐỘNG CHO MODAL
-  const modalCurrentPrice = selectedVariant 
-    ? selectedVariant.price * (1 - discountRate)
-    : minPriceAfterDiscount;
-
+  const modalOriginalPrice = selectedVariant ? selectedVariant.price : product.price;
+  const modalDiscountRate = selectedVariant 
+    ? ((selectedVariant.discount ?? product.discount ?? 0) / 100) 
+    : ((product.discount ?? 0) / 100);
+  const modalCurrentPrice = modalOriginalPrice * (1 - modalDiscountRate);
   return (
     <>
       <Link
@@ -198,7 +212,7 @@ export default function ProductCard({ product }: { product: Product }) {
           {hasDiscount && (
             <div className="absolute left-4 top-4">
               <span className="rounded-lg bg-red-500 px-2.5 py-1 text-xs font-bold text-white shadow-sm">
-                -{product.discount}%
+                -{maxDiscount}%
               </span>
             </div>
           )}
@@ -267,21 +281,23 @@ export default function ProductCard({ product }: { product: Product }) {
             <div className="mt-auto pt-3">
               <div className="flex flex-col items-start gap-1">
                 <span className="text-lg font-bold text-red-600 leading-none">
-                  {isPriceRange 
-                    ? `${formatVND(minPriceAfterDiscount)} - ${formatVND(maxPriceAfterDiscount)}` 
-                    : formatVND(minPriceAfterDiscount)}
+                  {isFinalPriceRange 
+                    ? `${formatVND(minFinalPrice)} - ${formatVND(maxFinalPrice)}` 
+                    : formatVND(minFinalPrice)}
                 </span>
                 
                 {hasDiscount && (
                   <span className="text-xs font-medium text-slate-400 line-through leading-none">
-                    {isPriceRange 
-                      ? `${formatVND(minPrice)} - ${formatVND(maxPrice)}` 
-                      : formatVND(minPrice)}
+                    {isOriginalPriceRange 
+                      ? `${formatVND(minOriginalPrice)} - ${formatVND(maxOriginalPrice)}` 
+                      : formatVND(minOriginalPrice)}
                   </span>
                 )}
 
+                {/* TAG FREESHIP... (Giữ nguyên đoạn này của sếp) */}
+
                 {/* TAG FREESHIP HIỂN THỊ Ở ĐÂY (NẾU GIÁ MIN SAU GIẢM >= 100K và SẢN PHẨM CÒN HÀNG ) */}
-                {minPriceAfterDiscount >= 100000 && totalStock > 0 && (
+                {minFinalPrice >= 100000 && totalStock > 0 && (
                   <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-blue-600 px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm transition group-hover:scale-105">
                     <Truck size={13} className="text-white" />
                     <span>Freeship</span>
@@ -335,9 +351,9 @@ export default function ProductCard({ product }: { product: Product }) {
                     <span className="text-2xl font-bold text-red-600">
                       {formatVND(modalCurrentPrice)}
                     </span>
-                    {hasDiscount && (
+                    {(modalDiscountRate > 0) && (
                       <span className="text-sm text-gray-400 line-through">
-                        {formatVND(hasVariants && selectedVariant ? selectedVariant.price : product.price)}
+                        {formatVND(modalOriginalPrice)}
                       </span>
                     )}
                   </div>

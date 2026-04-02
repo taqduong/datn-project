@@ -11,6 +11,9 @@ type CartItem = {
   productId: number
   variantId?: number      
   variantName?: string
+  variantPrice?: number     
+  variantDiscount?: number  
+  variantImage?: string
   quantity: number
   product: {
     id: number
@@ -35,9 +38,16 @@ export default function CartPage() {
   const [removingItems, setRemovingItems] = useState<Set<number>>(new Set())
   const router = useRouter()
 
-  // ✅ Giá khách trả (đồng bộ BE)
-  const getUnitPrice = (item: CartItem) => Number(item.product.priceAfterDiscount || 0)
-  const getOriginalPrice = (item: CartItem) => Number(item.product.price || 0)
+  // Giá gốc (Ưu tiên giá phân loại, nếu không có thì lấy giá SP mẹ)
+  const getOriginalPrice = (item: CartItem) => Number((item.variantPrice ?? item.product.price) || 0)
+
+  // Giá khách trả
+  const getUnitPrice = (item: CartItem) => {
+    const price = getOriginalPrice(item)
+    // SỬA DẤU ?? THÀNH || Ở ĐÂY 👇 (Nếu bằng 0 thì tự nhảy sang lấy của product)
+    const discount = item.variantDiscount || item.product.discount || 0
+    return Math.round(price * (1 - discount / 100))
+  }
 
   const calculateSubtotal = (items: CartItem[]) => {
     const sum = items.reduce((acc, item) => acc + getUnitPrice(item) * item.quantity, 0)
@@ -79,19 +89,19 @@ export default function CartPage() {
   // ================= Cập nhật số lượng =================
   const handleUpdateQuantity = async (itemId: number, productId: number, variantId: number | undefined, quantity: number) => {
     if (quantity < 1) {
-      await handleRemoveItem(itemId, productId, variantId) // ✅ Truyền thêm variantId
+      await handleRemoveItem(itemId, productId, variantId) // Truyền thêm variantId
       return
     }
 
     try {
-      // 1. Cập nhật giao diện (✅ Đổi từ productId sang cartItemId để phân biệt Đỏ/Xanh)
+      // 1. Cập nhật giao diện (Đổi từ productId sang cartItemId để phân biệt Đỏ/Xanh)
       const updatedItems = cartItems.map((item) =>
         item.cartItemId === itemId ? { ...item, quantity } : item 
       )
       setCartItems(updatedItems)
       calculateSubtotal(updatedItems)
 
-      // 2. Gọi API ngầm (✅ Truyền thêm variantId)
+      // 2. Gọi API ngầm (Truyền thêm variantId)
       await updateCartItem(productId, quantity, variantId)
 
       window.dispatchEvent(new Event('cartUpdated'))
@@ -205,7 +215,8 @@ export default function CartPage() {
                     {/* Ảnh sản phẩm */}
                     <div className="w-full sm:w-28 h-28 shrink-0 bg-gray-50 rounded-xl overflow-hidden border border-gray-100">
                       <img
-                        src={resolveImgUrl(item.product.imageUrl)} // 👈 Chỉ cần thay đúng chỗ này
+                        // ƯU TIÊN ẢNH BIẾN THỂ TRƯỚC
+                        src={resolveImgUrl(item.variantImage || item.product.imageUrl)} 
                         alt={item.product.name}
                         className="w-full h-full object-cover"
                       />
@@ -226,7 +237,7 @@ export default function CartPage() {
                           )}
                         </div>
                         <button
-                          onClick={() => handleRemoveItem(item.cartItemId, item.productId, item.variantId)} // ✅ Truyền thêm variantId
+                          onClick={() => handleRemoveItem(item.cartItemId, item.productId, item.variantId)} // Truyền thêm variantId
                           disabled={removingItems.has(item.cartItemId)}
                           className="text-gray-400 hover:text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors disabled:opacity-50"
                           title="Xóa sản phẩm"

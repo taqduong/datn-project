@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using BE.Data;
 using System.Text.Json;
 using System.Text;
-using System.Net.Http.Json; // Bắt buộc thêm để dùng ReadFromJsonAsync
+using System.Net.Http.Json; 
 
 namespace BE.Controllers
 {
@@ -141,41 +141,40 @@ namespace BE.Controllers
                 }
                 else
                 {
-                    // 1. Tìm nguyên cả câu (nếu khách gõ chuẩn tên SP)
-                    products = await productsQuery.Where(p => p.Name.ToLower().Contains(keyword)).Take(10).ToListAsync();
-
-                    // 2. FIX "BỆNH ĐẦN": Tìm kiếm mờ (Tách câu dài thành các từ khóa ngắn)
-                    // Ví dụ: "cho tôi mua tivi 65 inch" -> Tìm SP có chữ "tivi", "65", hoặc "inch"
-                    if (!products.Any())
+                    // FIX TẬN GỐC "BỆNH MẤT TRÍ NHỚ": Gộp câu hiện tại và câu ngay trước đó của khách để giữ ngữ cảnh
+                    string searchContext = keyword;
+                    if (request.history != null && request.history.Any())
                     {
-                        var ignoreWords = new List<string> { "cho", "tôi", "mua", "con", "cái", "này", "kia", "nhé", "ạ", "với", "xem", "lấy", "đặt", "hàng" };
-                        var words = keyword.Split(new[] { ' ', ',', '.', '?' }, StringSplitOptions.RemoveEmptyEntries)
-                                           .Where(w => w.Length >= 2 && !ignoreWords.Contains(w))
-                                           .ToList();
-                        
-                        if (words.Any())
-                        {
-                            // Đưa list SP lên RAM để LINQ tìm kiếm mờ mượt mà hơn, tránh lỗi query EF Core
-                            var tempProducts = await productsQuery.ToListAsync();
-                            products = tempProducts.Where(p => words.Any(w => p.Name.ToLower().Contains(w))).Take(10).ToList();
-                        }
+                        // Bắt các tin nhắn gần nhất của người dùng gộp lại để không quên ngữ cảnh
+                        var lastUserMsgs = request.history.Where(h => h.sender != "bot").Select(h => h.text).TakeLast(2);
+                        searchContext += " " + string.Join(" ", lastUserMsgs).ToLower(); 
                     }
 
-                    // 3. FIX LỖI MẤT TRÍ NHỚ: Lục lại câu hỏi ngay trước đó của khách
-                    if (!products.Any() && request.history != null && request.history.Any())
-                    {
-                        var actualLastMessage = request.history
-                            .Where(h => h.sender != "bot") // Lọc tin nhắn của user
-                            .Select(h => h.text?.ToLower().Trim())
-                            .LastOrDefault();
+                    // Tăng cường bộ lọc từ rác để AI bắt từ khóa chuẩn hơn
+                    var ignoreWords = new List<string> { "cho", "tôi", "mua", "con", "cái", "này", "kia", "nhé", "ạ", "với", "xem", "lấy", "đặt", "hàng", "shop", "tư", "vấn", "mình", "xin", "giá", "có", "chốt", "luôn", "mã", "áp", "dụng", "ưu", "đãi", "thêm", "đó", "đây", "ok", "oke", "ừ" };
+                    
+                    var words = searchContext.Split(new[] { ' ', ',', '.', '?' }, StringSplitOptions.RemoveEmptyEntries)
+                                       .Where(w => w.Length >= 2 && !ignoreWords.Contains(w))
+                                       .Distinct()
+                                       .ToList();
 
-                        if (!string.IsNullOrWhiteSpace(actualLastMessage))
-                        {
-                            products = await productsQuery.Where(p => p.Name.ToLower().Contains(actualLastMessage)).Take(10).ToListAsync();
-                        }
+                    if (words.Any())
+                    {
+                        var tempProducts = await productsQuery.ToListAsync();
+                        products = tempProducts
+                            .Select(p => new 
+                            { 
+                                Product = p, 
+                                MatchScore = words.Count(w => p.Name.ToLower().Contains(w)) 
+                            })
+                            .Where(x => x.MatchScore > 0)
+                            .OrderByDescending(x => x.MatchScore)
+                            .Select(x => x.Product)
+                            .Take(20) // Lấy 20 sản phẩm khớp nhất
+                            .ToList();
                     }
 
-                    // 4. Vẫn không tìm thấy gì thì lấy 10 sản phẩm mới nhất làm dữ liệu
+                    // Vẫn không tìm thấy gì thì lấy 10 sản phẩm mới nhất
                     if (!products.Any()) 
                     {
                         products = await productsQuery.OrderByDescending(p => p.Id).Take(10).ToListAsync();
@@ -252,9 +251,12 @@ namespace BE.Controllers
                 if (activeVouchers.Any())
                 {
                     var voucherLines = activeVouchers.Select(v => {
-                        string desc = v.IsFreeship ? "Miễn phí vận chuyển (tối đa 30k)" :
+                        // FIX LỖI "Nullable object must have a value": Kiểm tra null cẩn thận từng trường hợp
+                        string desc = v.IsFreeship ? "Miễn phí vận chuyển" :
                                       v.DiscountValue.HasValue ? $"Giảm {v.DiscountValue.Value:N0}đ" :
-                                      $"Giảm {v.DiscountPercent.Value * 100}% (tối đa {v.MaxDiscountAmount:N0}đ)";
+                                      v.DiscountPercent.HasValue ? $"Giảm {v.DiscountPercent.Value * 100}% (tối đa {v.MaxDiscountAmount ?? 0:N0}đ)" : 
+                                      "Ưu đãi đặc biệt";
+                                      
                         return $"'{v.Code}' ({desc}, Đơn tối thiểu {v.MinOrderValue:N0}đ)";
                     });
                     couponContext = "MÃ ƯU ĐÃI ĐANG CÓ SẴN (Hãy chủ động giới thiệu cho khách): " + string.Join("; ", voucherLines);
@@ -365,52 +367,61 @@ Lưu ý: Không tạo mã ORDER_INFO nếu thiếu thông tin hoặc khách chư
                                     decimal finalPrice = product.Discount.HasValue ? Math.Round(unitPrice * (1 - (decimal)product.Discount.Value / 100), 0) : unitPrice;
                                     var fallbackUser = await _context.Users.FindAsync(secureUserId.Value);
 
-                                    // --- BẮT ĐẦU XỬ LÝ VOUCHER & TÍNH TIỀN ---
+                                    // --- BẮT ĐẦU XỬ LÝ VOUCHER (HỖ TRỢ NHIỀU MÃ) & TÍNH TIỀN ---
                                     decimal subTotal = finalPrice * orderData.quantity; // Tạm tính tiền hàng
                                     decimal shippingFee = 30000; // Mặc định phí ship 30k
                                     decimal discountAmount = 0;  // Tiền được giảm
                                     string appliedCouponMessage = "";
-                                    string? appliedVoucherCode = null;
+                                    List<string> appliedVoucherCodes = new List<string>(); 
 
-                                    if (!string.IsNullOrWhiteSpace(orderData.couponCode))
+                                    // FIX 500: Phải check null siêu cẩn thận ở đây
+                                    if (orderData.couponCode != null && !string.IsNullOrWhiteSpace(orderData.couponCode))
                                     {
-                                        var validVoucher = await _context.Vouchers.FirstOrDefaultAsync(v => 
-                                            v.Code.ToLower() == orderData.couponCode.ToLower() && 
-                                            v.IsActive && 
-                                            v.ExpiryDate > DateTime.Now && 
-                                            v.UsedCount < v.UsageLimit);
-
-                                        if (validVoucher != null)
+                                        var inputCodes = orderData.couponCode.Split(new[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                                        
+                                        foreach (var code in inputCodes)
                                         {
-                                            if (subTotal >= validVoucher.MinOrderValue)
-                                            {
-                                                appliedVoucherCode = validVoucher.Code; // Giữ lại tên mã
+                                            var validVoucher = await _context.Vouchers.FirstOrDefaultAsync(v => 
+                                                v.Code.ToLower() == code.ToLower() && 
+                                                v.IsActive && 
+                                                v.ExpiryDate > DateTime.Now && 
+                                                v.UsedCount < v.UsageLimit);
 
-                                                if (validVoucher.IsFreeship) 
+                                            if (validVoucher != null)
+                                            {
+                                                if (subTotal >= validVoucher.MinOrderValue)
                                                 {
-                                                    shippingFee = 0; // Trừ thẳng phí ship về 0
-                                                    appliedCouponMessage = $"\n🎁 Đã áp dụng mã: **{validVoucher.Code}** (Miễn phí vận chuyển)";
-                                                }
-                                                else 
-                                                {
-                                                    if (validVoucher.DiscountValue.HasValue) discountAmount = validVoucher.DiscountValue.Value;
-                                                    else if (validVoucher.DiscountPercent.HasValue)
+                                                    appliedVoucherCodes.Add(validVoucher.Code); 
+
+                                                    if (validVoucher.IsFreeship) 
                                                     {
-                                                        discountAmount = subTotal * validVoucher.DiscountPercent.Value;
-                                                        if (validVoucher.MaxDiscountAmount.HasValue && discountAmount > validVoucher.MaxDiscountAmount.Value)
-                                                            discountAmount = validVoucher.MaxDiscountAmount.Value;
+                                                        shippingFee = 0; 
+                                                        appliedCouponMessage += $"\n🎁 Đã áp dụng mã: **{validVoucher.Code}** (Miễn phí vận chuyển)";
                                                     }
-                                                    appliedCouponMessage = $"\n🎁 Đã áp dụng mã: **{validVoucher.Code}** (Giảm {discountAmount:N0}đ)";
+                                                    else 
+                                                    {
+                                                        decimal currentDiscount = 0;
+                                                        if (validVoucher.DiscountValue.HasValue) currentDiscount = validVoucher.DiscountValue.Value;
+                                                        else if (validVoucher.DiscountPercent.HasValue)
+                                                        {
+                                                            currentDiscount = subTotal * validVoucher.DiscountPercent.Value;
+                                                            if (validVoucher.MaxDiscountAmount.HasValue && currentDiscount > validVoucher.MaxDiscountAmount.Value)
+                                                                currentDiscount = validVoucher.MaxDiscountAmount.Value;
+                                                        }
+                                                        discountAmount += currentDiscount; 
+                                                        appliedCouponMessage += $"\n🎁 Đã áp dụng mã: **{validVoucher.Code}** (Giảm {currentDiscount:N0}đ)";
+                                                    }
+                                                    
+                                                    validVoucher.UsedCount += 1; 
                                                 }
-                                                
-                                                validVoucher.UsedCount += 1; // Tăng lượt dùng lên 1
+                                                else appliedCouponMessage += $"\n⚠️ Mã '{code}' chưa được áp vì đơn cần tối thiểu {validVoucher.MinOrderValue:N0}đ.";
                                             }
-                                            else appliedCouponMessage = $"\n⚠️ Mã '{orderData.couponCode}' chưa được áp vì đơn cần tối thiểu {validVoucher.MinOrderValue:N0}đ.";
+                                            else appliedCouponMessage += $"\n⚠️ Mã '{code}' không tồn tại, hết hạn hoặc đã hết lượt.";
                                         }
-                                        else appliedCouponMessage = $"\n⚠️ Mã '{orderData.couponCode}' không tồn tại, hết hạn hoặc đã hết lượt.";
                                     }
 
-                                    // Chốt hạ tổng tiền = Tiền hàng + Ship - Giảm giá
+                                    string? finalAppliedVoucherCode = appliedVoucherCodes.Any() ? string.Join(", ", appliedVoucherCodes) : null;
+
                                     decimal totalAmount = subTotal + shippingFee - discountAmount;
                                     if (totalAmount < 0) totalAmount = 0; // Chống âm tiền
 
@@ -428,7 +439,7 @@ Lưu ý: Không tạo mã ORDER_INFO nếu thiếu thông tin hoặc khách chư
                                             
                                             // ===== BƠM ĐỦ DỮ LIỆU VOUCHER CHO FRONTEND ĐỌC =====
                                             TotalAmount = totalAmount, 
-                                            AppliedVoucherCode = appliedVoucherCode, 
+                                            AppliedVoucherCode = finalAppliedVoucherCode, 
                                             DiscountAmount = discountAmount,
                                             ShippingFee = shippingFee
                                         };
@@ -474,7 +485,11 @@ Lưu ý: Không tạo mã ORDER_INFO nếu thiếu thông tin hoặc khách chư
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { success = false, answer = "Lỗi server: " + ex.Message });
+                // Trả về Ok(200) để ép Chatbot in thẳng lỗi ra màn hình
+                return Ok(new { 
+                    success = false, 
+                    answer = "🚨 CẢNH BÁO LỖI TỪ BACKEND: " + ex.Message + " | Chi tiết sâu hơn: " + ex.InnerException?.Message 
+                });
             }
         }
 
