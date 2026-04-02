@@ -177,6 +177,7 @@ export interface CartItem {
   quantity: number;
   variantId?: number; 
   variantName?: string; 
+  variantColor?: string;
   variantPrice?: number;
   variantDiscount?: number;
   variantImage?: string;
@@ -217,6 +218,7 @@ export interface OrderDetailDto {
   productId: number;
   variantId?: number;    
   variantName?: string;
+  variantColor?: string;
   productName: string;
   quantity: number;
   price: number;

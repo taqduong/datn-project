@@ -153,6 +153,7 @@ namespace BE.Controllers
                     productId = c.ProductId,
                     variantId = c.VariantId, 
                     variantName = v != null ? v.VariantName : null, 
+                    variantColor = v != null ? v.Color : null, // <--- THÊM DÒNG NÀY VÀO ĐÂY
                     quantity = c.Quantity,
                     
                     // 3 TRƯỜNG DỮ LIỆU MỚI CHO FRONTEND

@@ -18,6 +18,9 @@ function CheckoutContent() {
   const qty = searchParams.get("qty");
   const variantId = searchParams.get("variantId"); 
   
+  // Lấy danh sách cartItemId mà khách đã tick từ Giỏ hàng truyền sang
+  const selectedCartItemsStr = searchParams.get("cartItems") 
+  
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [loadingCart, setLoadingCart] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -48,29 +51,28 @@ function CheckoutContent() {
         const voucherRes = await api.get("/Voucher");
         setVouchersList(voucherRes.data);
 
-        // Load Giỏ hàng Buy Now
+        // TRƯỜNG HỢP 1: Mua ngay (Buy Now)
         if (buyNowId && qty) {
           const res = await fetchProductById(buyNowId);
           const p = res.data;
           
-          // 1. Xác định giá gốc và % Giảm giá
           let basePrice = p.price;
-          let baseDiscount = p.discount || 0; // Thêm dòng này để hứng % giảm giá
+          let baseDiscount = p.discount || 0; 
           let variantName = undefined;
-          let variantImageUrl = undefined; // Thêm dòng này để hứng ảnh
+          let variantColor = undefined; 
+          let variantImageUrl = undefined; 
           
           if (variantId && p.variants) {
              const selectedVariant = p.variants.find((v: any) => v.id === Number(variantId));
              if (selectedVariant) {
                  basePrice = selectedVariant.price; 
-                 // Ưu tiên lấy % giảm của phân loại, nếu rỗng thì lấy của mẹ
                  baseDiscount = selectedVariant.discount ?? p.discount ?? 0; 
                  variantName = selectedVariant.variantName;
+                 variantColor = selectedVariant.color; 
                  variantImageUrl = selectedVariant.imageUrl;
              }
           }
 
-          // 2. Ép phần trăm giảm giá vào giá gốc
           let priceToUse = basePrice; 
           if (baseDiscount > 0) {
               priceToUse = Math.round(basePrice * (1 - baseDiscount / 100));
@@ -81,8 +83,8 @@ function CheckoutContent() {
             productId: p.id, 
             variantId: variantId ? Number(variantId) : undefined,
             variantName: variantName, 
+            variantColor: variantColor, 
             
-            // ÉP 3 TRƯỜNG DỮ LIỆU CỦA BIẾN THỂ VÀO ĐÂY LUÔN
             variantPrice: variantId ? basePrice : undefined,
             variantDiscount: variantId ? baseDiscount : undefined,
             variantImage: variantImageUrl,
@@ -91,16 +93,33 @@ function CheckoutContent() {
             product: { 
                 id: p.id, 
                 name: p.name, 
-                price: p.price, // Giữ nguyên giá mẹ để lỡ cần dùng
+                price: p.price, 
                 discount: p.discount, 
-                priceAfterDiscount: priceToUse, // <--- CÁI NÀY LÀ QUAN TRỌNG NHẤT, NÓ ĐÃ TÍNH CHUẨN RỒI
+                priceAfterDiscount: priceToUse,
                 imageUrl: p.imageUrl 
             }
-          } as any]); // Ép kiểu any cho nhanh qua đoạn này nếu TS la làng
-        } else {
+          } as any]);
+          
+        } 
+        // TRƯỜNG HỢP 2: Đi từ Giỏ hàng qua (Cart)
+        else {
           const res = await fetchCart();
-          const items = Array.isArray(res.data) ? res.data : [];
+          let items = Array.isArray(res.data) ? res.data : [];
+          
+          // LỌC CHỈ LẤY NHỮNG MÓN ĐÃ ĐƯỢC TICK
+          if (selectedCartItemsStr) {
+            const selectedIds = selectedCartItemsStr.split(',').map(Number);
+            items = items.filter((item: any) => selectedIds.includes(item.cartItemId));
+          }
+          // Nếu không truyền ID nào sang (có thể khách lách luật gõ URL), 
+          // để an toàn ta đá họ về giỏ hàng (Tùy chọn) hoặc load hết. Ở đây ta cứ gán vào.
+          
           setCartItems(items);
+          
+          // NẾU GIỎ HÀNG TRỐNG HOẶC FILTER XONG TRỐNG THÌ ĐÁ VỀ TRANG SẢN PHẨM HOẶC CART
+          if (items.length === 0) {
+            // router.push("/cart"); // Bỏ comment dòng này nếu muốn đá về
+          }
         }
       } catch (error) {
         console.error("Lỗi tải dữ liệu:", error);
@@ -109,7 +128,7 @@ function CheckoutContent() {
       }
     };
     loadData();
-  }, [buyNowId, qty, variantId]); 
+  }, [buyNowId, qty, variantId, selectedCartItemsStr]);
 
   // 3. TÍNH TẠM TÍNH
   const subtotal = cartItems.reduce((sum, item) => {
@@ -228,11 +247,22 @@ function CheckoutContent() {
       if (appliedFreeshipVoucher) usedCodes.push(appliedFreeshipVoucher.code);
       if (appliedDiscountVoucher) usedCodes.push(appliedDiscountVoucher.code);
 
+      // Lấy danh sách ID đã tick từ URL (ví dụ: "1,5,8" -> [1, 5, 8])
+      const selectedCartItemsStr = searchParams.get("cartItems");
+      let selectedIds: number[] = [];
+      if (selectedCartItemsStr) {
+        selectedIds = selectedCartItemsStr.split(',').map(Number);
+      }
+
+      // Tạo Payload gửi xuống Backend
       const payload: any = { 
         ...formData,
         discountAmount: discountAmount,
-        shippingFee: shippingFee, // Thêm dòng này để gửi qua C#
-        appliedVoucherCode: usedCodes.join(", ") 
+        shippingFee: shippingFee, 
+        appliedVoucherCode: usedCodes.join(", "),
+        
+        // DÒNG QUAN TRỌNG NHẤT: Gửi danh sách đã tick cho Backend
+        selectedCartItemIds: selectedIds 
       };
       
       if (buyNowId && qty) {
@@ -340,7 +370,11 @@ function CheckoutContent() {
                       <img src={resolveImgUrl(item.product.imageUrl)} alt={item.product.name} className="w-16 h-16 object-cover rounded-xl border border-slate-200 bg-white"/>
                       <div className="flex-1 flex flex-col justify-center">
                         <h3 className="text-sm font-bold text-slate-800 line-clamp-2 leading-tight mb-1">{item.product.name}</h3>
-                        {item.variantName && <span className="text-xs text-slate-500 font-medium bg-slate-100 w-max px-2 py-0.5 rounded-md mb-1">{item.variantName}</span>}
+                        {(item.variantName || item.variantColor) && (
+                          <span className="text-xs text-slate-500 font-medium bg-slate-100 w-max px-2 py-0.5 rounded-md mb-1">
+                            {item.variantColor ? `${item.variantColor} - ` : ''}{item.variantName}
+                          </span>
+                        )}
                         <p className="text-xs text-slate-500 font-medium mb-1">SL: {item.quantity}</p>
                         <div className="flex items-center gap-2"><span className="text-sm font-bold text-blue-600">{formatVND(finalPrice)}</span>{hasDiscount && <span className="text-xs text-slate-400 line-through">{formatVND(originalPrice)}</span>}</div>
                       </div>

@@ -34,8 +34,11 @@ export default function WishlistPage() {
   const [showVariantModal, setShowVariantModal] = useState(false);
   const [selectedModalProduct, setSelectedModalProduct] = useState<Product | null>(null);
   const [selectedVariant, setSelectedVariant] = useState<any | null>(null);
+  const [selectedColor, setSelectedColor] = useState<string | null>(null); // <--- THÊM DÒNG NÀY
   const [quantity, setQuantity] = useState(1);
   const [isAdding, setIsAdding] = useState(false);
+
+  
 
   useEffect(() => {
     loadWishlist();
@@ -160,6 +163,19 @@ export default function WishlistPage() {
   const maxStockLimit = modalHasVariants 
     ? (selectedVariant ? selectedVariant.stock : 0) 
     : (selectedModalProduct?.stock || 0);
+
+  // ===== THÊM MÀU =====
+  const getHexColor = (colorName?: string) => {
+    if (!colorName) return null;
+    const cleanName = colorName.trim().toLowerCase();
+    const map: { [key: string]: string } = {
+      đỏ: "#ef4444", cam: "#f97316", vàng: "#eab308", "xanh dương": "#3b82f6",
+      "xanh lá cây": "#22c55e", tím: "#a855f7", đen: "#000000", trắng: "#ffffff",
+      xanh: "#3b82f6", "xanh lá": "#22c55e", xám: "#6b7280", hồng: "#ec4899",
+      bạc: "#c0c0c0", nâu: "#8b4513", kem: "#f5f5dc", "vàng nhạt": "#fef08a",
+    };
+    return map[cleanName] || null;
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 pb-20 pt-10">
@@ -339,9 +355,12 @@ export default function WishlistPage() {
                             
                             setSelectedModalProduct(p);
                             if (hasVariants && p.variants && p.variants.length > 0) {
+                              // Mặc định chọn biến thể đầu tiên và lấy màu của nó
                               setSelectedVariant(p.variants[0]);
+                              setSelectedColor(p.variants[0].color); 
                             } else {
                               setSelectedVariant(null);
+                              setSelectedColor(null);
                             }
                             setQuantity(1);
                             setShowVariantModal(true);
@@ -408,51 +427,77 @@ export default function WishlistPage() {
                   </div>
                   {modalHasVariants && selectedVariant && (
                     <p className="mt-1.5 text-sm text-slate-600">
-                      Bạn đang chọn: <span className="font-semibold text-gray-900">{selectedVariant.variantName}</span>
+                      Bạn đang chọn: <span className="font-semibold text-gray-900">
+                        {selectedVariant.color ? `${selectedVariant.color} - ` : ''}{selectedVariant.variantName}
+                      </span>
                     </p>
                   )}
                 </div>
               </div>
 
               {modalHasVariants && (
-                <div className="space-y-4">
-                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Phân loại</h3>
-                  <div className="grid grid-cols-2 gap-3">
-                    {selectedModalProduct.variants?.map((v, index) => {
-                      const isOutOfStock = v.stock <= 0;
-                      return (
-                        <button
-                          key={v.id}
-                          onClick={() => {
-                            if (!isOutOfStock) {
-                              setSelectedVariant(v);
-                              setQuantity(1);
-                            }
-                          }}
-                          disabled={isOutOfStock}
-                          className={`relative overflow-hidden rounded-lg border px-3 py-2 text-sm font-medium transition-all duration-200 flex items-center gap-1.5
-                            ${selectedVariant?.id === v.id 
-                              ? 'border-blue-600 bg-blue-50 text-blue-700 ring-1 ring-blue-600' 
-                              : 'border-slate-200 bg-white text-slate-700 hover:border-slate-400'
-                            }
-                            ${isOutOfStock ? 'opacity-50 cursor-not-allowed bg-slate-100 text-slate-400 border-slate-200' : ''}
-                          `}
-                        >
-                          {v.color && (
-                            <div 
-                              className={`w-3 h-3 rounded-full shrink-0 border border-slate-300`}
-                              style={{ backgroundColor: v.color.toLowerCase() }} 
-                            />
-                          )}
-                          <span className="leading-none">{v.variantName}</span>
-                          {isOutOfStock && (
-                            <span className="absolute inset-0 flex items-center justify-center">
-                              <span className="w-full border-t border-slate-400 -rotate-12 transform absolute"></span>
-                            </span>
-                          )}
-                        </button>
-                      );
-                    })}
+                <div className="space-y-6">
+                  {/* PHẦN 1: MÀU SẮC */}
+                  <div className="space-y-3">
+                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Màu sắc</h3>
+                    <div className="flex flex-wrap gap-3">
+                      {Array.from(new Set(selectedModalProduct.variants?.map(v => v.color))).map(color => {
+                        // Gọi hàm để lấy mã màu Hex chuẩn
+                        const colorHex = getHexColor(color as string);
+                        const isWhite = colorHex === "#ffffff";
+
+                        return (
+                          <button
+                            key={color as string}
+                            onClick={() => {
+                              setSelectedColor(color as string);
+                              // Khi đổi màu, tự động chọn biến thể đầu tiên của màu đó
+                              const firstVarOfColor = selectedModalProduct.variants?.find(v => v.color === color);
+                              setSelectedVariant(firstVarOfColor);
+                            }}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-all ${
+                              selectedColor === color 
+                              ? 'border-blue-600 bg-blue-50 text-blue-700 font-bold' 
+                              : 'border-gray-100 bg-white text-gray-600 hover:border-gray-300'
+                            }`}
+                          >
+                            {colorHex && (
+                              <div 
+                                className={`w-4 h-4 rounded-full shadow-sm shrink-0 ${isWhite ? 'border border-gray-300' : ''}`} 
+                                style={{ backgroundColor: colorHex }} 
+                              />
+                            )}
+                            {color as string}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* PHẦN 2: KÍCH THƯỚC / PHÂN LOẠI */}
+                  <div className="space-y-3">
+                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Kích thước / Phân loại</h3>
+                    <div className="flex flex-wrap gap-3">
+                      {selectedModalProduct.variants
+                        ?.filter(v => v.color === selectedColor) // Chỉ hiện size của màu đang chọn
+                        .map((v) => {
+                          const isOutOfStock = v.stock <= 0;
+                          return (
+                            <button
+                              key={v.id}
+                              disabled={isOutOfStock}
+                              onClick={() => setSelectedVariant(v)}
+                              className={`px-5 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
+                                selectedVariant?.id === v.id
+                                ? 'border-blue-600 bg-blue-50 text-blue-700 font-bold'
+                                : 'border-gray-100 bg-white text-gray-600 hover:border-gray-300'
+                              } ${isOutOfStock ? 'opacity-40 cursor-not-allowed bg-gray-50' : ''}`}
+                            >
+                              {v.variantName}
+                            </button>
+                          );
+                        })}
+                    </div>
                   </div>
                 </div>
               )}

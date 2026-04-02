@@ -90,7 +90,6 @@ namespace BE.Controllers
                 // TÍNH NĂNG MỚI 2: GỢI Ý CÁ NHÂN HÓA BẰNG PYTHON AI
                 // =========================================================================
                 List<int> aiRecommendedIds = new List<int>();
-                List<int> aiRecommendedIds = new List<int>();
                 bool isAskingForRecommendation = keyword.Contains("gợi ý") || keyword.Contains("hợp với tôi") || keyword.Contains("tư vấn cho tôi");
 
                 if (isAskingForRecommendation && secureUserId.HasValue)
@@ -205,7 +204,7 @@ namespace BE.Controllers
                         var maxPrice = pricesAfterDiscount.Max();
                         priceInfo = minPrice == maxPrice ? $"{minPrice:N0} VNĐ" : $"{minPrice:N0} - {maxPrice:N0} VNĐ";
                         totalStock = p.ProductVariants!.Sum(v => v.Stock);
-                        var variantNames = p.ProductVariants!.Select(v => v.VariantName).ToList();
+                        var variantNames = p.ProductVariants!.Select(v => $"{v.Color} - {v.VariantName}").ToList();
                         variantInfo = $" | Phân loại có sẵn: {string.Join(", ", variantNames)}";
                     }
                     else

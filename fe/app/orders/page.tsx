@@ -227,9 +227,14 @@ export default function OrdersPage() {
                         )}
                       </div>
 
-                      <span className="text-sm font-bold text-slate-400">
-                        ĐƠN #{order.orderId}
-                      </span>
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-bold text-slate-400">
+                          ĐƠN #{order.orderId}
+                        </span>
+                        <span className="bg-slate-200 text-slate-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">
+                          {order.orderDetails.reduce((sum, item) => sum + item.quantity, 0)} sản phẩm
+                        </span>
+                      </div>
                     </div>
                     <div className="text-right">
                       <p className="text-sm text-slate-500 font-medium mb-1">Tổng thanh toán</p>
@@ -287,10 +292,10 @@ export default function OrdersPage() {
                           {/* ĐÃ ĐẨY CÁI DIV NÀY RA NGOÀI THẺ IMG CHO ĐÚNG CÚ PHÁP HTML */}
                           <div className="flex-1">
                             <h4 className="font-bold text-slate-800 text-sm md:text-base line-clamp-1">{item.productName}</h4>
-                            {item.variantName && (
-                              <p className="text-[10px] font-bold text-blue-600 uppercase bg-blue-50 w-fit px-2 py-0.5 rounded mt-0.5">
-                                Phân loại: {item.variantName}
-                              </p>
+                            {(item.variantName || item.variantColor) && (
+                                <p className="text-[10px] font-bold text-blue-600 uppercase bg-blue-50 w-fit px-2 py-0.5 rounded mt-0.5">
+                                  Phân loại: {item.variantColor ? `${item.variantColor} - ` : ''}{item.variantName}
+                                </p>
                             )}
                             <p className="text-sm text-slate-500 mt-1">
                               Số lượng: <span className="font-semibold">{item.quantity}</span> 

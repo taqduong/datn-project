@@ -31,6 +31,7 @@ export default function ProductCard({ product }: { product: Product }) {
   // 1. STATE MỚI QUẢN LÝ MODAL CHỌN BIẾN THỂ (QUICK ADD)
   const [showVariantModal, setShowVariantModal] = useState(false);
   const [selectedVariant, setSelectedVariant] = useState<any | null>(null);
+  const [selectedColor, setSelectedColor] = useState<string | null>(null); // THÊM STATE QUẢN LÝ MÀU
 
   const [quantity, setQuantity] = useState(1);
 
@@ -92,10 +93,25 @@ export default function ProductCard({ product }: { product: Product }) {
     return count.toString();
   };
 
-  // HÀM KHI BẤM CHỌN MỘT BIẾN THỂ TRONG MODAL
+  // LOGIC 2 CẤP ĐỘ: HÀM KHI BẤM CHỌN MÀU / SIZE
   const handleSelectVariant = (variant: any) => {
     setSelectedVariant(variant);
-    setQuantity(1); // Reset số lượng về 1 khi đổi loại
+    if (variant.color) setSelectedColor(variant.color); // Đồng bộ màu
+    setQuantity(1);
+  };
+
+  const handleSelectColor = (color: string) => {
+    setSelectedColor(color);
+    if (!product.variants) return;
+
+    const variantsOfColor = product.variants.filter((v: any) => v.color === color);
+    const exactMatch = variantsOfColor.find((v: any) => v.variantName === selectedVariant?.variantName);
+    
+    if (exactMatch && exactMatch.stock > 0) {
+      handleSelectVariant(exactMatch); 
+    } else {
+      setSelectedVariant(null); 
+    }
   };
 
   // MỞ MODAL KHI BẤM GIỎ HÀNG NGOÀI THẺ
@@ -103,13 +119,16 @@ export default function ProductCard({ product }: { product: Product }) {
     e.preventDefault(); 
     e.stopPropagation(); 
 
-    setQuantity(1); // Reset số lượng
+    setQuantity(1); 
     if (hasVariants && product.variants && product.variants.length > 0) {
-      handleSelectVariant(product.variants[0]); // Tự động chọn biến thể đầu tiên
+      const firstVariant = product.variants[0];
+      setSelectedVariant(firstVariant); 
+      setSelectedColor(firstVariant.color || null); // Tự động set màu
     } else {
       setSelectedVariant(null);
+      setSelectedColor(null);
     }
-    setShowVariantModal(true); // Bật popup
+    setShowVariantModal(true); 
   };
 
   // XÁC NHẬN THÊM VÀO GIỎ TỪ TRONG MODAL
@@ -135,7 +154,7 @@ export default function ProductCard({ product }: { product: Product }) {
       window.dispatchEvent(new Event('cartUpdated')); 
       
       setShowVariantModal(false); 
-      alert(`Đã thêm ${quantity} sản phẩm vào giỏ hàng!`);
+      alert(`Đã thêm ${quantity} ${product.name} ${selectedVariant ? `(${selectedColor ? selectedColor + ' - ' : ''}${selectedVariant.variantName})` : ""} vào giỏ hàng!`);
     } catch (error) {
       console.error("Lỗi khi thêm vào giỏ hàng:", error);
       alert("Có lỗi xảy ra, vui lòng thử lại sau.");
@@ -179,6 +198,26 @@ export default function ProductCard({ product }: { product: Product }) {
     ? ((selectedVariant.discount ?? product.discount ?? 0) / 100) 
     : ((product.discount ?? 0) / 100);
   const modalCurrentPrice = modalOriginalPrice * (1 - modalDiscountRate);
+
+  // THÊM: MÀU SẮC ĐỘC NHẤT VÀ LỌC SIZE THEO MÀU
+  const uniqueColors = Array.from(new Set(product.variants?.map((v: any) => v.color).filter(Boolean) || [])) as string[];
+  const hasColors = uniqueColors.length > 0;
+  const variantsToShow = hasColors && selectedColor 
+    ? product.variants?.filter((v: any) => v.color === selectedColor) || []
+    : product.variants || [];
+
+  const getHexColor = (colorName?: string) => {
+    if (!colorName) return null;
+    const cleanName = colorName.trim().toLowerCase();
+    const map: { [key: string]: string } = {
+      đỏ: "#ef4444", cam: "#f97316", vàng: "#eab308", "xanh dương": "#3b82f6",
+      "xanh lá cây": "#22c55e", tím: "#a855f7", đen: "#000000", trắng: "#ffffff",
+      xanh: "#3b82f6", "xanh lá": "#22c55e", xám: "#6b7280", hồng: "#ec4899",
+      bạc: "#c0c0c0", nâu: "#8b4513", kem: "#f5f5dc", "vàng nhạt": "#fef08a",
+    };
+    return map[cleanName] || null;
+  };
+
   return (
     <>
       <Link
@@ -369,7 +408,7 @@ export default function ProductCard({ product }: { product: Product }) {
                 </div>
                 {hasVariants && selectedVariant && (
                   <p className="mt-1.5 text-sm text-slate-600">
-                    Bạn đang chọn: <span className="font-semibold text-gray-900">{selectedVariant.variantName}</span>
+                    Đã chọn: <span className="font-semibold text-gray-900">{selectedColor ? `${selectedColor} - ` : ''}{selectedVariant.variantName}</span>
                   </p>
                 )}
               </div>
@@ -377,40 +416,73 @@ export default function ProductCard({ product }: { product: Product }) {
 
             {/* CHỈ HIỆN KHU VỰC CHỌN MÀU/SIZE NẾU SẢN PHẨM ĐÓ CÓ BIẾN THỂ */}
             {hasVariants && (
-              <div className="space-y-4">
-                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Phân loại</h3>
-                <div className="grid grid-cols-2 gap-3">
-                  {product.variants?.map((v, index) => {
-                    const isOutOfStock = v.stock <= 0;
-                    return (
-                      <button
-                        key={v.id}
-                        onClick={() => !isOutOfStock && handleSelectVariant(v)}
-                        disabled={isOutOfStock}
-                        className={`relative overflow-hidden rounded-lg border px-3 py-2 text-sm font-medium transition-all duration-200 flex items-center gap-1.5
-                          ${selectedVariant?.id === v.id 
-                            ? 'border-blue-600 bg-blue-50 text-blue-700 ring-1 ring-blue-600' 
-                            : 'border-slate-200 bg-white text-slate-700 hover:border-slate-400'
-                          }
-                          ${isOutOfStock ? 'opacity-50 cursor-not-allowed bg-slate-100 text-slate-400 border-slate-200' : ''}
-                        `}
-                      >
-                        {v.color && (
-                          <div 
-                            className={`w-3 h-3 rounded-full shrink-0 border border-slate-300`}
-                            style={{ backgroundColor: v.color.toLowerCase() }} 
-                          />
-                        )}
-                        <span className="leading-none">{v.variantName}</span>
-                        {isOutOfStock && (
-                          <span className="absolute inset-0 flex items-center justify-center">
-                            <span className="w-full border-t border-slate-400 -rotate-12 transform absolute"></span>
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
+              <div className="space-y-4 border-t border-gray-100 pt-4">
+                {/* HÀNG 1: CHỌN MÀU SẮC */}
+                {hasColors && (
+                  <div>
+                    <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                      Màu sắc
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                      {uniqueColors.map((color) => {
+                        const isSelectedColor = selectedColor === color;
+                        const colorHex = getHexColor(color);
+                        const isWhite = colorHex === "#ffffff";
+
+                        return (
+                          <button
+                            key={color}
+                            onClick={() => handleSelectColor(color)}
+                            className={`relative overflow-hidden rounded-lg border px-3 py-1.5 text-sm font-medium transition-all flex items-center gap-1.5
+                              ${isSelectedColor 
+                                ? "border-blue-600 bg-blue-50 text-blue-700 ring-1 ring-blue-600" 
+                                : "border-slate-200 bg-white text-slate-700 hover:border-slate-400"}`}
+                          >
+                            {colorHex && (
+                              <span
+                                className={`w-3.5 h-3.5 rounded-full shrink-0 ${isWhite ? "border border-slate-300" : ""}`}
+                                style={{ backgroundColor: colorHex }}
+                              />
+                            )}
+                            <span>{color}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* HÀNG 2: CHỌN KÍCH THƯỚC / PHÂN LOẠI */}
+                {variantsToShow.length > 0 && (
+                  <div>
+                    <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                      {hasColors ? "Kích thước / Phân loại" : "Phân loại"}
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                      {variantsToShow.map((v: any) => {
+                        const isSelected = selectedVariant?.id === v.id;
+                        const isOutOfStock = v.stock <= 0;
+
+                        return (
+                          <button
+                            key={v.id}
+                            onClick={() => !isOutOfStock && handleSelectVariant(v)}
+                            disabled={isOutOfStock}
+                            className={`relative overflow-hidden rounded-lg border px-4 py-1.5 text-sm font-medium transition-all duration-200 min-w-[60px]
+                              ${isSelected
+                                ? "border-blue-600 bg-blue-50 text-blue-700 ring-1 ring-blue-600"
+                                : "border-slate-200 bg-white text-slate-700 hover:border-slate-400"
+                              }
+                              ${isOutOfStock ? "opacity-50 cursor-not-allowed bg-slate-100 text-slate-400" : ""}
+                            `}
+                          >
+                            <span className="leading-none">{v.variantName}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

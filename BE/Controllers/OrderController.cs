@@ -89,13 +89,23 @@ namespace BE.Controllers
             // RẼ NHÁNH 2: NẾU KHÁCH MUA TỪ GIỎ HÀNG
             else
             {
-                var cartItems = await _context.Carts
+                // 1. Tạo query trước (Không dùng 'var cartItems' ở đây nữa)
+                var query = _context.Carts
                     .Include(c => c.Product)
                     .Include(c => c.ProductVariant)
-                    .Where(c => c.UserId == userId.Value)
-                    .ToListAsync();
+                    .Where(c => c.UserId == userId.Value); // userId đã check null ở đầu hàm nên .Value an toàn
 
-                if (!cartItems.Any()) return BadRequest(new { message = "Giỏ hàng trống." });
+                // 2. Lọc theo danh sách ID nếu có
+                if (request.SelectedCartItemIds != null && request.SelectedCartItemIds.Any())
+                {
+                    query = query.Where(c => request.SelectedCartItemIds.Contains(c.CartItemId));
+                }
+
+                // 3. Bây giờ mới thực thi query và gán vào biến cartItems (CHỈ KHAI BÁO 1 LẦN)
+                var cartItems = await query.ToListAsync();
+
+                if (cartItems == null || !cartItems.Any()) 
+                    return BadRequest(new { message = "Giỏ hàng trống hoặc chưa chọn sản phẩm." });
 
                 foreach (var item in cartItems)
                 {
@@ -198,6 +208,7 @@ namespace BE.Controllers
                         // BỔ SUNG: Truyền ID, Tên và Ảnh của Biến thể ra ngoài API
                         VariantId = od.VariantId, 
                         VariantName = od.ProductVariant != null ? od.ProductVariant.VariantName : null, 
+                        VariantColor = od.ProductVariant != null ? od.ProductVariant.Color : null, // <--- GÁN COLOR VÀO ĐÂY Ở CẢ 2 API Nhé!
                         Quantity = od.Quantity,
                         Price = od.UnitPrice,
                         ProductName = od.Product.Name ?? "",
@@ -255,8 +266,9 @@ namespace BE.Controllers
                     {
                         ProductId = od.ProductId,
                         // BỔ SUNG: Truyền dữ liệu Biến thể
-                        VariantId = od.VariantId,
-                        VariantName = od.ProductVariant != null ? od.ProductVariant.VariantName : null,
+                        VariantId = od.VariantId, 
+                        VariantName = od.ProductVariant != null ? od.ProductVariant.VariantName : null, 
+                        VariantColor = od.ProductVariant != null ? od.ProductVariant.Color : null, // <--- GÁN COLOR VÀO ĐÂY Ở CẢ 2 API Nhé!
                         Quantity = od.Quantity,
                         Price = od.UnitPrice,
                         ProductName = od.Product.Name ?? "",
@@ -317,6 +329,7 @@ namespace BE.Controllers
                     // BỔ SUNG: Truyền dữ liệu Biến thể ra Front-end
                     VariantId = od.VariantId,
                     VariantName = od.ProductVariant != null ? od.ProductVariant.VariantName : null,
+                    VariantColor = od.ProductVariant != null ? od.ProductVariant.Color : null, // <--- BỔ SUNG LUÔN VÀO ĐÂY
                     ProductName = od.Product?.Name ?? "",
                     Quantity = od.Quantity,
                     Price = od.UnitPrice,
@@ -443,6 +456,9 @@ namespace BE.Controllers
         public decimal DiscountAmount { get; set; } = 0;
         public string? AppliedVoucherCode { get; set; } 
         public decimal ShippingFee { get; set; } = 30000;
+
+        // THÊM DÒNG NÀY ĐỂ NHẬN DANH SÁCH CÁC MÓN KHÁCH ĐÃ TICK
+        public List<int> SelectedCartItemIds { get; set; } = new List<int>();
     }
 
     public class UpdateStatusDto
@@ -464,6 +480,7 @@ namespace BE.Controllers
         public int ProductId { get; set; }
         public int? VariantId { get; set; } //Truyền lên Frontend
         public string? VariantName { get; set; }
+        public string? VariantColor { get; set; }
         public string ProductName { get; set; } = "";
         public int Quantity { get; set; }
         public decimal Price { get; set; }

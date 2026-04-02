@@ -849,8 +849,8 @@ export default function ProductPage() {
                     <thead className="bg-gray-100 text-gray-600">
                       <tr>
                         <th className="border p-2 text-center w-20">Ảnh</th>
-                        <th className="border p-2 text-left">Tên Phân Loại *</th>
-                        <th className="border p-2 text-left w-24">Màu sắc</th>
+                        <th className="border p-2 text-left w-24">Màu sắc</th> 
+                        <th className="border p-2 text-left">Phân loại *</th>
                         <th className="border p-2 text-left w-28">Giá gốc *</th>
                         <th className="border p-2 text-left w-20">Giảm (%)</th>
                         <th className="border p-2 text-left w-24">Kho *</th>
@@ -879,11 +879,14 @@ export default function ProductPage() {
                             </div>
                           </td>
 
+                          {/* Đẩy Màu Sắc lên cột số 2 cho khớp với thead mới */}
                           <td className="p-2">
-                            <input type="text" value={variant.variantName} onChange={(e) => handleVariantChange(index, "variantName", e.target.value)} className="w-full rounded border p-2 text-black" required />
+                            <input type="text" value={variant.color} onChange={(e) => handleVariantChange(index, "color", e.target.value)} placeholder="Đen, Trắng..." className="w-full rounded border p-2 text-black" />
                           </td>
+
+                          {/* Đẩy Tên Phân Loại (Kích thước) xuống cột số 3 */}
                           <td className="p-2">
-                            <input type="text" value={variant.color} onChange={(e) => handleVariantChange(index, "color", e.target.value)} className="w-full rounded border p-2 text-black" />
+                            <input type="text" value={variant.variantName} onChange={(e) => handleVariantChange(index, "variantName", e.target.value)} placeholder="Size M, 128GB..." className="w-full rounded border p-2 text-black" required />
                           </td>
                           <td className="p-2">
                             <input type="number" value={variant.price} onChange={(e) => handleVariantChange(index, "price", Number(e.target.value))} className="w-full rounded border p-2 text-black" required />

@@ -204,7 +204,9 @@ export default function OrderDetailPage() {
             <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
               <div className="p-6 border-b border-slate-100 flex items-center gap-3 bg-slate-50/50">
                 <ShoppingBag className="text-blue-600" />
-                <h2 className="text-lg font-bold text-slate-800">Sản phẩm đã mua ({order.orderDetails.length})</h2>
+                <h2 className="text-lg font-bold text-slate-800">
+                  Sản phẩm đã mua ({order.orderDetails.reduce((sum, item) => sum + item.quantity, 0)})
+                </h2>
               </div>
               
               <div className="divide-y divide-slate-100">
@@ -218,10 +220,10 @@ export default function OrderDetailPage() {
                     />
                     <div className="flex-1 flex flex-col justify-center">
                       <h3 className="font-bold text-slate-900 text-lg mb-1">{item.productName}</h3>
-                      {item.variantName && (
+                      {(item.variantName || item.variantColor) && (
                         <div className="mt-1 mb-2">
                           <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-bold bg-blue-50 text-blue-600 border border-blue-100 uppercase tracking-wider">
-                            Phân loại: {item.variantName}
+                            Phân loại: {item.variantColor ? `${item.variantColor} - ` : ''}{item.variantName}
                           </span>
                         </div>
                       )}
@@ -463,9 +465,9 @@ export default function OrderDetailPage() {
                   <tr key={index} style={{ borderBottom: '1px solid #e2e8f0' }}>
                     <td style={{ padding: '15px 12px', color: '#64748b' }}>{index + 1}</td>
                     <td style={{ padding: '15px 12px', fontWeight: 'bold' }}>{item.productName}
-                        {item.variantName && (
+                        {(item.variantName || item.variantColor) && (
                             <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 'normal', marginTop: '4px' }}>
-                              Phân loại: {item.variantName}
+                              Phân loại: {item.variantColor ? `${item.variantColor} - ` : ''}{item.variantName}
                             </div>
                         )}
                     </td>
