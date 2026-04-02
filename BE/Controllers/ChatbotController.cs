@@ -196,7 +196,7 @@ namespace BE.Controllers
                     {
                         var pricesAfterDiscount = p.ProductVariants!.Select(v => 
                         {
-                            decimal vDiscount = (decimal)(v.Discount ?? 0);
+                            decimal vDiscount = (decimal)(v.Discount ?? p.Discount ?? 0);
                             return Math.Round((decimal)v.Price * (1 - vDiscount / 100m), 0);
                         }).ToList();
 
@@ -229,7 +229,8 @@ namespace BE.Controllers
                     {
                         var discountedPrices = p.ProductVariants!.Select(v => 
                         {
-                            decimal vDiscount = (decimal)(v.Discount ?? 0);
+                            // THÊM p.Discount VÀO ĐÂY NỮA
+                            decimal vDiscount = (decimal)(v.Discount ?? p.Discount ?? 0);
                             return Math.Round((decimal)v.Price * (1 - vDiscount / 100m), 0);
                         }).ToList();
                         minPrice = discountedPrices.Min();
@@ -381,8 +382,8 @@ Lưu ý: Không tạo mã ORDER_INFO nếu thiếu thông tin hoặc khách chư
                                     targetVariantId = variant.Id;
                                     availableStock = variant.Stock;
                                     
-                                    // ĐÃ ÉP KIỂU TẠI ĐÂY THÀNH DECIMAL
-                                    decimal vDiscount = (decimal)(variant.Discount ?? 0);
+                                    // THÊM product.Discount VÀO ĐÂY ĐỂ LÊN ĐƠN KHÔNG BỊ SAI TIỀN
+                                    decimal vDiscount = (decimal)(variant.Discount ?? product.Discount ?? 0);
                                     finalPrice = Math.Round((decimal)variant.Price * (1 - vDiscount / 100m), 0);
                                 }
                                 else
