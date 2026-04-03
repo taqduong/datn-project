@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useRef } from "react";
 import { Heart, Star, CheckCircle, User as UserIcon, ZoomIn, ZoomOut, X } from "lucide-react";
-import { fetchProductById, addToCart, addToWishlist, type Product, fetchReviewsByProduct, type ReviewDto, logUserActivity, fetchSimilarProducts } from "@/services/api";
+import { fetchProductById, addToCart, addToWishlist, type Product, fetchReviewsByProduct, type ReviewDto, logUserActivity, fetchSimilarProducts, trackProductView } from "@/services/api";
 import ProductCard from "@/components/ProductCard";
 
 export default function ProductDetailPage() {
@@ -132,6 +132,11 @@ export default function ProductDetailPage() {
 
       if (data?.id && trackedIdRef.current !== id) {
         trackedIdRef.current = id;
+        
+        // 1. BÁO CÁO LƯỢT XEM CHO BẢNG THỐNG KÊ ADMIN (Ai xem cũng đếm)
+        trackProductView(data.id).catch(err => console.error("Lỗi đếm view:", err));
+
+        // 2. LƯU LỊCH SỬ CHO AI GỢI Ý (Chỉ lưu nếu đã đăng nhập)
         const token = localStorage.getItem("token");
         if (token) {
           logUserActivity({ productId: data.id, actionType: "View" }).catch((err) =>
@@ -168,14 +173,14 @@ export default function ProductDetailPage() {
   }, [id]);
 
   // Tự động chọn màu đầu tiên khi load sản phẩm
-  useEffect(() => {
-    if (product?.variants && product.variants.length > 0) {
-      const colors = product.variants.map((v: any) => v.color).filter(Boolean);
-      if (colors.length > 0 && !selectedColor) {
-        setSelectedColor(colors[0]); 
-      }
-    }
-  }, [product]);
+  // useEffect(() => {
+  //   if (product?.variants && product.variants.length > 0) {
+  //     const colors = product.variants.map((v: any) => v.color).filter(Boolean);
+  //     if (colors.length > 0 && !selectedColor) {
+  //       setSelectedColor(colors[0]); 
+  //     }
+  //   }
+  // }, [product]);
 
   const formatVND = (value: number) =>
     new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(value || 0);
@@ -319,7 +324,7 @@ export default function ProductDetailPage() {
     }
 
     if (product.variants && product.variants.length > 0 && !selectedVariant) {
-      alert("⚠️ Vui lòng chọn Phân loại kích thước trước khi mua!");
+      alert("⚠️ Vui lòng chọn đầy đủ Màu sắc và Phân loại trước khi mua hàng!");
       return;
     }
 
@@ -338,7 +343,7 @@ export default function ProductDetailPage() {
     }
 
     if (product.variants && product.variants.length > 0 && !selectedVariant) {
-      alert("⚠️ Vui lòng chọn Phân loại kích thước trước khi thêm vào giỏ!");
+      alert("⚠️ Vui lòng chọn đầy đủ Màu sắc và Phân loại trước khi thêm vào giỏ!");
       return;
     }
 

@@ -82,19 +82,19 @@ namespace BE.Controllers
                 .Select(a => new {
                     a.ProductId,
                     ProductName = a.Product != null ? a.Product.Name : "Sản phẩm ẩn",
+                    ImageUrl = a.Product != null ? a.Product.ImageUrl : "", // <--- THÊM DÒNG LẤY ẢNH NÀY
                     a.Views,
                     a.AddToCartCount,
                     
-                    // THAY THẾ SỐ LIỆU CŨ BẰNG CÔNG THỨC ĐẾM ĐỘNG (KHỚP 100% VỚI PRODUCT CARD)
                     PurchaseCount = a.Product != null 
                         ? a.Product.OrderDetails
-                            .Where(od => od.Order != null && od.Order.Status == "Completed")
+                            .Where(od => od.Order != null && od.Order.Status.ToLower() == "completed")
                             .Sum(od => (int?)od.Quantity) ?? 0 
                         : 0,
                         
                     a.LastUpdated
                 })
-                .AsNoTracking() // Tối ưu tốc độ đọc
+                .AsNoTracking()
                 .ToListAsync();
 
             return Ok(data);
