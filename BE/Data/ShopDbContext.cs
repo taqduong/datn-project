@@ -36,6 +36,8 @@ public partial class ShopDbContext : DbContext
 
     public virtual DbSet<Voucher> Vouchers { get; set; }
 
+    public DbSet<ContactMessage> ContactMessages { get; set; }
+
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -64,6 +66,7 @@ public partial class ShopDbContext : DbContext
         {
             entity.Property(e => e.OrderDate).HasDefaultValueSql("GETDATE()");
         });
+
 
         // ========================================================
         // FIX LỖI "MULTIPLE CASCADE PATHS"

@@ -299,6 +299,23 @@ export interface VoucherDto {
   usedCount: number;
   isActive: boolean;
 }
+
+export interface ContactPayload {
+  fullName: string;
+  email: string;
+  subject?: string;
+  content: string;
+}
+
+export interface ContactMessageDto {
+  id: number;
+  fullName: string;
+  email: string;
+  subject?: string;
+  content: string;
+  createdAt: string;
+  isRead: boolean;
+}
 // ================= Categories API =================
 export const categoriesAPI = {
   getAll: () => api.get<Category[]>("/categories"),
@@ -527,6 +544,14 @@ export const voucherAPI = {
   delete: (id: number) => api.delete(`/Voucher/${id}`)
 };
 
+// ================= Contact API =================
+export const contactAPI = {
+  submit: (data: ContactPayload) => 
+    api.post<{ success: boolean; message: string }>("/contact", data),
+  getAllAdmin: () => api.get<ContactMessageDto[]>("/contact"),
+  markAsRead: (id: number) => api.put(`/contact/${id}/read`),
+};
+
 // ================= Helper Exports =================
 export const fetchCategories = categoriesAPI.getAll;
 export const fetchCategoryById = categoriesAPI.getById;
@@ -588,6 +613,10 @@ export const deleteAdminVoucher = voucherAPI.delete;
 
 export const forgotPassword = authAPI.forgotPassword;
 export const resetPassword = authAPI.resetPassword;
+
+export const submitContactForm = contactAPI.submit;
+export const fetchAdminContacts = contactAPI.getAllAdmin;
+export const markContactAsRead = contactAPI.markAsRead;
 
 export default api;
 
