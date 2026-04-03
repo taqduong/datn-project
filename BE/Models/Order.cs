@@ -37,6 +37,9 @@ public partial class Order
     [StringLength(50)]
     public string PaymentMethod { get; set; } = "COD"; // Mặc định là COD
 
+    [StringLength(50)]
+    public string RefundStatus { get; set; } = "None"; //"None", "Pending" (Chờ hoàn), "Refunded" (Đã hoàn)
+
     // ===== Thông tin giao hàng =====
     // Mình để Required cho Tên, SĐT, Địa chỉ vì giao hàng thì bắt buộc phải có những cái này
     [Required]

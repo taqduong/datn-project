@@ -191,6 +191,7 @@ namespace BE.Controllers
                     OrderDate = o.OrderDate,
                     TotalAmount = o.TotalAmount,
                     Status = o.Status ?? "",
+                    RefundStatus = o.RefundStatus ?? "None",
                     PaymentMethod = o.PaymentMethod,
                     FullName = o.FullName ?? "",
                     Phone = o.Phone ?? "",
@@ -251,6 +252,7 @@ namespace BE.Controllers
                     OrderDate = o.OrderDate,
                     TotalAmount = o.TotalAmount,
                     Status = o.Status ?? "",
+                    RefundStatus = o.RefundStatus ?? "None",
                     PaymentMethod = o.PaymentMethod,
                     FullName = o.FullName ?? "",
                     Phone = o.Phone ?? "",
@@ -312,6 +314,7 @@ namespace BE.Controllers
                 OrderDate = order.OrderDate,
                 TotalAmount = order.TotalAmount,
                 Status = order.Status ?? "",
+                RefundStatus = order.RefundStatus ?? "None",
                 PaymentMethod = order.PaymentMethod,
                 FullName = order.FullName ?? "",
                 Email = order.Email ?? "",
@@ -382,12 +385,37 @@ namespace BE.Controllers
                 return BadRequest(new { message = "Không thể hủy đơn hàng đã được xử lý hoặc giao hàng." });
 
             order.Status = "Cancelled";
+
+            // LOGIC ĐÁNH DẤU CHỜ HOÀN TIỀN CHO ĐƠN VNPAY ĐÃ TRẢ TIỀN
+            if (order.PaymentMethod == "VNPay_Paid") 
+            {
+                 order.RefundStatus = "Pending";
+            }
             
             // GỌI HÀM HOÀN KHO DÙNG CHUNG CHO GỌN
             await RestoreStockAsync(order); 
 
             await _context.SaveChangesAsync();
             return Ok(new { message = "Đã hủy đơn hàng và hoàn lại số lượng vào kho." });
+        }
+
+        // ================== ADMIN: XÁC NHẬN ĐÃ HOÀN TIỀN ==================
+        [HttpPut("{id:int}/confirm-refund")]
+        // [Authorize(Roles = "admin")]
+        public async Task<IActionResult> ConfirmRefund(int id)
+        {
+            var order = await _context.Orders.FindAsync(id);
+            if (order == null) return NotFound(new { message = "Không tìm thấy đơn hàng." });
+
+            if (order.Status?.ToLower() != "cancelled" || order.RefundStatus?.ToLower() != "pending")
+            {
+                return BadRequest(new { message = "Đơn hàng không hợp lệ để hoàn tiền." });
+            }
+
+            order.RefundStatus = "Refunded";
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Xác nhận đã hoàn tiền thành công!" });
         }
 
         // ================== ADMIN: DUYỆT/HỦY ĐƠN HÀNG ==================
@@ -494,6 +522,7 @@ namespace BE.Controllers
         public DateTime OrderDate { get; set; }
         public decimal TotalAmount { get; set; }
         public string Status { get; set; } = "";
+        public string RefundStatus { get; set; } = "None";
         public List<OrderDetailDto> OrderDetails { get; set; } = new();
         public string PaymentMethod { get; set; } = "";
         public string FullName { get; set; } = "";

@@ -6,7 +6,7 @@ import {
   MapPin, Phone, Mail, ChevronDown, ChevronUp, Trash2, PackageOpen,
   Download
 } from "lucide-react";
-import { fetchAdminOrders, deleteOrder, updateOrderStatus, type OrderDto } from "@/services/api";
+import { fetchAdminOrders, deleteOrder, updateOrderStatus, type OrderDto, confirmRefundOrder } from "@/services/api";
 import * as XLSX from "xlsx";
 
 // Hàm xử lý link ảnh sản phẩm
@@ -237,9 +237,41 @@ export default function AdminOrdersPage() {
                         <p className="text-xs font-semibold text-slate-400 uppercase">Tổng tiền</p>
                         <p className="text-xl font-bold text-red-600">{formatVND(order.totalAmount)}</p>
                       </div>
+                      
                       <div className="flex items-center gap-2">
-                        {/* NÚT XÓA CHỈ HIỆN KHI ĐƠN ĐÃ BỊ HỦY */}
-                        {['cancelled', 'đã hủy', 'đã hủy đơn'].includes(order.status.toLowerCase()) && (
+                        {/* ========================================== */}
+                        {/* NÚT XÁC NHẬN HOÀN TIỀN CHO ADMIN */}
+                        {order.status.toLowerCase() === 'cancelled' && order.refundStatus?.toLowerCase() === 'pending' && (
+                          <button 
+                            onClick={async (e) => {
+                                e.stopPropagation();
+                                if(window.confirm(`Xác nhận đã chuyển khoản hoàn tiền đơn #${order.orderId} cho khách?`)) {
+                                    try {
+                                        await confirmRefundOrder(order.orderId);
+                                        alert("Đã cập nhật trạng thái Hoàn tiền thành công!");
+                                        loadOrders();
+                                    } catch(err) {
+                                        alert("Có lỗi xảy ra khi xác nhận hoàn tiền.");
+                                    }
+                                }
+                            }}
+                            className="mr-3 px-4 py-1.5 bg-green-600 text-white rounded-lg text-sm font-bold shadow-sm hover:bg-green-700 hover:shadow-md transition-all active:scale-95"
+                          >
+                            Xác nhận hoàn tiền
+                          </button>
+                        )}
+                        
+                        {/* Tag hiển thị khi đã hoàn */}
+                        {order.status.toLowerCase() === 'cancelled' && order.refundStatus?.toLowerCase() === 'refunded' && (
+                          <span className="mr-3 px-3 py-1 bg-green-100 text-green-700 border border-green-200 rounded-md text-xs font-bold uppercase">
+                             Đã hoàn tiền
+                          </span>
+                        )}
+                        {/* ========================================== */}
+
+                        {/* NÚT XÓA CHỈ HIỆN KHI ĐƠN ĐÃ BỊ HỦY VÀ (Không cần hoàn tiền HOẶC Đã hoàn xong) */}
+                        {['cancelled', 'đã hủy', 'đã hủy đơn'].includes(order.status.toLowerCase()) && 
+                         (order.refundStatus?.toLowerCase() === 'none' || order.refundStatus?.toLowerCase() === 'refunded') && (
                           <button 
                             onClick={(e) => handleDelete(e, order.orderId)} 
                             className="p-2 text-slate-400 hover:text-red-600 transition-colors"
@@ -248,6 +280,7 @@ export default function AdminOrdersPage() {
                             <Trash2 size={20}/>
                           </button>
                         )}
+
                         <div className="p-2 text-slate-400">{isExpanded ? <ChevronUp size={24}/> : <ChevronDown size={24}/>}</div>
                       </div>
                     </div>

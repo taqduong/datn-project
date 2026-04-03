@@ -230,6 +230,7 @@ export interface OrderDto {
   orderDate: string;
   totalAmount: number;
   status: string;
+  refundStatus: string;
   fullName: string;
   phone: string;
   address: string;
@@ -466,6 +467,7 @@ export const ordersAPI = {
   delete: (id: number | string) => api.delete(`/Order/${id}`),
   updateStatus: (id: number | string, status: string) => api.put(`/Order/${id}/status`, { status }),
   cancel: (id: number | string) => api.put(`/Order/${id}/cancel`),
+  confirmRefund: (id: number | string) => api.put(`/Order/${id}/confirm-refund`),
 };
 
 // ================= Wishlist API =================
@@ -586,6 +588,7 @@ export const fetchOrderById = ordersAPI.getById;
 export const deleteOrder = ordersAPI.delete;
 export const updateOrderStatus = ordersAPI.updateStatus;
 export const cancelOrder = ordersAPI.cancel;
+export const confirmRefundOrder = ordersAPI.confirmRefund;
 
 export const fetchWishlist = wishlistAPI.getAll
 export const addToWishlist = wishlistAPI.add

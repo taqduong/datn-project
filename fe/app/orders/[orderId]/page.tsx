@@ -71,14 +71,23 @@ export default function OrderDetailPage() {
   }, [loadOrderDetail]);
 
   const handleCancelOrder = async () => {
-    if (!window.confirm("Sếp có chắc chắn muốn hủy đơn hàng này không? Quá trình này không thể hoàn tác.")) {
+    if (!window.confirm("Bạn có chắc chắn muốn hủy đơn hàng này không? Quá trình này không thể hoàn tác.")) {
       return;
     }
     
     try {
       if (orderId) {
+        // 1. Gọi API hủy đơn
         await cancelOrder(orderId);
-        alert("Hủy đơn hàng thành công! ");
+        
+        // 2. Hiển thị Alert tùy theo phương thức thanh toán
+        if (order?.paymentMethod === 'VNPay_Paid') {
+            alert("Hủy đơn hàng thành công! Vui lòng chờ HomeMart đối soát và hoàn tiền lại cho bạn nhé.");
+        } else {
+            alert("Hủy đơn hàng thành công!");
+        }
+
+        // 3. Tải lại dữ liệu trang
         await loadOrderDetail(); 
       }
     } catch (error: any) {
@@ -176,6 +185,17 @@ export default function OrderDetailPage() {
                 <AlertCircle className="w-5 h-5" /> Chưa thanh toán
               </div>
             )}
+
+            {/* TAG ĐANG CHỜ HOÀN TIỀN */}
+            {order.status.toLowerCase() === 'cancelled' && order.refundStatus?.toLowerCase() === 'pending' && (
+              <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl border font-bold text-sm bg-orange-50 text-orange-600 border-orange-200">
+                <svg className="h-5 w-5 animate-spin text-orange-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Đang chờ hoàn tiền
+              </div>
+            )}
             
             {isCompleted && (
               <button
@@ -209,48 +229,55 @@ export default function OrderDetailPage() {
                 </h2>
               </div>
               
-              <div className="divide-y divide-slate-100">
-                {order.orderDetails.map((item, idx) => (
-                  <div key={idx} className="p-6 flex gap-5 hover:bg-slate-50 transition-colors">
-                    <img
-                      src={resolveImgUrl(item.imageUrl)} 
-                      alt={item.productName}
-                      className="w-20 h-20 object-cover rounded-2xl border border-slate-200 bg-white"
-                      onError={(e) => (e.currentTarget.src = "https://placehold.co/400x400?text=No+Image")}
-                    />
-                    <div className="flex-1 flex flex-col justify-center">
-                      <h3 className="font-bold text-slate-900 text-lg mb-1">{item.productName}</h3>
-                      {(item.variantName || item.variantColor) && (
-                        <div className="mt-1 mb-2">
-                          <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-bold bg-blue-50 text-blue-600 border border-blue-100 uppercase tracking-wider">
-                            Phân loại: {item.variantColor ? `${item.variantColor} - ` : ''}{item.variantName}
-                          </span>
-                        </div>
-                      )}
-                      <p className="text-sm text-slate-500 mb-2">Mã SP: #{item.productId}</p>
-                      
-                      <div className="flex items-center justify-between mt-auto">
-                        <p className="text-slate-600 font-medium">
-                          {formatVND(item.price)} <span className="text-slate-400 mx-2">x</span> {item.quantity}
-                        </p>
-                        <p className="font-bold text-blue-600 text-lg">
-                          {formatVND(item.price * item.quantity)}
-                        </p>
-                      </div>
-
-                      {isCompleted && (
-                        <div className="mt-4 flex justify-end border-t border-slate-100 pt-4">
-                          <button
-                            onClick={() => router.push(`/review?productId=${item.productId}&orderId=${order.orderId}`)}
-                            className="flex items-center gap-2 rounded-xl border border-orange-500 text-orange-600 px-5 py-2.5 text-sm font-semibold hover:bg-orange-50 hover:text-orange-700 transition-colors"
-                          >
-                            <Star size={16} fill="currentColor" /> Đánh giá
-                          </button>
-                        </div>
-                      )}
+              <div className="relative divide-y divide-slate-100">
+                
+                {/* CON DẤU ĐÃ HOÀN TIỀN */}
+                {order.status.toLowerCase() === 'cancelled' && order.refundStatus?.toLowerCase() === 'refunded' && (
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 transform z-40 pointer-events-none">
+                    <div className="inline-block -rotate-12 rounded-xl border-4 border-double border-green-600 px-8 py-3 text-center bg-white/90 backdrop-blur-sm shadow-2xl">
+                      <span className="block text-3xl font-bold uppercase tracking-widest text-green-600 drop-shadow-sm">
+                        Đã hoàn tiền
+                      </span>
+                      <span className="block text-sm font-bold text-green-600 mt-1">
+                        HomeMart Official
+                      </span>
                     </div>
                   </div>
-                ))}
+                )}
+
+                {/* Vòng lặp sản phẩm cũ của sếp nằm trong này để bị con dấu đè lên */}
+                <div className={order.refundStatus?.toLowerCase() === 'refunded' ? 'opacity-40 grayscale-[30%]' : ''}>
+                  {order.orderDetails.map((item, idx) => (
+                    <div key={idx} className="p-6 flex gap-5 hover:bg-slate-50 transition-colors">
+                      <img
+                        src={resolveImgUrl(item.imageUrl)} 
+                        alt={item.productName}
+                        className="w-20 h-20 object-cover rounded-2xl border border-slate-200 bg-white"
+                        onError={(e) => (e.currentTarget.src = "https://placehold.co/400x400?text=No+Image")}
+                      />
+                      <div className="flex-1 flex flex-col justify-center">
+                        <h3 className="font-bold text-slate-900 text-lg mb-1">{item.productName}</h3>
+                        {(item.variantName || item.variantColor) && (
+                          <div className="mt-1 mb-2">
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-bold bg-blue-50 text-blue-600 border border-blue-100 uppercase tracking-wider">
+                              Phân loại: {item.variantColor ? `${item.variantColor} - ` : ''}{item.variantName}
+                            </span>
+                          </div>
+                        )}
+                        <p className="text-sm text-slate-500 mb-2">Mã SP: #{item.productId}</p>
+                        
+                        <div className="flex items-center justify-between mt-auto">
+                          <p className="text-slate-600 font-medium">
+                            {formatVND(item.price)} <span className="text-slate-400 mx-2">x</span> {item.quantity}
+                          </p>
+                          <p className="font-bold text-blue-600 text-lg">
+                            {formatVND(item.price * item.quantity)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
 
               {/* BOX TỔNG KẾT TIỀN */}
