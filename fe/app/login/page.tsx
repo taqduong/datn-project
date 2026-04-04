@@ -43,7 +43,18 @@ export default function LoginPage() {
     }
     
     try {
-      const res = await authAPI.login({username: formData.username, password: formData.password})
+      const res = await authAPI.login({
+        username: formData.username, 
+        password: formData.password
+      })
+      if (!res?.data?.token) {
+        setError('Tên đăng nhập hoặc mật khẩu không chính xác');
+        setIsLoading(false);
+        setSuccess(false); // Đảm bảo bảng xanh không hiện ra
+        return; // Dừng luôn tại đây
+      }
+
+      // Nếu có Token thì mới chạy tiếp xuống dưới này
       const { token, user } = res.data as { token: string; user: any }
       
       if (rememberMe) {
@@ -55,7 +66,6 @@ export default function LoginPage() {
         localStorage.removeItem('rememberedUser')
       }
 
-      // NAVBAR CẬP NHẬT LẠI SỐ LƯỢNG:
       window.dispatchEvent(new Event('cartUpdated'));
       window.dispatchEvent(new Event('wishlistUpdated'));
 
@@ -68,7 +78,9 @@ export default function LoginPage() {
 
     } catch (error: any) {
       console.error(error)
-      setError(error?.response?.data?.message || 'Đăng nhập thất bại')
+      // Hiện lỗi đỏ từ Server hoặc lỗi mặc định
+      setError(error?.response?.data?.message || 'Tên đăng nhập hoặc mật khẩu không chính xác')
+      setSuccess(false)
     } finally {
       setIsLoading(false)
     }

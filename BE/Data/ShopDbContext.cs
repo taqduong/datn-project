@@ -36,7 +36,9 @@ public partial class ShopDbContext : DbContext
 
     public virtual DbSet<Voucher> Vouchers { get; set; }
 
-    public DbSet<ContactMessage> ContactMessages { get; set; }
+    public virtual DbSet<ContactMessage> ContactMessages { get; set; }
+
+    public virtual DbSet<ChatMessage> ChatMessages { get; set; }
 
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

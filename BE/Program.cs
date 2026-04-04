@@ -41,6 +41,8 @@ builder.Services.AddControllers()
 // Đăng ký các Service của ứng dụng (Dependency Injection)
 builder.Services.AddScoped<BE.Services.IEmailService, BE.Services.EmailService>();
 
+//  BẬT TỔNG ĐÀI SIGNALR CHO CHAT
+builder.Services.AddSignalR();
 
 // CONFIGURATION: Authentication & JWT Middleware
 var jwtSettings = builder.Configuration.GetSection("Jwt");
@@ -132,5 +134,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+app.MapHub<BE.Hubs.ChatHub>("/chatHub");
 
 app.Run();

@@ -14,7 +14,8 @@ import {
   ChartArea,
   Home,
   Ticket,
-  MessageSquare
+  MessageSquare,
+  MessageCircle
 } from "lucide-react";
 import { useMemo, useState } from "react";
 
@@ -56,6 +57,12 @@ export default function Sidebar() {
         label: "Đơn hàng",
         description: "Quản lý đơn hàng",
         icon: ShoppingBag,
+      },
+      {
+        href: "/admin/chat",
+        label: "Chat CSKH",
+        description: "Hỗ trợ trực tuyến",
+        icon: MessageCircle,
       },
       {
         href: "/admin/vouchers",

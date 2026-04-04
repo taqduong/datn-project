@@ -317,6 +317,13 @@ export interface ContactMessageDto {
   createdAt: string;
   isRead: boolean;
 }
+
+export interface ChatMessageDto {
+  id: number;
+  message: string;
+  isFromAdmin: boolean;
+  createdAt: string;
+}
 // ================= Categories API =================
 export const categoriesAPI = {
   getAll: () => api.get<Category[]>("/categories"),
@@ -554,6 +561,14 @@ export const contactAPI = {
   markAsRead: (id: number) => api.put(`/contact/${id}/read`),
 };
 
+// ================= Chat API =================
+export const chatAPI = {
+  getUserHistory: () => api.get<ChatMessageDto[]>("/chat/history"),
+  getAdminChatUsers: () => api.get("/chat/admin/users"),
+  getHistoryWithUser: (userId: number | string) => api.get<ChatMessageDto[]>(`/chat/admin/history/${userId}`),
+  markAsRead: (userId: number | string) => api.put(`/chat/admin/read/${userId}`)
+};
+
 // ================= Helper Exports =================
 export const fetchCategories = categoriesAPI.getAll;
 export const fetchCategoryById = categoriesAPI.getById;
@@ -620,6 +635,11 @@ export const resetPassword = authAPI.resetPassword;
 export const submitContactForm = contactAPI.submit;
 export const fetchAdminContacts = contactAPI.getAllAdmin;
 export const markContactAsRead = contactAPI.markAsRead;
+
+export const fetchUserChatHistory = chatAPI.getUserHistory;
+export const fetchAdminChatUsers = chatAPI.getAdminChatUsers;
+export const fetchHistoryWithUser = chatAPI.getHistoryWithUser;
+export const markChatAsRead = chatAPI.markAsRead;
 
 export default api;
 
