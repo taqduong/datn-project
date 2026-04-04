@@ -388,47 +388,64 @@ export default function HomePage() {
       {/* ======================================================= */}
       <RecentlyViewed />
 
-      {/* Promo banner & Newsletter */}
+      {/* ======================================================= */}
+      {/* KHU VỰC VỀ CHÚNG TÔI & LIÊN HỆ */}
+      {/* ======================================================= */}
       <section className="mx-auto max-w-7xl px-4 py-12 pb-20 sm:px-6 lg:px-8">
         <div className="grid gap-8 lg:grid-cols-2">
-          {/* Promo */}
-          <div className="overflow-hidden rounded-[2.5rem] bg-linear-to-br from-blue-600 to-indigo-700 p-10 text-white shadow-xl sm:p-12 relative">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
+          
+          {/* Card: Về Chúng Tôi */}
+          <div className="group relative overflow-hidden rounded-[2.5rem] bg-linear-to-br from-blue-600 to-indigo-700 p-10 text-white shadow-xl sm:p-12">
+            <div className="absolute -right-10 -top-10 h-64 w-64 translate-x-1/4 rounded-full bg-white/10 blur-3xl transition-transform duration-700 group-hover:scale-150"></div>
             <div className="relative z-10">
-              <p className="text-sm font-black uppercase tracking-widest text-blue-200 mb-3">
-                Ưu đãi giới hạn
+              <p className="mb-3 text-sm font-black uppercase tracking-widest text-blue-200">
+                Câu chuyện thương hiệu
               </p>
               <h2 className="text-3xl font-black leading-tight sm:text-4xl">
-                Mua sắm thông minh <br /> tiết kiệm mỗi ngày
+                Về HomeMart
               </h2>
+              <p className="mt-4 leading-relaxed font-medium text-blue-100">
+                Tự hào là nền tảng thương mại điện tử hàng đầu chuyên cung cấp thiết bị gia dụng và nội thất thông minh. Chúng tôi cam kết mang đến không gian sống tiện nghi, hiện đại và đẳng cấp cho mọi gia đình Việt.
+              </p>
               <Link
-                href="/products"
-                className="mt-8 inline-flex items-center justify-center rounded-2xl bg-white px-8 py-4 text-base font-bold text-blue-700 transition hover:bg-slate-50 hover:scale-105 hover:shadow-lg"
+                href="/about"
+                className="mt-8 inline-flex items-center justify-center rounded-2xl bg-white px-8 py-4 text-base font-bold text-blue-700 shadow-sm transition hover:scale-105 hover:bg-slate-50 hover:shadow-lg"
               >
-                Mua sắm ngay
+                Tìm hiểu thêm
               </Link>
             </div>
           </div>
 
-          {/* Newsletter */}
-          <div className="rounded-[2.5rem] border border-slate-100 bg-white p-10 shadow-lg sm:p-12">
-            <h2 className="text-3xl font-black text-slate-900">
-              Nhận thông báo ưu đãi
-            </h2>
-            <p className="mt-3 text-base font-medium text-slate-500">
-              Cập nhật chương trình giảm giá và sản phẩm mới qua email của bạn. Không lo bỏ lỡ deal hời!
-            </p>
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <input
-                type="email"
-                placeholder="Nhập email của bạn..."
-                className="flex-1 rounded-2xl border-2 border-slate-100 bg-slate-50 px-5 py-4 text-base font-medium text-slate-900 outline-none transition focus:border-blue-500 focus:bg-white"
-              />
-              <button className="rounded-2xl bg-slate-900 px-8 py-4 text-base font-bold text-white transition hover:bg-slate-800 hover:shadow-lg">
-                Đăng ký
-              </button>
+          {/* Card: Liên Hệ */}
+          <div className="group relative overflow-hidden rounded-[2.5rem] border border-slate-100 bg-white p-10 shadow-lg sm:p-12">
+            <div className="relative z-10">
+              <p className="mb-3 text-sm font-black uppercase tracking-widest text-rose-500">
+                Hỗ trợ khách hàng 24/7
+              </p>
+              <h2 className="text-3xl font-black text-slate-900">
+                Cần hỗ trợ? <br/>Liên hệ ngay!
+              </h2>
+              <p className="mt-4 text-base font-medium text-slate-500">
+                Đội ngũ chuyên viên chăm sóc của HomeMart luôn sẵn sàng lắng nghe và giải đáp mọi thắc mắc của bạn về sản phẩm, đơn hàng, bảo hành hay khiếu nại.
+              </p>
+              
+              <div className="mt-8 flex flex-col gap-4 sm:flex-row">
+                <Link 
+                  href="/contact" 
+                  className="inline-flex items-center justify-center rounded-2xl bg-slate-900 px-8 py-4 text-base font-bold text-white shadow-sm transition hover:-translate-y-1 hover:bg-slate-800 hover:shadow-lg"
+                >
+                  Gửi tin nhắn ngay
+                </Link>
+                <a 
+                  href="tel:19001080" 
+                  className="inline-flex items-center justify-center rounded-2xl bg-blue-50 px-8 py-4 text-base font-bold text-blue-700 transition hover:bg-blue-100"
+                >
+                  📞 1900 1080
+                </a>
+              </div>
             </div>
           </div>
+
         </div>
       </section>
     </div>

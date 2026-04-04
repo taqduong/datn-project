@@ -115,63 +115,64 @@ export default function AdminChatPage() {
       .build();
 
     connectionRef.current = connection;
+    
+    let isMounted = true; 
+    let connectTimeout: NodeJS.Timeout;
 
     const handleReceiveMessage = (msg: RealtimeChatMessage) => {
       loadUsers();
-
       setSelectedUser((prevSelected) => {
         if (prevSelected && prevSelected.userId === msg.userId) {
           appendMessageSafely(msg);
-
           markChatAsRead(msg.userId)
             .then(() => loadUsers())
             .catch((err) => console.error("Lỗi đánh dấu đã đọc:", err));
         }
-
         return prevSelected;
       });
     };
 
     const startConnection = async () => {
       try {
-        if (connection.state === "Disconnected") {
+        if (connection.state === "Disconnected" && isMounted) {
           await connection.start();
+          setIsConnected(true);
+          console.log("🟢 Admin đã kết nối Tổng đài Chat!");
         }
-
-        setIsConnected(true);
-        console.log("🟢 Admin đã kết nối Tổng đài Chat!");
 
         connection.off("ReceiveMessage", handleReceiveMessage);
         connection.on("ReceiveMessage", handleReceiveMessage);
 
-        connection.onreconnecting(() => {
-          setIsConnected(false);
-        });
-
+        connection.onreconnecting(() => setIsConnected(false));
         connection.onreconnected(() => {
           setIsConnected(true);
           loadUsers();
         });
-
-        connection.onclose(() => {
-          setIsConnected(false);
-        });
-      } catch (error) {
+        connection.onclose(() => setIsConnected(false));
+      } catch (error: any) {
+        if (error.message && error.message.includes("stopped during negotiation")) return;
         console.error("🔴 Lỗi kết nối Chat:", error);
         setIsConnected(false);
       }
     };
 
-    startConnection();
+    connectTimeout = setTimeout(() => {
+      if (isMounted) {
+        startConnection();
+      }
+    }, 100);
 
     return () => {
+      isMounted = false;
+      clearTimeout(connectTimeout);
+
       connection.off("ReceiveMessage", handleReceiveMessage);
-      connection
-        .stop()
-        .then(() => {
-          setIsConnected(false);
-        })
-        .catch((err) => console.error("Lỗi khi ngắt SignalR:", err));
+      if (connection.state !== "Disconnected") {
+        connection
+          .stop()
+          .then(() => setIsConnected(false))
+          .catch((err) => console.error("Lỗi khi ngắt SignalR:", err));
+      }
     };
   }, [HUB_URL]);
 

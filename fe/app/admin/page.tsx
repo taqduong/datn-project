@@ -31,7 +31,7 @@ export default function AdminDashboardPage() {
     const user = JSON.parse(localStorage.getItem("user") || "{}");
     // Kiểm tra quyền
     if (user?.role !== "nhanvien" && user?.role !== "admin") {
-      router.replace("/404");
+      router.push("/");
       return; 
     } 
     setIsAdmin(true);
