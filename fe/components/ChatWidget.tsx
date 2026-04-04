@@ -119,10 +119,11 @@ export default function ChatWidget() {
   if (!currentUser || currentUser.role === "admin" || currentUser.role === "Admin" || currentUser.role === "nhanvien") return null;
 
   return (
-    <div className="fixed bottom-6 left-6 z-50 flex flex-col items-start">
+    <div className={`fixed bottom-[90px] right-5 flex flex-col items-end ${isOpen ? "z-[60]" : "z-50"}`}>
+      
       {/* Khung Chat (Khi mở) */}
       {isOpen && (
-        <div className="bg-white w-[340px] sm:w-[380px] rounded-3xl shadow-2xl border border-slate-200 mb-4 overflow-hidden flex flex-col h-[500px] animate-in slide-in-from-bottom-4 duration-300 transform origin-bottom-left">
+        <div className="bg-white w-[340px] sm:w-[380px] rounded-3xl shadow-2xl border border-slate-200 mb-4 overflow-hidden flex flex-col h-[500px] animate-in slide-in-from-bottom-4 duration-300 transform origin-bottom-right">
           {/* Header */}
           <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white p-4 flex justify-between items-center shadow-md z-10">
             <div className="flex items-center gap-3">
@@ -202,17 +203,27 @@ export default function ChatWidget() {
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="bg-emerald-500 text-white h-14 w-14 rounded-full shadow-xl shadow-emerald-500/30 hover:bg-emerald-600 hover:scale-110 active:scale-95 transition-all duration-300 flex items-center justify-center group relative"
+          className="group relative flex items-center gap-2.5 rounded-2xl border border-emerald-400/20 bg-emerald-500 px-3 py-2.5 text-white shadow-[0_8px_25px_rgba(16,185,129,0.2)] transition-all duration-300 hover:-translate-y-1 hover:bg-emerald-600 hover:shadow-[0_12px_30px_rgba(16,185,129,0.25)] active:translate-y-0"
         >
-          <Headset size={24} className="group-hover:rotate-12 transition-transform duration-300" />
-          
-          <span className="absolute left-full ml-4 w-max opacity-0 group-hover:opacity-100 transition-opacity bg-slate-800 text-white text-xs py-1.5 px-3 rounded-lg shadow-lg pointer-events-none">
-            Chat với CSKH
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/16 ring-1 ring-inset ring-white/20 backdrop-blur-sm">
+            <Headset
+              size={16}
+              className="transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6"
+            />
+          </div>
+
+          <span className="pr-1 text-left leading-none">
+            <span className="block text-[12px] font-medium text-white/90">
+              Chat với
+            </span>
+            <span className="mt-1 block text-[15px] font-semibold tracking-[-0.01em]">
+              CSKH
+            </span>
           </span>
-          
-          <span className="absolute top-0 right-0 flex h-3.5 w-3.5">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-red-500 border-2 border-white"></span>
+
+          <span className="absolute right-1.5 top-1.5 flex h-2.5 w-2.5">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400/90 opacity-75"></span>
+            <span className="relative inline-flex h-2.5 w-2.5 rounded-full border border-white bg-red-500"></span>
           </span>
         </button>
       )}

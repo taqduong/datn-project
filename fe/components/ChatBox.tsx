@@ -9,7 +9,8 @@ import {
   Trash2,
   X,
   Maximize2, 
-  Minimize2, 
+  Minimize2,
+  Bot, 
 } from "lucide-react";
 import { fetchChatbotAnswer } from "@/services/api";
 
@@ -410,14 +411,29 @@ export default function ChatBox() {
   const showQuickPrompts = !isLoading; // Giữ hiển thị thanh gợi ý luôn (khi không đang tải)
 
   return (
-    <div className="fixed bottom-5 right-5 z-50">
+    <div className={`fixed bottom-5 right-5 ${isOpen ? "z-[60]" : "z-50"}`}>
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
           aria-label="Mở hộp chat"
-          className="group flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-xl transition hover:scale-105 hover:bg-blue-700"
+          className="group relative flex items-center gap-2.5 rounded-2xl bg-blue-600 px-4 py-3 text-white shadow-lg shadow-blue-600/20 transition-all duration-300 hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-xl hover:shadow-blue-600/25 active:translate-y-0"
         >
-          <MessageCircle className="h-6 w-6" />
+          {/* Icon Robot AI */}
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/15 ring-1 ring-white/20">
+            <Bot size={18} className="transition-transform duration-300 group-hover:scale-110" />
+          </div>
+
+          {/* Text 2 dòng đồng bộ với CSKH */}
+          <span className="text-left text-sm font-semibold leading-[1.15] tracking-[-0.01em]">
+            Trợ lý
+            <span className="block text-white/95">Bot AI</span>
+          </span>
+
+          {/* Chấm xanh lá báo hiệu AI luôn online 24/7 */}
+          <span className="absolute right-1.5 top-1.5 flex h-2.5 w-2.5">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
+            <span className="relative inline-flex h-2.5 w-2.5 rounded-full border border-white/80 bg-emerald-500"></span>
+          </span>
         </button>
       )}
 
