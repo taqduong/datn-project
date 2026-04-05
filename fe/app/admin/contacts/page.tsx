@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { fetchAdminContacts, ContactMessageDto, markContactAsRead } from "@/services/api";
+import { fetchAdminContacts, ContactMessageDto, markContactAsRead, replyContactForm } from "@/services/api";
 import {
   Mail,
   Clock,
@@ -10,6 +10,7 @@ import {
   Inbox,
   MessageSquare,
   Filter,
+  Send,
 } from "lucide-react";
 
 type FilterStatus = "all" | "unread" | "read";
@@ -19,6 +20,37 @@ export default function AdminContactPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
+
+  // --- STATE CHO MODAL PHẢN HỒI EMAIL ---
+  const [replyModalOpen, setReplyModalOpen] = useState(false);
+  const [selectedContact, setSelectedContact] = useState<ContactMessageDto | null>(null);
+  const [replyText, setReplyText] = useState("");
+  const [isReplying, setIsReplying] = useState(false);
+
+  // --- HÀM XỬ LÝ MỞ MODAL & GỬI MAIL ---
+  const openReplyModal = (contact: ContactMessageDto) => {
+    setSelectedContact(contact);
+    setReplyText("");
+    setReplyModalOpen(true);
+  };
+
+  const handleSendReply = async () => {
+    if (!selectedContact) return;
+    if (!replyText.trim()) return alert("Vui lòng nhập nội dung phản hồi!");
+    
+    setIsReplying(true);
+    try {
+      await replyContactForm(selectedContact.id, replyText);
+      alert("Đã gửi email phản hồi thành công!");
+      setReplyModalOpen(false);
+      loadContacts(); // Tải lại dữ liệu để cập nhật trạng thái "Đã đọc"
+    } catch (error) {
+      console.error("Lỗi gửi email:", error);
+      alert("Lỗi khi gửi email phản hồi! Kiểm tra lại Backend.");
+    } finally {
+      setIsReplying(false);
+    }
+  };
 
   useEffect(() => {
     loadContacts();
@@ -339,32 +371,87 @@ export default function AdminContactPage() {
                       </td>
 
                       <td className="px-6 py-5 align-top">
-                        {contact.isRead ? (
-                          <span className="inline-flex items-center gap-1.5 rounded-full bg-green-50 px-3 py-1.5 text-xs font-semibold text-green-700 ring-1 ring-inset ring-green-600/20">
-                            <CheckCircle size={14} />
-                            Đã đọc
-                          </span>
-                        ) : (
-                          <div className="flex flex-col items-start gap-2">
-                            <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 ring-1 ring-inset ring-blue-600/20">
-                              <span className="h-2 w-2 rounded-full bg-blue-600 animate-pulse" />
-                              Mới
+                        <div className="flex flex-col items-start gap-3">
+                          {contact.isRead ? (
+                            <span className="inline-flex items-center gap-1.5 rounded-full bg-green-50 px-3 py-1.5 text-xs font-semibold text-green-700 ring-1 ring-inset ring-green-600/20">
+                              <CheckCircle size={14} />
+                              Đã đọc
                             </span>
-                            {/* NÚT ĐÁNH DẤU ĐÃ ĐỌC */}
-                            <button 
-                              onClick={() => handleMarkAsRead(contact.id)}
-                              className="text-[11px] font-semibold text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1 transition-colors"
-                            >
-                              <CheckCircle size={12} /> Đánh dấu đã đọc
-                            </button>
-                          </div>
-                        )}
+                          ) : (
+                            <div className="flex flex-col items-start gap-2">
+                              <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 ring-1 ring-inset ring-blue-600/20">
+                                <span className="h-2 w-2 rounded-full bg-blue-600 animate-pulse" />
+                                Mới
+                              </span>
+                              <button 
+                                onClick={() => handleMarkAsRead(contact.id)}
+                                className="text-[11px] font-semibold text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1 transition-colors"
+                              >
+                                <CheckCircle size={12} /> Đánh dấu đã đọc
+                              </button>
+                            </div>
+                          )}
+
+                          {/* NÚT MỞ MODAL PHẢN HỒI EMAIL */}
+                          <button
+                            onClick={() => openReplyModal(contact)}
+                            className="mt-1 inline-flex items-center gap-1.5 rounded-lg bg-slate-800 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-700"
+                          >
+                            <Send size={12} /> Phản hồi Email
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))
                 )}
               </tbody>
             </table>
+            {/* ========================================= */}
+            {/* MODAL SOẠN EMAIL PHẢN HỒI CHO KHÁCH HÀNG */}
+            {/* ========================================= */}
+            {replyModalOpen && selectedContact && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm">
+                <div className="w-full max-w-lg overflow-hidden rounded-3xl bg-white shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+                  <div className="border-b border-slate-100 bg-slate-50 px-6 py-4">
+                    <h3 className="text-lg font-bold text-slate-900">Phản hồi Khách hàng</h3>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Gửi tới: <span className="font-semibold text-blue-600">{selectedContact.email}</span>
+                    </p>
+                  </div>
+                  
+                  <div className="p-6">
+                    <div className="mb-4 rounded-xl bg-slate-50 p-4 text-sm text-slate-600 border border-slate-100">
+                      <strong>Khách hỏi:</strong> "{selectedContact.content}"
+                    </div>
+                    
+                    <label className="mb-2 block text-sm font-semibold text-slate-700">Nội dung trả lời</label>
+                    <textarea
+                      rows={6}
+                      className="w-full resize-none rounded-xl border border-slate-200 bg-white p-4 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                      placeholder="Nhập nội dung email phản hồi..."
+                      value={replyText}
+                      onChange={(e) => setReplyText(e.target.value)}
+                    ></textarea>
+                  </div>
+
+                  <div className="border-t border-slate-100 bg-slate-50 px-6 py-4 flex justify-end gap-3">
+                    <button
+                      onClick={() => setReplyModalOpen(false)}
+                      className="rounded-xl px-5 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-200"
+                    >
+                      Hủy bỏ
+                    </button>
+                    <button
+                      onClick={handleSendReply}
+                      disabled={isReplying}
+                      className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
+                    >
+                      {isReplying ? "Đang gửi..." : ( <><Send size={16} /> Gửi Email</> )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -559,6 +559,8 @@ export const contactAPI = {
     api.post<{ success: boolean; message: string }>("/contact", data),
   getAllAdmin: () => api.get<ContactMessageDto[]>("/contact"),
   markAsRead: (id: number) => api.put(`/contact/${id}/read`),
+  reply: (id: number, replyContent: string) => 
+    api.post<{ success: boolean; message: string }>(`/contact/${id}/reply`, { replyContent }),
 };
 
 // ================= Chat API =================
@@ -635,6 +637,7 @@ export const resetPassword = authAPI.resetPassword;
 export const submitContactForm = contactAPI.submit;
 export const fetchAdminContacts = contactAPI.getAllAdmin;
 export const markContactAsRead = contactAPI.markAsRead;
+export const replyContactForm = contactAPI.reply;
 
 export const fetchUserChatHistory = chatAPI.getUserHistory;
 export const fetchAdminChatUsers = chatAPI.getAdminChatUsers;

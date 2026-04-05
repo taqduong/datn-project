@@ -209,7 +209,7 @@ export default function AdminOrdersPage() {
                             </option>
                             
                             <option 
-                              value="shipping"
+                              value="Shipping"
                               disabled={order.paymentMethod?.toLowerCase() === 'vnpay' && order.status.toLowerCase() === 'pending'}
                             >
                               Đang giao hàng

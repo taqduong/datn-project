@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using BE.Data;
 using BE.Models;
+using BE.Services;
 
 namespace BE.Controllers
 {
@@ -17,10 +18,12 @@ namespace BE.Controllers
     public class OrderController : ControllerBase
     {
         private readonly ShopDbContext _context;
+        private readonly IEmailService _emailService;
 
-        public OrderController(ShopDbContext context)
+        public OrderController(ShopDbContext context, IEmailService emailService)
         {
             _context = context;
+            _emailService = emailService;
         }
 
         private int? GetUserIdFromToken()
@@ -170,6 +173,20 @@ namespace BE.Controllers
 
             _context.Orders.Add(newOrder);
             await _context.SaveChangesAsync();
+            if (!string.IsNullOrEmpty(newOrder.Email))
+            {
+                try {
+                    var fullOrder = await _context.Orders
+                        .Include(o => o.OrderDetails).ThenInclude(od => od.Product)
+                        .Include(o => o.OrderDetails).ThenInclude(od => od.ProductVariant)
+                        .FirstOrDefaultAsync(o => o.OrderId == newOrder.OrderId);
+
+                    if (fullOrder != null) {
+                        string body = GetOrderEmailTemplate(fullOrder, "Xác nhận đặt hàng thành công", "Đơn hàng của bạn đã được tiếp nhận và đang chờ xử lý. Chúng tôi sẽ sớm giao hàng cho bạn.");
+                        await _emailService.SendEmailAsync(fullOrder.Email, $"[HomeMart] Xác nhận đơn hàng thành công #{fullOrder.OrderId}", body);
+                    }
+                } catch { /* Bỏ qua lỗi nếu gửi mail thất bại */ }
+            }
             return Ok(new { message = "Đặt hàng thành công!", orderId = newOrder.OrderId });
         }
 
@@ -375,6 +392,9 @@ namespace BE.Controllers
 
             var order = await _context.Orders
                 .Include(o => o.OrderDetails)
+                    .ThenInclude(od => od.Product)        
+                .Include(o => o.OrderDetails)
+                    .ThenInclude(od => od.ProductVariant) 
                 .FirstOrDefaultAsync(o => o.OrderId == id);
 
             if (order == null) return NotFound(new { message = "Không tìm thấy đơn hàng." });
@@ -396,6 +416,13 @@ namespace BE.Controllers
             await RestoreStockAsync(order); 
 
             await _context.SaveChangesAsync();
+            if (!string.IsNullOrEmpty(order.Email))
+            {
+                try {
+                    string body = GetOrderEmailTemplate(order, "Đơn hàng đã bị hủy", "Rất tiếc, đơn hàng của bạn đã bị hủy. Nếu có nhầm lẫn, vui lòng liên hệ hotline 1900 1080 để được hỗ trợ.");
+                    await _emailService.SendEmailAsync(order.Email, $"[HomeMart] Thông báo hủy đơn hàng #{order.OrderId}", body);
+                } catch { }
+            }
             return Ok(new { message = "Đã hủy đơn hàng và hoàn lại số lượng vào kho." });
         }
 
@@ -418,26 +445,54 @@ namespace BE.Controllers
             return Ok(new { message = "Xác nhận đã hoàn tiền thành công!" });
         }
 
-        // ================== ADMIN: DUYỆT/HỦY ĐƠN HÀNG ==================
+        // ================== ADMIN: DUYỆT/HỦY/CẬP NHẬT TRẠNG THÁI ĐƠN HÀNG ==================
         [HttpPut("{id:int}/status")]
-        // [Authorize(Roles = "admin")]
         public async Task<IActionResult> UpdateOrderStatus(int id, [FromBody] UpdateStatusDto request)
         {
             var order = await _context.Orders
-                .Include(o => o.OrderDetails)
+                .Include(o => o.OrderDetails).ThenInclude(od => od.Product)
+                .Include(o => o.OrderDetails).ThenInclude(od => od.ProductVariant)
                 .FirstOrDefaultAsync(o => o.OrderId == id);
                 
             if (order == null) return NotFound(new { message = "Không tìm thấy đơn hàng." });
 
             if (request.Status == "Cancelled" && order.Status != "Cancelled")
             {
-                // GỌI HÀM HOÀN KHO DÙNG CHUNG
                 await RestoreStockAsync(order); 
             }
 
             order.Status = request.Status;
             await _context.SaveChangesAsync();
 
+            if (!string.IsNullOrEmpty(order.Email))
+            {
+                try {
+                    string title = "";
+                    string msg = "";
+
+                    if (request.Status == "Processing") {
+                        title = "Đơn hàng đang được chuẩn bị";
+                        msg = "HomeMart đã xác nhận đơn hàng của bạn và đang tiến hành đóng gói. Shipper sẽ sớm đến lấy hàng!";
+                    } 
+                    else if (request.Status == "Shipping") {
+                        title = "Đơn hàng đang được giao";
+                        msg = "Đơn hàng của bạn đã được bàn giao cho đơn vị vận chuyển và đang trên đường tới chỗ bạn.";
+                    } 
+                    else if (request.Status == "Completed") {
+                        title = "Giao hàng thành công";
+                        msg = "Đơn hàng đã được giao thành công. Cảm ơn bạn đã tin dùng sản phẩm của HomeMart!";
+                    }
+                    else if (request.Status == "Cancelled") {
+                        title = "Đơn hàng đã bị hủy";
+                        msg = "Rất tiếc, đơn hàng của bạn đã bị hủy trên hệ thống. Nếu có nhầm lẫn, vui lòng liên hệ hotline để được hỗ trợ.";
+                    }
+
+                    if (!string.IsNullOrEmpty(title)) {
+                        string body = GetOrderEmailTemplate(order, title, msg);
+                        await _emailService.SendEmailAsync(order.Email, $"[HomeMart] Thông báo đơn hàng #{order.OrderId}: {title}", body);
+                    }
+                } catch { }
+            }
             return Ok(new { message = "Cập nhật trạng thái thành công!" });
         }
 
@@ -464,6 +519,98 @@ namespace BE.Controllers
             await _context.SaveChangesAsync();
 
             return Ok(new { message = "Đã xoá đơn hàng và hoàn trả tồn kho thành công." });
+        }
+
+        [NonAction]
+        private string GetOrderEmailTemplate(Order order, string statusTitle, string statusMessage)
+        {
+            var sb = new System.Text.StringBuilder();
+
+            // Xử lý ghi chú: Nếu trống thì hiển thị "Không có"
+            string noteText = string.IsNullOrEmpty(order.Note) ? "Không có" : order.Note;
+
+            sb.Append($@"
+            <div style='font-family: Arial, sans-serif; max-width: 650px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;'>
+                <div style='background-color: #2563eb; padding: 20px; text-align: center; color: white;'>
+                    <h2 style='margin: 0; font-size: 24px;'>HomeMart Shop</h2>
+                    <p style='margin: 5px 0 0 0; font-size: 16px;'>{statusTitle}</p>
+                </div>
+                <div style='padding: 20px; color: #333;'>
+                    <p>Xin chào <strong>{order.FullName}</strong>,</p>
+                    <p>{statusMessage}</p>
+                    
+                    <h3 style='border-bottom: 1px solid #eee; padding-bottom: 10px; color: #2563eb; margin-top: 30px;'>THÔNG TIN ĐƠN HÀNG #{order.OrderId}</h3>
+                    <p style='margin: 5px 0;'><strong>Ngày đặt:</strong> {order.OrderDate:dd/MM/yyyy HH:mm}</p>
+                    <p style='margin: 5px 0;'><strong>Người nhận:</strong> {order.FullName} - {order.Phone}</p>
+                    <p style='margin: 5px 0;'><strong>Giao đến:</strong> {order.Address}, {order.Ward}, {order.City}</p>
+                    <p style='margin: 5px 0;'><strong>Ghi chú:</strong> <span style='font-style: italic; color: #d97706;'>{noteText}</span></p>
+
+                    <table width='100%' cellpadding='10' cellspacing='0' style='border-collapse: collapse; margin-top: 20px;'>
+                        <thead style='background-color: #f8f9fa; text-align: left;'>
+                            <tr>
+                                <th>Sản phẩm</th>
+                                <th width='60' style='text-align: center;'>SL</th>
+                                <th width='100' style='text-align: right;'>Giá</th>
+                            </tr>
+                        </thead>
+                        <tbody>");
+
+            decimal totalItemsPrice = 0;
+
+            // Vòng lặp in ra từng sản phẩm
+            foreach (var detail in order.OrderDetails)
+            {
+                string productName = detail.Product?.Name ?? "Sản phẩm không xác định";
+                string variantInfo = detail.ProductVariant != null ? $"Phân loại: {detail.ProductVariant.VariantName}" : "";
+                
+                decimal lineTotal = detail.UnitPrice * detail.Quantity;
+                totalItemsPrice += lineTotal;
+
+                sb.Append($@"
+                            <tr style='border-bottom: 1px solid #eee;'>
+                                <td>
+                                    <div style='font-weight: bold; margin-bottom: 4px; color: #333;'>{productName}</div>
+                                    {(string.IsNullOrEmpty(variantInfo) ? "" : $"<div style='font-size: 12px; color: #757575;'>{variantInfo}</div>")}
+                                </td>
+                                <td style='text-align: center; color: #555;'>x{detail.Quantity}</td>
+                                <td style='text-align: right; color: #555;'>{detail.UnitPrice:N0} đ</td>
+                            </tr>");
+            }
+
+            sb.Append($@"
+                        </tbody>
+                    </table>
+
+                    <table width='100%' cellpadding='8' cellspacing='0' style='margin-top: 15px; font-size: 14px;'>
+                        <tr>
+                            <td colspan='2' style='text-align: right; color: #555;'>Tổng tiền hàng:</td>
+                            <td width='120' style='text-align: right;'>{totalItemsPrice:N0} đ</td>
+                        </tr>
+                        <tr>
+                            <td colspan='2' style='text-align: right; color: #555;'>Phí vận chuyển:</td>
+                            <td style='text-align: right;'>{order.ShippingFee:N0} đ</td>
+                        </tr>
+                        <tr>
+                            <td colspan='2' style='text-align: right; color: #555;'>Voucher giảm giá:</td>
+                            <td style='text-align: right;'>- {order.DiscountAmount:N0} đ</td>
+                        </tr>
+                        <tr>
+                            <td colspan='2' style='text-align: right; font-weight: bold; font-size: 16px;'>Tổng thanh toán:</td>
+                            <td style='text-align: right; font-weight: bold; font-size: 18px; color: #2563eb;'>{order.TotalAmount:N0} đ</td>
+                        </tr>
+                    </table>
+
+                    <div style='text-align: center; margin-top: 35px;'>
+                        <a href='http://localhost:3000/orders' style='display: inline-block; background-color: #2563eb; color: white; padding: 12px 30px; text-decoration: none; border-radius: 4px; font-weight: bold;'>XEM CHI TIẾT ĐƠN HÀNG</a>
+                    </div>
+                </div>
+                <div style='background-color: #f1f5f9; padding: 20px; text-align: center; font-size: 12px; color: #64748b;'>
+                    © 2026 HomeMart - Hệ thống TMĐT Gia dụng thông minh<br/>
+                    Email này được gửi tự động từ hệ thống, vui lòng không trả lời trực tiếp.
+                </div>
+            </div>");
+
+            return sb.ToString();
         }
     }
 

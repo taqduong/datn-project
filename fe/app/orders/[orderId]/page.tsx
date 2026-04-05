@@ -6,7 +6,8 @@ import { fetchOrderById, cancelOrder, type OrderDto, resolveImgUrl } from "@/ser
 import {
   ArrowLeft, Calendar, Package, MapPin, Phone, 
   User, CheckCircle2, Clock, Truck, XCircle, ShoppingBag, 
-  CreditCard, FileText, AlertCircle, Star, Download
+  CreditCard, FileText, AlertCircle, Star, Download,
+  Mail
 } from "lucide-react";
 
 export default function OrderDetailPage() {
@@ -332,6 +333,14 @@ export default function OrderDetailPage() {
                   <div>
                     <p className="text-slate-500 mb-0.5">Số điện thoại</p>
                     <p className="font-semibold text-slate-900">{order.phone}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <Mail className="w-5 h-5 text-slate-400 shrink-0" />
+                  <div>
+                    <p className="text-slate-500 mb-0.5">Email liên hệ</p>
+                    <p className="font-semibold text-slate-900 break-all">{order.email || "Chưa cung cấp"}</p>
                   </div>
                 </div>
 
