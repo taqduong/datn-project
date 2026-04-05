@@ -6,6 +6,8 @@ import api, {
   createCategory,
   updateCategory,
   deleteCategory,
+  uploadImage,
+  resolveImgUrl,
   type Category,
 } from "@/services/api";
 import toast from "react-hot-toast";
@@ -14,6 +16,7 @@ import Modal from "@/components/Modal";
 type CategoryForm = {
   name: string;
   description: string;
+  imageUrl: string;
 };
 
 export default function CategoryPage() {
@@ -22,6 +25,7 @@ export default function CategoryPage() {
   const [form, setForm] = useState<CategoryForm>({
     name: "",
     description: "",
+    imageUrl: "",
   });
 
   const [loading, setLoading] = useState(true);
@@ -33,6 +37,7 @@ export default function CategoryPage() {
   const [importStep, setImportStep] = useState<1 | 2>(1);
   const [previewData, setPreviewData] = useState<any[]>([]);
   const [selectedExcelFile, setSelectedExcelFile] = useState<File | null>(null);
+  const [selectedZipFile, setSelectedZipFile] = useState<File | null>(null);
   const [isUploadingExcel, setIsUploadingExcel] = useState(false);
 
   const handleCloseImportModal = () => {
@@ -40,9 +45,30 @@ export default function CategoryPage() {
     setImportStep(1);
     setPreviewData([]);
     setSelectedExcelFile(null);
+    setSelectedZipFile(null);
   };
 
   const nameInputRef = useRef<HTMLInputElement>(null);
+
+  const handleUploadImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const toastId = toast.loading("Đang tải ảnh lên...");
+      const fd = new FormData();
+      fd.append("Files", file); // Phải viết hoa chữ F cho khớp với Backend
+      
+      const res = await uploadImage(fd);
+      if (res.data.imageUrls && res.data.imageUrls.length > 0) {
+        setForm(prev => ({ ...prev, imageUrl: res.data.imageUrls[0] }));
+        toast.success("Tải ảnh thành công", { id: toastId });
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("Lỗi khi tải ảnh lên");
+    }
+  };
 
   const loadCategories = async () => {
     try {
@@ -79,10 +105,7 @@ export default function CategoryPage() {
   };
 
   const resetForm = () => {
-    setForm({
-      name: "",
-      description: "",
-    });
+    setForm({ name: "", description: "", imageUrl: "" });
     setIsEditing(false);
     setEditCategoryId(null);
   };
@@ -98,6 +121,7 @@ export default function CategoryPage() {
       const res = await createCategory({
         name: form.name.trim(),
         description: form.description.trim(),
+        imageUrl: form.imageUrl, 
       });
 
       setCategories((prev) => [...prev, res.data]);
@@ -125,6 +149,7 @@ export default function CategoryPage() {
       await updateCategory(editCategoryId, {
         name: form.name.trim(),
         description: form.description.trim(),
+        imageUrl: form.imageUrl, 
       });
 
       setCategories((prev) =>
@@ -134,6 +159,7 @@ export default function CategoryPage() {
                 ...category,
                 name: form.name.trim(),
                 description: form.description.trim(),
+                imageUrl: form.imageUrl, 
               }
             : category
         )
@@ -176,6 +202,7 @@ export default function CategoryPage() {
     setForm({
       name: category.name,
       description: category.description || "",
+      imageUrl: category.imageUrl || "",
     });
 
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -269,6 +296,32 @@ export default function CategoryPage() {
                 disabled={submitting}
               />
             </div>
+
+            {/* GIAO DIỆN UPLOAD ẢNH */}
+            <div className="md:col-span-2 mt-2">
+              <label className="mb-2 block text-sm font-medium text-gray-700">
+                Ảnh đại diện danh mục
+              </label>
+              <div className="flex items-center gap-4">
+                {form.imageUrl ? (
+                  <div className="relative h-20 w-20 overflow-hidden rounded-xl border border-gray-200 shadow-sm">
+                    <img src={resolveImgUrl(form.imageUrl)} alt="Preview" className="h-full w-full object-cover" />
+                    <button type="button" onClick={() => setForm(prev => ({...prev, imageUrl: ""}))} className="absolute right-0 top-0 flex h-6 w-6 items-center justify-center rounded-bl-lg bg-red-500 text-xs font-bold text-white transition hover:bg-red-600">✕</button>
+                  </div>
+                ) : (
+                  <div className="flex h-20 w-20 items-center justify-center rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 text-2xl text-gray-400">
+                    🖼️
+                  </div>
+                )}
+                <div>
+                  <input type="file" id="category-img" className="hidden" accept="image/*" onChange={handleUploadImage} disabled={submitting} />
+                  <label htmlFor="category-img" className="cursor-pointer rounded-lg bg-purple-50 px-4 py-2 text-sm font-semibold text-purple-700 border border-purple-200 hover:bg-purple-100 transition shadow-sm">
+                    Tải ảnh lên
+                  </label>
+                </div>
+              </div>
+            </div>
+
           </div>
 
           <div className="flex gap-3">
@@ -358,6 +411,9 @@ export default function CategoryPage() {
                       Mô tả
                     </th>
                     <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                      Ảnh
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                       Thao tác
                     </th>
                   </tr>
@@ -366,7 +422,7 @@ export default function CategoryPage() {
                 <tbody className="divide-y divide-gray-200">
                   {filteredCategories.length === 0 ? (
                     <tr>
-                      <td colSpan={4} className="px-6 py-12 text-center">
+                      <td colSpan={5} className="px-6 py-12 text-center">
                         <div className="flex flex-col items-center justify-center">
                           <span className="mb-4 text-5xl">📂</span>
                           <h3 className="mb-2 text-lg font-medium text-gray-900">
@@ -412,6 +468,19 @@ export default function CategoryPage() {
                           >
                             {category.description}
                           </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          {category.imageUrl ? (
+                            <img
+                              src={resolveImgUrl(category.imageUrl)}
+                              alt={category.name}
+                              className="h-14 w-14 rounded-xl object-cover border border-gray-200 shadow hover:scale-105 transition"
+                            />
+                          ) : (
+                            <div className="flex h-14 w-14 items-center justify-center rounded-lg border border-dashed text-gray-400 text-xs">
+                              No Img
+                            </div>
+                          )}
                         </td>
 
                         <td className="whitespace-nowrap px-6 py-4">
@@ -480,6 +549,30 @@ export default function CategoryPage() {
                   </label>
                 </div>
               </div>
+
+              <div className="mt-4">
+                <label className="mb-2 block text-sm font-bold text-gray-700">
+                  2. File nén chứa ẢNH (.zip) - Không bắt buộc
+                </label>
+                <div className="w-[520px]">
+                  <input
+                    id="category-zip-upload"
+                    type="file"
+                    accept=".zip"
+                    className="hidden"
+                    onChange={(e) => setSelectedZipFile(e.target.files?.[0] || null)}
+                  />
+                  <label
+                    htmlFor="category-zip-upload"
+                    className="flex cursor-pointer items-center rounded-lg border border-gray-300 px-3 py-2.5 text-black hover:border-purple-400"
+                  >
+                    <span className="truncate">
+                      {selectedZipFile ? selectedZipFile.name : "Chọn tệp"}
+                    </span>
+                  </label>
+                </div>
+              </div>
+
               <div className="mt-8 w-full flex justify-end gap-3">
                 <button type="button" onClick={handleCloseImportModal} className="cursor-pointer rounded-lg bg-black px-6 py-2.5 font-bold text-white transition hover:bg-gray-800">Hủy</button>
                 <button 
@@ -489,7 +582,9 @@ export default function CategoryPage() {
                     try {
                       setIsUploadingExcel(true);
                       const fd = new FormData();
-                      fd.append("file", selectedExcelFile!);
+                      fd.append("excelFile", selectedExcelFile!); // Đổi "file" thành "excelFile"
+                      if (selectedZipFile) fd.append("zipFile", selectedZipFile); // Thêm zipFile
+
                       const res = await api.post("/categories/preview-import", fd, { headers: { "Content-Type": "multipart/form-data" } });
                       setPreviewData(res.data);
                       setImportStep(2); 
@@ -515,8 +610,9 @@ export default function CategoryPage() {
                   <thead className="sticky top-0 z-10 bg-gray-100 text-gray-800 shadow-sm">
                     <tr>
                       <th className="p-4 font-semibold w-[60px]">Dòng</th>
-                      <th className="p-4 font-semibold w-[450px]">Tên Danh Mục</th>
-                      <th className="p-4 font-semibold w-[500px]">Mô Tả</th>
+                      <th className="p-4 font-semibold w-[350px]">Tên Danh Mục</th>
+                      <th className="p-4 font-semibold w-[400px]">Mô Tả</th>
+                      <th className="p-4 font-semibold w-[200px]">Tên Ảnh</th> 
                       <th className="p-4 text-center font-semibold w-[140px]">Trạng thái</th>
                       <th className="p-4 font-semibold min-w-[140px]">Lỗi</th>
                     </tr>
@@ -536,6 +632,10 @@ export default function CategoryPage() {
                         </td>
 
                         <td className="p-4 text-gray-700">{row.description || "-"}</td>
+
+                        <td className="p-4 text-gray-700 italic">
+                          {row.imageFileName || "Không có"}
+                        </td>
 
                         <td className="p-4 text-center w-[140px]">
                           {row.isValid ? (
@@ -577,7 +677,9 @@ export default function CategoryPage() {
                       try {
                         setIsUploadingExcel(true);
                         const fd = new FormData();
-                        fd.append("file", selectedExcelFile!);
+                        fd.append("excelFile", selectedExcelFile!); // Đổi "file" thành "excelFile"
+                        if (selectedZipFile) fd.append("zipFile", selectedZipFile); // Thêm zipFile
+
                         const res = await api.post("/categories/import", fd, { headers: { "Content-Type": "multipart/form-data" } });
                         toast.success(res.data.message);
                         handleCloseImportModal();

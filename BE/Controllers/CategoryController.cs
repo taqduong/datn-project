@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using BE.Models;
 using BE.Data;
 using OfficeOpenXml;
+using System.IO.Compression;
 
 namespace BE.Controllers
 {
@@ -11,10 +12,12 @@ namespace BE.Controllers
     public class CategoryController : ControllerBase
     {
         private readonly ShopDbContext _context;
+        private readonly IWebHostEnvironment _env;
 
-        public CategoryController(ShopDbContext context)
+        public CategoryController(ShopDbContext context, IWebHostEnvironment env)
         {
             _context = context;
+            _env = env;
         }
 
         // =========================================================================
@@ -25,6 +28,7 @@ namespace BE.Controllers
             public int Row { get; set; }
             public string Name { get; set; } = string.Empty;
             public string Description { get; set; } = string.Empty;
+            public string ImageFileName { get; set; } = string.Empty;
             public bool IsValid { get; set; }
             public List<string> Errors { get; set; } = new List<string>();
         }
@@ -33,10 +37,13 @@ namespace BE.Controllers
         // BƯỚC 1: API ĐỌC NHÁP EXCEL (PREVIEW LỖI)
         // =========================================================================
         [HttpPost("preview-import")]
-        public async Task<IActionResult> PreviewImport(IFormFile file)
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> PreviewImport([FromForm] CategoryImportRequest request)
         {
-            if (file == null || file.Length == 0) return BadRequest(new { message = "Vui lòng chọn file hợp lệ." });
-            if (Path.GetExtension(file.FileName).ToLower() != ".xlsx") return BadRequest(new { message = "Chỉ hỗ trợ file Excel .xlsx." });
+            var excelFile = request.excelFile;
+
+            if (excelFile == null || excelFile.Length == 0) return BadRequest(new { message = "Vui lòng chọn file Excel hợp lệ." });
+            if (Path.GetExtension(excelFile.FileName).ToLower() != ".xlsx") return BadRequest(new { message = "Chỉ hỗ trợ file Excel .xlsx." });
 
             var previewList = new List<PreviewCategoryRowDto>();
 
@@ -44,7 +51,7 @@ namespace BE.Controllers
             {
                 using (var stream = new MemoryStream())
                 {
-                    await file.CopyToAsync(stream);
+                    await excelFile.CopyToAsync(stream);
                     stream.Position = 0;
                     using (var package = new ExcelPackage(stream))
                     {
@@ -54,17 +61,19 @@ namespace BE.Controllers
                         int rowCount = worksheet.Dimension.Rows;
 
                         for (int row = 2; row <= rowCount; row++)
-                        {
-                            var name = worksheet.Cells[row, 1].Value?.ToString()?.Trim() ?? "";
-                            var description = worksheet.Cells[row, 2].Value?.ToString()?.Trim() ?? "";
+{
+                        var name = worksheet.Cells[row, 1].Value?.ToString()?.Trim() ?? "";
+                        var description = worksheet.Cells[row, 2].Value?.ToString()?.Trim() ?? "";
+                        var imageFileName = worksheet.Cells[row, 3].Value?.ToString()?.Trim() ?? ""; // <--- THÊM DÒNG ĐỌC CỘT 3
 
-                            var previewRow = new PreviewCategoryRowDto
-                            {
-                                Row = row,
-                                Name = name,
-                                Description = description,
-                                IsValid = true
-                            };
+                        var previewRow = new PreviewCategoryRowDto
+                        {
+                            Row = row,
+                            Name = name,
+                            Description = description,
+                            ImageFileName = imageFileName, 
+                            IsValid = true
+                        };
 
                             // Check lỗi rỗng
                             if (string.IsNullOrEmpty(name))
@@ -95,18 +104,53 @@ namespace BE.Controllers
         // BƯỚC 2: API IMPORT THẬT (CHẶN DÒNG LỖI)
         // =========================================================================
         [HttpPost("import")]
-        public async Task<IActionResult> ImportCategories(IFormFile file)
+        [Consumes("multipart/form-data")] 
+        public async Task<IActionResult> ImportCategories([FromForm] CategoryImportRequest request)
         {
-            if (file == null || file.Length == 0) return BadRequest(new { message = "Vui lòng chọn file." });
+            var excelFile = request.excelFile;
+            var zipFile = request.zipFile; // <--- LẤY FILE ZIP TỪ REACT LÊN
+
+            if (excelFile == null || excelFile.Length == 0) return BadRequest(new { message = "Vui lòng chọn file Excel." });
 
             var importedCategories = new List<Category>();
             int successCount = 0, skipCount = 0;
+            var extractedImages = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
             try
             {
+                // 1. GIẢI NÉN FILE ZIP VÀ LƯU ẢNH VÀO SERVER
+                if (zipFile != null && zipFile.Length > 0)
+                {
+                    if (Path.GetExtension(zipFile.FileName).ToLower() != ".zip")
+                        return BadRequest(new { message = "Chỉ hỗ trợ file nén định dạng .zip" });
+
+                    var webRootPath = _env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+                    var uploadPath = Path.Combine(webRootPath, "uploads", "categories");
+                    if (!Directory.Exists(uploadPath)) Directory.CreateDirectory(uploadPath);
+
+                    // Giải nén
+                    using var archive = new System.IO.Compression.ZipArchive(zipFile.OpenReadStream());
+                    foreach (var entry in archive.Entries)
+                    {
+                        if (string.IsNullOrEmpty(entry.Name)) continue; 
+                        var ext = Path.GetExtension(entry.Name).ToLower();
+                        if (new[] { ".jpg", ".jpeg", ".png", ".webp" }.Contains(ext))
+                        {
+                            var originalName = Path.GetFileNameWithoutExtension(entry.Name);
+                            var newFileName = $"{originalName}_{DateTime.Now:yyyyMMddHHmmss}{ext}";
+                            var fullPath = Path.Combine(uploadPath, newFileName);
+                            entry.ExtractToFile(fullPath, true);
+                            
+                            // Lưu vào bộ nhớ tạm: "giadung.jpg" -> "/uploads/categories/xxx.jpg"
+                            extractedImages[entry.Name] = $"/uploads/categories/{newFileName}"; 
+                        }
+                    }
+                }
+
+                // 2. XỬ LÝ FILE EXCEL VÀ GHÉP ẢNH
                 using (var stream = new MemoryStream())
                 {
-                    await file.CopyToAsync(stream);
+                    await excelFile.CopyToAsync(stream);
                     stream.Position = 0;
                     using (var package = new ExcelPackage(stream))
                     {
@@ -118,6 +162,7 @@ namespace BE.Controllers
                         {
                             var name = worksheet.Cells[row, 1].Value?.ToString()?.Trim();
                             var description = worksheet.Cells[row, 2].Value?.ToString()?.Trim();
+                            var imageFileName = worksheet.Cells[row, 3].Value?.ToString()?.Trim(); // ĐỌC CỘT 3 EXCEL
 
                             // Bảo vệ Database: Tên trống hoặc trùng thì SKIP
                             if (string.IsNullOrEmpty(name)) { skipCount++; continue; }
@@ -125,9 +170,17 @@ namespace BE.Controllers
                             var isExist = await _context.Categories.AnyAsync(c => c.Name.ToLower() == name.ToLower());
                             if (isExist) { skipCount++; continue; }
 
+                            // So khớp ảnh: Tên trong Excel có trùng với ảnh trong ZIP không?
+                            string? finalImageUrl = null;
+                            if (!string.IsNullOrEmpty(imageFileName) && extractedImages.TryGetValue(imageFileName, out var savedUrl))
+                            {
+                                finalImageUrl = savedUrl;
+                            }
+
                             importedCategories.Add(new Category {
                                 Name = name,
                                 Description = description,
+                                ImageUrl = finalImageUrl, // <--- LƯU LINK ẢNH VÀO DATABASE
                                 CreatedAt = DateTime.Now
                             });
                             successCount++;
@@ -149,7 +202,6 @@ namespace BE.Controllers
             }
         }
 
-        // --- CÁC API CRUD CƠ BẢN GIỮ NGUYÊN CHO SẾP ---
 
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Category>>> GetAllCategories() => await _context.Categories.ToListAsync();
@@ -161,10 +213,15 @@ namespace BE.Controllers
             return category == null ? NotFound() : Ok(category);
         }
 
-        [HttpPost("create-manual")] // Đổi tên để tránh trùng route với CreateCategory cũ
+        [HttpPost("create-manual")]
         public async Task<ActionResult<Category>> CreateCategory([FromBody] CategoryRequest request)
         {
-            var category = new Category { Name = request.Name, Description = request.Description, CreatedAt = DateTime.Now };
+            var category = new Category { 
+                Name = request.Name, 
+                Description = request.Description, 
+                ImageUrl = request.ImageUrl, 
+                CreatedAt = DateTime.Now 
+            };
             _context.Categories.Add(category);
             await _context.SaveChangesAsync();
             return CreatedAtAction(nameof(GetCategory), new { id = category.Id }, category);
@@ -175,8 +232,11 @@ namespace BE.Controllers
         {
             var category = await _context.Categories.FindAsync(id);
             if (category == null) return NotFound();
+            
             category.Name = request.Name;
             category.Description = request.Description;
+            category.ImageUrl = request.ImageUrl; 
+            
             await _context.SaveChangesAsync();
             return Ok(new { message = "Cập nhật thành công." });
         }
@@ -197,5 +257,12 @@ namespace BE.Controllers
     {
         public string Name { get; set; } = string.Empty;
         public string? Description { get; set; }
+        public string? ImageUrl { get; set; }
+    }
+
+    public class CategoryImportRequest
+    {
+        public IFormFile excelFile { get; set; } = null!;
+        public IFormFile? zipFile { get; set; }
     }
 }

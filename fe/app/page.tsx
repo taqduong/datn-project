@@ -318,10 +318,18 @@ export default function HomePage() {
                   key={category.id}
                   className="group rounded-3xl border border-slate-100 bg-white p-6 shadow-sm transition duration-300 hover:-translate-y-1.5 hover:border-blue-200 hover:shadow-xl hover:shadow-blue-100"
                 >
-                  <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-50 text-2xl transition group-hover:bg-blue-50 group-hover:scale-110">
-                    {/* 3. Hiển thị Icon đã lọc được */}
-                    {categoryIcon}
-                  </div>
+                  <div className="mb-5 flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl bg-slate-50 text-3xl transition duration-300 group-hover:scale-110 group-hover:shadow-md">
+                  {/* NẾU CÓ LINK ẢNH THÌ HIỆN ẢNH, KHÔNG CÓ THÌ DÙNG ICON CŨ */}
+                  {category.imageUrl ? (
+                    <img 
+                      src={resolveImgUrl(category.imageUrl)} 
+                      alt={category.name} 
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    categoryIcon
+                  )}
+                </div>
                   <h3 className="text-lg font-bold text-slate-900">
                     {category.name}
                   </h3>

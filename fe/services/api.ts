@@ -49,6 +49,7 @@ export interface Category {
   id: number;
   name: string;
   description?: string;
+  imageUrl?: string;
   createdAt?: string;
 }
 
@@ -83,6 +84,7 @@ export interface ProductVariant {
 export interface CreateCategoryPayload {
   name: string;
   description?: string;
+  imageUrl?: string;
 }
 
 export interface CreateProductPayload {

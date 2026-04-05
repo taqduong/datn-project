@@ -14,6 +14,9 @@ public partial class Category
 
     [StringLength(500)]
     public string? Description { get; set; }
+    
+    [StringLength(500)]
+    public string? ImageUrl { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.Now;
 
