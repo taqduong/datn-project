@@ -27,7 +27,7 @@ export default function ProductsPage() {
   
   // ================= STATE PHÂN TRANG =================
   const [currentPage, setCurrentPage] = useState(1);
-  const ITEMS_PER_PAGE = 12; // In 12 sản phẩm mỗi trang cho đẹp đội hình Grid 3
+  const [pageSize, setPageSize] = useState(12); 
 
   const searchParams = useSearchParams();
   const keyword = searchParams.get("keyword");
@@ -69,7 +69,7 @@ export default function ProductsPage() {
   // KHI BẤM LỌC, TÌM KIẾM HOẶC ĐỔI SẮP XẾP -> Ép nó quay về Trang 1
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedCategory, selectedPriceRange, sortBy, keyword]);
+  }, [selectedCategory, selectedPriceRange, sortBy, keyword, pageSize]);
 
   const getDisplayPrice = (product: Product) => {
     const discountRate = (product.discount || 0) / 100;
@@ -141,10 +141,10 @@ export default function ProductsPage() {
   }, [products, selectedCategory, selectedPriceRange, sortBy]);
 
   // ================= CẮT DỮ LIỆU ĐỂ PHÂN TRANG =================
-  const totalPages = Math.ceil(filteredAndSortedProducts.length / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(filteredAndSortedProducts.length / pageSize); 
   const currentProducts = filteredAndSortedProducts.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize        
   );
 
   const minPrice =
@@ -242,20 +242,40 @@ export default function ProductsPage() {
                 )}
               </div>
 
-              <div className="flex items-center gap-3">
-                <label className="text-sm font-semibold text-slate-600">Sắp xếp:</label>
-                <div className="relative">
-                  <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value as SortType)}
-                    className="appearance-none rounded-xl border border-slate-200 bg-slate-50 pl-4 pr-10 py-2 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
-                  >
-                    <option value="newest">Mới nhất</option>
-                    <option value="priceAsc">Giá tăng dần</option>
-                    <option value="priceDesc">Giá giảm dần</option>
-                    <option value="nameAsc">Tên A-Z</option>
-                  </select>
-                  <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              <div className="flex flex-wrap items-center gap-6">
+                
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-semibold text-slate-600">Hiển thị:</label>
+                  <div className="relative">
+                    <select
+                      value={pageSize}
+                      onChange={(e) => setPageSize(Number(e.target.value))}
+                      className="appearance-none rounded-xl border border-slate-200 bg-slate-50 pl-4 pr-10 py-2 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                    >
+                      <option value={4}>4</option>
+                      <option value={8}>8</option>
+                      <option value={12}>12</option>
+                      <option value={24}>24</option>
+                    </select>
+                    <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-semibold text-slate-600">Sắp xếp:</label>
+                  <div className="relative">
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value as SortType)}
+                      className="appearance-none rounded-xl border border-slate-200 bg-slate-50 pl-4 pr-10 py-2 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                    >
+                      <option value="newest">Mới nhất</option>
+                      <option value="priceAsc">Giá tăng dần</option>
+                      <option value="priceDesc">Giá giảm dần</option>
+                      <option value="nameAsc">Tên A-Z</option>
+                    </select>
+                    <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                  </div>
                 </div>
               </div>
             </div>
@@ -294,7 +314,6 @@ export default function ProductsPage() {
             ) : (
               <>
                 <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                  {/* UPDATE MAP TỪ currentProducts THAY VÌ filteredAndSortedProducts */}
                   {currentProducts.map((p) => (
                     <ProductCard key={p.id} product={p as any} />
                   ))}
