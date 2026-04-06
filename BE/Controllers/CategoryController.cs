@@ -61,27 +61,25 @@ namespace BE.Controllers
                         int rowCount = worksheet.Dimension.Rows;
 
                         for (int row = 2; row <= rowCount; row++)
-{
-                        var name = worksheet.Cells[row, 1].Value?.ToString()?.Trim() ?? "";
-                        var description = worksheet.Cells[row, 2].Value?.ToString()?.Trim() ?? "";
-                        var imageFileName = worksheet.Cells[row, 3].Value?.ToString()?.Trim() ?? ""; // <--- THÊM DÒNG ĐỌC CỘT 3
-
-                        var previewRow = new PreviewCategoryRowDto
                         {
-                            Row = row,
-                            Name = name,
-                            Description = description,
-                            ImageFileName = imageFileName, 
-                            IsValid = true
-                        };
+                            var name = worksheet.Cells[row, 1].Value?.ToString()?.Trim() ?? "";
+                            var description = worksheet.Cells[row, 2].Value?.ToString()?.Trim() ?? "";
+                            var imageFileName = worksheet.Cells[row, 3].Value?.ToString()?.Trim() ?? "";
 
-                            // Check lỗi rỗng
+                            var previewRow = new PreviewCategoryRowDto
+                            {
+                                Row = row,
+                                Name = name,
+                                Description = description,
+                                ImageFileName = imageFileName, 
+                                IsValid = true
+                            };
+
                             if (string.IsNullOrEmpty(name))
                             {
                                 previewRow.IsValid = false;
                                 previewRow.Errors.Add("Tên danh mục trống");
                             }
-                            // Check trùng tên trong Database
                             else if (await _context.Categories.AnyAsync(c => c.Name.ToLower() == name.ToLower()))
                             {
                                 previewRow.IsValid = false;
@@ -101,14 +99,14 @@ namespace BE.Controllers
         }
 
         // =========================================================================
-        // BƯỚC 2: API IMPORT THẬT (CHẶN DÒNG LỖI)
+        // BƯỚC 2: API IMPORT THẬT (LƯU DB VÀ GIỮ NGUYÊN TÊN ẢNH)
         // =========================================================================
         [HttpPost("import")]
         [Consumes("multipart/form-data")] 
         public async Task<IActionResult> ImportCategories([FromForm] CategoryImportRequest request)
         {
             var excelFile = request.excelFile;
-            var zipFile = request.zipFile; // <--- LẤY FILE ZIP TỪ REACT LÊN
+            var zipFile = request.zipFile; 
 
             if (excelFile == null || excelFile.Length == 0) return BadRequest(new { message = "Vui lòng chọn file Excel." });
 
@@ -118,7 +116,6 @@ namespace BE.Controllers
 
             try
             {
-                // 1. GIẢI NÉN FILE ZIP VÀ LƯU ẢNH VÀO SERVER
                 if (zipFile != null && zipFile.Length > 0)
                 {
                     if (Path.GetExtension(zipFile.FileName).ToLower() != ".zip")
@@ -128,7 +125,6 @@ namespace BE.Controllers
                     var uploadPath = Path.Combine(webRootPath, "uploads", "categories");
                     if (!Directory.Exists(uploadPath)) Directory.CreateDirectory(uploadPath);
 
-                    // Giải nén
                     using var archive = new System.IO.Compression.ZipArchive(zipFile.OpenReadStream());
                     foreach (var entry in archive.Entries)
                     {
@@ -136,18 +132,15 @@ namespace BE.Controllers
                         var ext = Path.GetExtension(entry.Name).ToLower();
                         if (new[] { ".jpg", ".jpeg", ".png", ".webp" }.Contains(ext))
                         {
-                            var originalName = Path.GetFileNameWithoutExtension(entry.Name);
-                            var newFileName = $"{originalName}_{DateTime.Now:yyyyMMddHHmmss}{ext}";
-                            var fullPath = Path.Combine(uploadPath, newFileName);
-                            entry.ExtractToFile(fullPath, true);
+                            // SỬA Ở ĐÂY: Dùng nguyên xi tên file từ Excel/Zip (giống ProductController)
+                            var destinationPath = Path.Combine(uploadPath, entry.Name);
+                            entry.ExtractToFile(destinationPath, true); // Ghi đè nếu đã tồn tại
                             
-                            // Lưu vào bộ nhớ tạm: "giadung.jpg" -> "/uploads/categories/xxx.jpg"
-                            extractedImages[entry.Name] = $"/uploads/categories/{newFileName}"; 
+                            extractedImages[entry.Name] = $"/uploads/categories/{entry.Name}"; 
                         }
                     }
                 }
 
-                // 2. XỬ LÝ FILE EXCEL VÀ GHÉP ẢNH
                 using (var stream = new MemoryStream())
                 {
                     await excelFile.CopyToAsync(stream);
@@ -162,15 +155,13 @@ namespace BE.Controllers
                         {
                             var name = worksheet.Cells[row, 1].Value?.ToString()?.Trim();
                             var description = worksheet.Cells[row, 2].Value?.ToString()?.Trim();
-                            var imageFileName = worksheet.Cells[row, 3].Value?.ToString()?.Trim(); // ĐỌC CỘT 3 EXCEL
+                            var imageFileName = worksheet.Cells[row, 3].Value?.ToString()?.Trim(); 
 
-                            // Bảo vệ Database: Tên trống hoặc trùng thì SKIP
                             if (string.IsNullOrEmpty(name)) { skipCount++; continue; }
                             
                             var isExist = await _context.Categories.AnyAsync(c => c.Name.ToLower() == name.ToLower());
                             if (isExist) { skipCount++; continue; }
 
-                            // So khớp ảnh: Tên trong Excel có trùng với ảnh trong ZIP không?
                             string? finalImageUrl = null;
                             if (!string.IsNullOrEmpty(imageFileName) && extractedImages.TryGetValue(imageFileName, out var savedUrl))
                             {
@@ -180,7 +171,7 @@ namespace BE.Controllers
                             importedCategories.Add(new Category {
                                 Name = name,
                                 Description = description,
-                                ImageUrl = finalImageUrl, // <--- LƯU LINK ẢNH VÀO DATABASE
+                                ImageUrl = finalImageUrl, 
                                 CreatedAt = DateTime.Now
                             });
                             successCount++;
@@ -235,7 +226,18 @@ namespace BE.Controllers
             
             category.Name = request.Name;
             category.Description = request.Description;
-            category.ImageUrl = request.ImageUrl; 
+
+            // DỌN RÁC KHI SỬA ẢNH: Nếu đổi ảnh mới thì xóa ảnh cũ trên ổ cứng đi
+            if (category.ImageUrl != request.ImageUrl)
+            {
+                if (!string.IsNullOrEmpty(category.ImageUrl))
+                {
+                    var oldFileName = Path.GetFileName(category.ImageUrl);
+                    var oldFilePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "categories", oldFileName);
+                    if (System.IO.File.Exists(oldFilePath)) System.IO.File.Delete(oldFilePath);
+                }
+                category.ImageUrl = request.ImageUrl; 
+            }
             
             await _context.SaveChangesAsync();
             return Ok(new { message = "Cập nhật thành công." });
@@ -247,6 +249,15 @@ namespace BE.Controllers
             var category = await _context.Categories.Include(c => c.Products).FirstOrDefaultAsync(c => c.Id == id);
             if (category == null) return NotFound();
             if (category.Products.Any()) return BadRequest(new { message = "Danh mục đang có sản phẩm, không thể xóa!" });
+
+            // SỬA Ở ĐÂY: DỌN RÁC Ổ CỨNG KHI XÓA DANH MỤC
+            if (!string.IsNullOrEmpty(category.ImageUrl))
+            {
+                var fileName = Path.GetFileName(category.ImageUrl);
+                var filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "categories", fileName);
+                if (System.IO.File.Exists(filePath)) System.IO.File.Delete(filePath);
+            }
+
             _context.Categories.Remove(category);
             await _context.SaveChangesAsync();
             return Ok(new { message = "Xóa thành công." });

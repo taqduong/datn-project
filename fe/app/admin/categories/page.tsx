@@ -232,7 +232,7 @@ export default function CategoryPage() {
                 onClick={() => setImportModalOpen(true)}
                 className="cursor-pointer flex items-center gap-3 rounded-xl bg-emerald-50 border border-emerald-400 shadow-sm px-6 py-3 text-base font-semibold text-emerald-700 transition hover:bg-emerald-100 hover:text-emerald-800"
               >
-                📁 Nhập từ File Excel
+                📁 Nhập từ File Excel và Zip
               </button>
             </div>
 
@@ -527,7 +527,7 @@ export default function CategoryPage() {
             <div className="space-y-4">
               <div>
                 <label className="mb-2 block text-sm font-bold text-gray-700">
-                  Chọn File Excel (.xlsx) *
+                  1. Chọn File Excel (.xlsx) *
                 </label>
 
                 <div className="w-[520px]">
