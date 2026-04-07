@@ -136,15 +136,15 @@ function CheckoutContent() {
     return sum + finalPrice * item.quantity;
   }, 0);
 
-  // 4. AUTO-TICK FREESHIP NẾU CÓ TRONG DANH SÁCH TỪ DB
-  useEffect(() => {
-    if (subtotal >= 100000 && vouchersList.length > 0) {
-      const fsVoucher = vouchersList.find(v => v.code === "FREESHIP" || v.isFreeship);
-      if (fsVoucher) setAppliedFreeshipVoucher(fsVoucher);
-    } else {
-      setAppliedFreeshipVoucher(null);
-    }
-  }, [subtotal, vouchersList]);
+  // // 4. AUTO-TICK FREESHIP NẾU CÓ TRONG DANH SÁCH TỪ DB
+  // useEffect(() => {
+  //   if (subtotal >= 100000 && vouchersList.length > 0) {
+  //     const fsVoucher = vouchersList.find(v => v.code === "FREESHIP" || v.isFreeship);
+  //     if (fsVoucher) setAppliedFreeshipVoucher(fsVoucher);
+  //   } else {
+  //     setAppliedFreeshipVoucher(null);
+  //   }
+  // }, [subtotal, vouchersList]);
 
   // 5. TÍNH PHÍ SHIP & VOUCHER
   let shippingFee = 30000; 
@@ -199,8 +199,22 @@ function CheckoutContent() {
     if (appliedDiscountVoucher?.code === vCode) { setAppliedDiscountVoucher(null); return; }
 
     try {
-      // Gọi API sang C# để check giống như trên Swagger
-      const res = await api.post("/Voucher/check", { code: vCode, orderValue: subtotal });
+      // 1. Lấy thông tin user đang đăng nhập từ LocalStorage (Để C# biết ai đang dùng mã)
+      let currentUserId = null;
+      if (typeof window !== "undefined") {
+        const storedUser = localStorage.getItem("user");
+        if (storedUser) {
+          const userObj = JSON.parse(storedUser);
+          currentUserId = userObj.id;
+        }
+      }
+
+      // 2. Gọi API sang C# kèm theo cả userId
+      const res = await api.post("/Voucher/check", { 
+        code: vCode, 
+        orderValue: subtotal,
+        userId: currentUserId // <-- Gửi thêm ID khách hàng xuống Backend
+      });
       
       if (res.data.success) {
         // Dùng dữ liệu từ list nếu có, không thì tự map từ API trả về (trường hợp nhập tay)
@@ -309,6 +323,7 @@ function CheckoutContent() {
   if (cartItems.length === 0) return (<div className="min-h-[70vh] flex flex-col items-center justify-center bg-slate-50 px-4"><div className="w-24 h-24 bg-white rounded-full flex items-center justify-center shadow-sm mb-6"><ShoppingBag className="w-12 h-12 text-slate-300" /></div><h2 className="text-2xl font-bold text-slate-800 mb-2">Giỏ hàng trống</h2><p className="text-slate-500 mb-8 text-center max-w-md">Bạn chưa chọn sản phẩm nào để thanh toán. Hãy dạo một vòng xem có gì ưng ý không nhé!</p><button onClick={() => router.push("/products")} className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3.5 rounded-xl font-bold transition-all shadow-lg hover:shadow-blue-500/30 active:scale-95">Tiếp tục mua sắm</button></div>);
 
   const hasAnyVoucher = appliedFreeshipVoucher || appliedDiscountVoucher;
+  const isEligibleForFreeship = subtotal >= 100000 && !appliedFreeshipVoucher;
 
   return (
     <div className="bg-slate-50 min-h-screen py-10">
@@ -385,25 +400,54 @@ function CheckoutContent() {
 
               {/* NÚT MỞ MODAL VOUCHER */}
               <div className="mt-5 border-t border-slate-100 pt-5 mb-4">
-                <button type="button" onClick={() => setShowVoucherModal(true)} className="w-full bg-white border border-slate-200 hover:border-blue-400 p-4 rounded-xl transition shadow-sm flex flex-col items-center justify-center text-center gap-1 group">
+                <button
+                  type="button"
+                  onClick={() => setShowVoucherModal(true)}
+                  className="w-full bg-white border border-slate-200 hover:border-blue-400 p-4 rounded-xl transition shadow-sm flex flex-col items-center justify-center text-center gap-1 group"
+                >
                   {hasAnyVoucher ? (
                     <div className="flex items-center justify-between w-full">
-                      <div className="flex items-center gap-3 shrink-0"><Ticket className="w-6 h-6 text-blue-600" /><span className="font-bold text-slate-800">Mã ưu đãi</span></div>
+                      <div className="flex items-center gap-3 shrink-0">
+                        <Ticket className="w-6 h-6 text-blue-600" />
+                        <span className="font-bold text-slate-800">Mã ưu đãi</span>
+                      </div>
                       <div className="flex items-center gap-2">
                         <div className="flex items-center justify-end gap-2 flex-wrap">
-                           {appliedFreeshipVoucher && (<span className="text-blue-700 font-bold bg-blue-50 border border-blue-200 px-3 py-1.5 rounded-lg text-xs sm:text-[13px] whitespace-nowrap shadow-sm transition-all hover:scale-105">🚚 Freeship</span>)}
-                           {appliedDiscountVoucher && (<span className="text-emerald-700 font-bold bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-lg text-xs sm:text-[13px] whitespace-nowrap shadow-sm transition-all hover:scale-105">🏷️ -{formatVND(discountAmount)}</span>)}
+                          {appliedFreeshipVoucher && (
+                            <span className="text-blue-700 font-bold bg-blue-50 border border-blue-200 px-3 py-1.5 rounded-lg text-xs sm:text-[13px] whitespace-nowrap shadow-sm transition-all hover:scale-105">
+                              🚚 Freeship
+                            </span>
+                          )}
+                          {appliedDiscountVoucher && (
+                            <span className="text-emerald-700 font-bold bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-lg text-xs sm:text-[13px] whitespace-nowrap shadow-sm transition-all hover:scale-105">
+                              🏷️ -{formatVND(discountAmount)}
+                            </span>
+                          )}
                         </div>
                         <ArrowRight size={16} className="text-slate-400 shrink-0" />
                       </div>
                     </div>
                   ) : (
                     <div className="flex items-center justify-between w-full">
-                      <div className="flex items-center gap-3"><Ticket className="w-6 h-6 text-blue-600" /><div className="flex flex-col items-start"><span className="font-bold text-slate-800">Mã ưu đãi</span><span className="text-xs text-slate-500 font-medium group-hover:text-blue-600 transition-colors">Chọn hoặc nhập mã</span></div></div>
+                      <div className="flex items-center gap-3">
+                        <Ticket className="w-6 h-6 text-blue-600" />
+                        <div className="flex flex-col items-start">
+                          <span className="font-bold text-slate-800">Mã ưu đãi</span>
+                          <span className="text-xs text-slate-500 font-medium group-hover:text-blue-600 transition-colors">
+                            Chọn hoặc nhập mã
+                          </span>
+                        </div>
+                      </div>
                       <ArrowRight size={18} className="text-slate-400 group-hover:translate-x-1 transition-transform" />
                     </div>
                   )}
                 </button>
+
+                {isEligibleForFreeship && (
+                  <p className="mt-2 text-sm font-medium text-emerald-600">
+                    🚚 Freeship cho đơn hàng từ 100.000đ — vào mục <span className="font-bold">Mã ưu đãi</span> để chọn
+                  </p>
+                )}
               </div>
 
               {/* TÍNH TIỀN */}

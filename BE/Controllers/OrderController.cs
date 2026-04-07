@@ -154,7 +154,6 @@ namespace BE.Controllers
             {
                 UserId = userId.Value,
                 OrderDate = DateTime.Now,
-                // Tính tổng tiền đơn hàng bao gồm phí ship và trừ voucher
                 TotalAmount = Math.Max(0, totalAmount + request.ShippingFee - request.DiscountAmount),
                 Status = "Pending", 
                 PaymentMethod = request.PaymentMethod,
@@ -170,6 +169,26 @@ namespace BE.Controllers
                 AppliedVoucherCode = request.AppliedVoucherCode,
                 OrderDetails = orderDetails
             };
+
+            // =========================================================================
+            // CỘNG DỒN SỐ LƯỢNG VOUCHER ĐÃ SỬ DỤNG
+            // =========================================================================
+            if (!string.IsNullOrEmpty(request.AppliedVoucherCode))
+            {
+                // Khách có thể áp 2 mã cùng lúc (VD: "FREESHIP, BLACKFRIDAY"), nên phải cắt chuỗi ra
+                var appliedCodes = request.AppliedVoucherCode.Split(',')
+                                          .Select(c => c.Trim().ToUpper())
+                                          .ToList();
+
+                foreach (var code in appliedCodes)
+                {
+                    var voucher = await _context.Vouchers.FirstOrDefaultAsync(v => v.Code.ToUpper() == code);
+                    if (voucher != null)
+                    {
+                        voucher.UsedCount += 1; // Tăng biến đếm lên 1
+                    }
+                }
+            }
 
             _context.Orders.Add(newOrder);
             await _context.SaveChangesAsync();

@@ -1,4 +1,5 @@
 import axios from "axios";
+import { ReactNode } from "react";
 
 // ================= Base URL =================
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5270/api";
@@ -288,6 +289,7 @@ export interface CanReviewResponse {
 }
 
 export interface VoucherDto {
+  maxUsagePerUser: ReactNode;
   id: number;
   code: string;
   title: string;
@@ -297,6 +299,7 @@ export interface VoucherDto {
   discountValue?: number;
   maxDiscountAmount?: number;
   minOrderValue: number;
+  startDate: string;
   expiryDate: string;
   usageLimit: number;
   usedCount: number;

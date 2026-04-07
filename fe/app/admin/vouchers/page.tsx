@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Ticket, Plus, Search, Edit, Trash2, Power, PowerOff, Loader2, Truck, XCircle } from "lucide-react";
+import { Ticket, Plus, Search, Edit, Trash2, Loader2, Truck, XCircle, Clock } from "lucide-react";
 import { voucherAPI, type VoucherDto } from "@/services/api";
 
 export default function AdminVouchersPage() {
@@ -11,10 +11,20 @@ export default function AdminVouchersPage() {
 
   const [showModal, setShowModal] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [currentVoucher, setCurrentVoucher] = useState<Partial<VoucherDto>>({
+  
+  // 1. THÊM HÀM TRỊ MÚI GIỜ (Chuyển thẳng về giờ Việt Nam)
+  const getLocalDatetimeLocal = (dateInput?: string | Date | number) => {
+    const d = dateInput ? new Date(dateInput) : new Date();
+    d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); // Bù trừ độ lệch múi giờ
+    return d.toISOString().slice(0, 16);
+  };
+
+  // 2. CẬP NHẬT LẠI STATE MẶC ĐỊNH
+  const [currentVoucher, setCurrentVoucher] = useState<Partial<VoucherDto | any>>({
     code: "", title: "", description: "", isFreeship: false, minOrderValue: 0,
-    usageLimit: 100, isActive: true,
-    expiryDate: new Date(new Date().setMonth(new Date().getMonth() + 1)).toISOString().slice(0, 16)
+    usageLimit: 100, maxUsagePerUser: 1, resetInterval: "None", isActive: true, 
+    startDate: getLocalDatetimeLocal(),
+    expiryDate: getLocalDatetimeLocal(new Date().setMonth(new Date().getMonth() + 1))
   });
 
   const loadVouchers = async () => {
@@ -32,16 +42,24 @@ export default function AdminVouchersPage() {
 
   useEffect(() => { loadVouchers(); }, []);
 
-  const handleOpenModal = (voucher?: VoucherDto) => {
+  const handleOpenModal = (voucher?: VoucherDto | any) => {
     if (voucher) {
       setIsEditing(true);
-      setCurrentVoucher({ ...voucher, expiryDate: new Date(voucher.expiryDate).toISOString().slice(0, 16) });
+      setCurrentVoucher({ 
+        ...voucher, 
+        maxUsagePerUser: voucher.maxUsagePerUser > 0 ? voucher.maxUsagePerUser : 1, 
+        resetInterval: voucher.resetInterval || "None", 
+        // Gọi hàm trị múi giờ ở đây:
+        startDate: voucher.startDate ? getLocalDatetimeLocal(voucher.startDate) : getLocalDatetimeLocal(),
+        expiryDate: voucher.expiryDate ? getLocalDatetimeLocal(voucher.expiryDate) : getLocalDatetimeLocal()
+      });
     } else {
       setIsEditing(false);
       setCurrentVoucher({
         code: "", title: "", description: "", isFreeship: false, minOrderValue: 0,
-        usageLimit: 100, isActive: true, discountValue: 0, discountPercent: 0, maxDiscountAmount: 0,
-        expiryDate: new Date(new Date().setMonth(new Date().getMonth() + 1)).toISOString().slice(0, 16)
+        usageLimit: 100, maxUsagePerUser: 1, resetInterval: "None", isActive: true, discountValue: 0, discountPercent: 0, maxDiscountAmount: 0,
+        startDate: getLocalDatetimeLocal(),
+        expiryDate: getLocalDatetimeLocal(new Date().setMonth(new Date().getMonth() + 1))
       });
     }
     setShowModal(true);
@@ -81,7 +99,7 @@ export default function AdminVouchersPage() {
     }
   };
 
-  const toggleActive = async (v: VoucherDto) => {
+  const toggleActive = async (v: any) => {
     try {
       await voucherAPI.update(v.id, { ...v, isActive: !v.isActive });
       loadVouchers();
@@ -93,6 +111,20 @@ export default function AdminVouchersPage() {
   const formatVND = (val: number) => new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(val);
 
   const filteredVouchers = vouchers.filter(v => v.code.toLowerCase().includes(search.toLowerCase()) || v.title.toLowerCase().includes(search.toLowerCase()));
+
+  const getIntervalText = (interval: string) => {
+    if (interval === "10s") return "Test 10 giây";
+    if (interval === "Daily") return "Hồi mỗi ngày";
+    if (interval === "Hourly") return "Hồi mỗi giờ";
+    return "Dùng 1 lần";
+  };
+
+  // Helper hàm để in ra ngày giờ đẹp hơn
+  const formatDateTime = (dateStr: string) => {
+    if (!dateStr) return "N/A";
+    const date = new Date(dateStr);
+    return date.toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' });
+  };
 
   return (
     <div className="p-6">
@@ -121,7 +153,7 @@ export default function AdminVouchersPage() {
                 <th className="px-6 py-4">Mã Code</th>
                 <th className="px-6 py-4">Chi tiết giảm</th>
                 <th className="px-6 py-4">Đơn tối thiểu</th>
-                <th className="px-6 py-4">Hạn dùng</th>
+                <th className="px-6 py-4">Thời gian áp dụng</th>
                 <th className="px-6 py-4">Đã dùng</th>
                 <th className="px-6 py-4">Trạng thái</th>
                 <th className="px-6 py-4 text-right">Thao tác</th>
@@ -133,7 +165,11 @@ export default function AdminVouchersPage() {
               ) : filteredVouchers.length === 0 ? (
                 <tr><td colSpan={7} className="text-center py-10 text-slate-500">Chưa có mã ưu đãi nào.</td></tr>
               ) : (
-                filteredVouchers.map((v) => (
+                filteredVouchers.map((v: any) => {
+                  const isExpired = new Date(v.expiryDate) < new Date();
+                  const isNotStartedYet = new Date(v.startDate) > new Date();
+                  
+                  return (
                   <tr key={v.id} className="hover:bg-slate-50 transition-colors">
                     <td className="px-6 py-4">
                       <span className="font-black text-blue-700 bg-blue-50 border border-blue-200 px-2 py-1 rounded tracking-widest">{v.code}</span>
@@ -143,10 +179,24 @@ export default function AdminVouchersPage() {
                       {v.isFreeship ? <span className="text-emerald-600 flex items-center gap-1"><Truck size={14}/> Freeship</span> : v.discountValue ? <span className="text-orange-600">-{formatVND(v.discountValue)}</span> : <span className="text-orange-600">-{v.discountPercent! * 100}%</span>}
                     </td>
                     <td className="px-6 py-4 text-slate-600 font-medium">{formatVND(v.minOrderValue)}</td>
-                    <td className="px-6 py-4 text-xs text-slate-500">
-                      {new Date(v.expiryDate) < new Date() ? <span className="text-red-500 font-bold">Hết hạn</span> : new Date(v.expiryDate).toLocaleString('vi-VN')}
+                    <td className="px-6 py-4">
+                      <div className="flex flex-col gap-1 text-[11px] text-slate-500">
+                        <div className="flex items-center gap-1">
+                           <span className="font-medium text-slate-400 w-6">Từ:</span> 
+                           <span className={isNotStartedYet ? "text-amber-600 font-bold" : "text-slate-700"}>{formatDateTime(v.startDate)}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                           <span className="font-medium text-slate-400 w-6">Đến:</span> 
+                           <span className={isExpired ? "text-red-600 font-bold" : "text-slate-700"}>{formatDateTime(v.expiryDate)}</span>
+                        </div>
+                      </div>
                     </td>
-                    <td className="px-6 py-4 text-slate-600 font-bold">{v.usedCount} / {v.usageLimit}</td>
+                    <td className="px-6 py-4 text-slate-600 font-bold">
+                      {v.usedCount} / {v.usageLimit}
+                      <p className="text-[10px] font-normal mt-1 text-rose-500">
+                        Tối đa {v.maxUsagePerUser}/khách ({getIntervalText(v.resetInterval)})
+                      </p>
+                    </td>
                     <td className="px-6 py-4">
                       <button onClick={() => toggleActive(v)} className={`px-3 py-1 rounded-full text-xs font-bold border transition-colors ${v.isActive ? 'bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100' : 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200'}`}>
                         {v.isActive ? 'Đang bật' : 'Đã tắt'}
@@ -157,7 +207,7 @@ export default function AdminVouchersPage() {
                       <button onClick={() => handleDelete(v.id)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={16} /></button>
                     </td>
                   </tr>
-                ))
+                )})
               )}
             </tbody>
           </table>
@@ -223,18 +273,44 @@ export default function AdminVouchersPage() {
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-5">
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-1">Giới hạn lượt dùng</label>
-                  <input type="number" required value={currentVoucher.usageLimit} onChange={e => setCurrentVoucher({...currentVoucher, usageLimit: Number(e.target.value)})} className="w-full border border-slate-300 px-4 py-2.5 rounded-xl" />
+              {/* KHỐI THỜI GIAN */}
+              <div className="p-4 border border-blue-100 bg-blue-50/30 rounded-xl space-y-4">
+                <h3 className="text-sm font-bold text-blue-800 flex items-center gap-2 border-b border-blue-100 pb-2">
+                  <Clock size={16} /> Cài đặt Thời gian & Số lượng
+                </h3>
+                <div className="grid grid-cols-2 gap-5">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Thời gian BẮT ĐẦU</label>
+                    <input type="datetime-local" required value={currentVoucher.startDate} onChange={e => setCurrentVoucher({...currentVoucher, startDate: e.target.value})} className="w-full border border-slate-300 px-3 py-2 rounded-lg text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Thời gian KẾT THÚC</label>
+                    <input type="datetime-local" required value={currentVoucher.expiryDate} onChange={e => setCurrentVoucher({...currentVoucher, expiryDate: e.target.value})} className="w-full border border-slate-300 px-3 py-2 rounded-lg text-sm" />
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-1">Ngày hết hạn</label>
-                  <input type="datetime-local" required value={currentVoucher.expiryDate} onChange={e => setCurrentVoucher({...currentVoucher, expiryDate: e.target.value})} className="w-full border border-slate-300 px-4 py-2.5 rounded-xl" />
+
+                <div className="grid grid-cols-3 gap-4 pt-2">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Tổng lượt dùng</label>
+                    <input type="number" required value={currentVoucher.usageLimit} onChange={e => setCurrentVoucher({...currentVoucher, usageLimit: Number(e.target.value)})} className="w-full border border-slate-300 px-3 py-2 rounded-lg text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-rose-600 mb-1">Tối đa/Khách</label>
+                    <input type="number" required value={currentVoucher.maxUsagePerUser} onChange={e => setCurrentVoucher({...currentVoucher, maxUsagePerUser: Number(e.target.value)})} className="w-full border border-rose-200 px-3 py-2 rounded-lg text-sm focus:border-rose-500 focus:ring-rose-500" min="1" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Chu kỳ hồi mã</label>
+                    <select value={currentVoucher.resetInterval} onChange={e => setCurrentVoucher({...currentVoucher, resetInterval: e.target.value})} className="w-full border border-slate-300 px-3 py-2 rounded-lg text-sm font-medium focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer">
+                      <option value="None">Không hồi</option>
+                      <option value="10s">Test 10s</option>
+                      <option value="Hourly">Mỗi giờ</option>
+                      <option value="Daily">Mỗi ngày</option>
+                    </select>
+                  </div>
                 </div>
               </div>
 
-              <div className="pt-4 border-t border-slate-100 flex justify-end gap-3">
+              <div className="pt-2 flex justify-end gap-3">
                 <button type="button" onClick={() => setShowModal(false)} className="px-6 py-2.5 font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors">Hủy</button>
                 <button type="submit" className="px-6 py-2.5 font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-colors shadow-md">Lưu Voucher</button>
               </div>
