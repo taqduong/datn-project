@@ -289,7 +289,7 @@ export interface CanReviewResponse {
 }
 
 export interface VoucherDto {
-  maxUsagePerUser: ReactNode;
+  maxUsagePerUser: number;
   id: number;
   code: string;
   title: string;
@@ -304,6 +304,14 @@ export interface VoucherDto {
   usageLimit: number;
   usedCount: number;
   isActive: boolean;
+  resetInterval: string;
+}
+
+export interface CheckVoucherResponse {
+  success: boolean;
+  message: string;
+  voucher: VoucherDto;
+  discountAmount: number;
 }
 
 export interface ContactPayload {
@@ -555,7 +563,10 @@ export const voucherAPI = {
   getAllAdmin: () => api.get<VoucherDto[]>("/Voucher/admin"),
   create: (data: Partial<VoucherDto>) => api.post("/Voucher", data),
   update: (id: number, data: Partial<VoucherDto>) => api.put(`/Voucher/${id}`, data),
-  delete: (id: number) => api.delete(`/Voucher/${id}`)
+  delete: (id: number) => api.delete(`/Voucher/${id}`),
+  // Cho Khách hàng (Check mã lúc thanh toán)
+  check: (code: string, orderValue: number, userId?: number) => 
+    api.post<CheckVoucherResponse>("/Voucher/check", { code, orderValue, userId })
 };
 
 // ================= Contact API =================
@@ -635,6 +646,7 @@ export const fetchAdminVouchers = voucherAPI.getAllAdmin;
 export const createAdminVoucher = voucherAPI.create;
 export const updateAdminVoucher = voucherAPI.update;
 export const deleteAdminVoucher = voucherAPI.delete;
+export const checkVoucher = voucherAPI.check;
 
 export const forgotPassword = authAPI.forgotPassword;
 export const resetPassword = authAPI.resetPassword;

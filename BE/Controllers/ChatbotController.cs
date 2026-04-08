@@ -264,8 +264,8 @@ namespace BE.Controllers
                     : "TÌNH TRẠNG: KHÁCH CHƯA ĐĂNG NHẬP. NẾU KHÁCH CÓ BẤT KỲ Ý ĐỊNH MUA HOẶC ĐẶT HÀNG NÀO, BẮT BUỘC TRẢ LỜI ĐÚNG CÂU NÀY: 'Dạ, để HomeMart có thể lên đơn, bạn vui lòng Đăng nhập tài khoản ở góc trên màn hình nhé!'. TUYỆT ĐỐI KHÔNG TẠO MÃ ORDER_INFO NẾU CHƯA ĐĂNG NHẬP.";
 
                 var activeVouchers = await _context.Vouchers
-                    .Where(v => v.IsActive && v.ExpiryDate > DateTime.Now && v.UsedCount < v.UsageLimit)
-                    .ToListAsync();
+                .Where(v => v.IsActive && !v.IsHidden && v.StartDate <= DateTime.Now && v.ExpiryDate > DateTime.Now && v.UsedCount < v.UsageLimit)
+                .ToListAsync();
 
                 string couponContext = "MÃ ƯU ĐÃI ĐANG CÓ SẴN: Hiện tại shop không có mã ưu đãi nào.";
                 if (activeVouchers.Any())
@@ -310,8 +310,7 @@ Khi khách hàng ngỏ ý muốn mua/đặt hàng, bạn PHẢI thu thập ĐỦ
 3. Địa chỉ nhận hàng (Tuyệt đối KHÔNG tự bịa địa chỉ. Nếu khách chưa cho địa chỉ cụ thể thì BẮT BUỘC phải hỏi khách).
 4. Tên người nhận (Phải hỏi xác nhận có dùng tên '{currentUser?.FullName}' không hay đổi tên khác)
 5. Số điện thoại (Phải hỏi xác nhận có dùng SĐT '{currentUser?.Phone}' không hay đổi số khác)
-6. Mã giảm giá (BẮT BUỘC liệt kê ĐẦY ĐỦ TẤT CẢ các mã ưu đãi đang có trong danh sách để khách biết. QUAN TRỌNG: Khách ĐƯỢC PHÉP áp dụng cùng lúc 2 mã là 1 mã Miễn phí vận chuyển và 1 mã Giảm tiền. Nếu khách dùng 2 mã, hãy nối chúng bằng dấu phẩy. Nếu không dùng thì để trống).
-
+6. Mã giảm giá (BẮT BUỘC liệt kê ĐẦY ĐỦ TẤT CẢ các mã ưu đãi đang có trong danh sách để khách biết. ĐẶC BIỆT: Nếu khách chủ động cung cấp một mã ưu đãi bất kỳ, BẠN PHẢI CHẤP NHẬN MÃ ĐÓ và điền vào JSON, tuyệt đối không từ chối dù mã đó không có trong danh sách của bạn. QUAN TRỌNG: Khách ĐƯỢC PHÉP áp dụng cùng lúc 2 mã là 1 mã Miễn phí vận chuyển và 1 mã Giảm tiền. Nếu khách dùng 2 mã, hãy nối chúng bằng dấu phẩy. Nếu không dùng thì để trống).
 Nếu thiếu 1 trong 6 thông tin trên, hãy chủ động hỏi lại khách một cách khéo léo.
 Khi ĐÃ ĐỦ thông tin và khách CHỐT MUA, hãy cảm ơn và BẮT BUỘC chèn đoạn mã JSON sau ở cuối câu:
 [ORDER_INFO: {{ ""productId"": 1, ""variantName"": ""Màu Đỏ"", ""quantity"": 1, ""address"": ""Hà Nội"", ""fullName"": ""Tên người nhận"", ""phone"": ""SĐT người nhận"", ""couponCode"": ""FREESHIP, SIEUSALE"" }}]
@@ -407,64 +406,102 @@ Lưu ý: Không tạo mã ORDER_INFO nếu thiếu thông tin hoặc khách chư
                                     bool hasAppliedFreeship = false;
                                     bool hasAppliedDiscount = false;
 
-                                    if (orderData.couponCode != null && !string.IsNullOrWhiteSpace(orderData.couponCode))
+                                    var inputCodes = orderData.couponCode.Split(new[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries); 
+
+                                    foreach (var code in inputCodes)
                                     {
-                                        var inputCodes = orderData.couponCode.Split(new[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries);
-                                        
-                                        foreach (var code in inputCodes)
+                                        // 1. Lấy mã ra kiểm tra IsActive trước
+                                        var validVoucher = await _context.Vouchers.FirstOrDefaultAsync(v => 
+                                            v.Code.ToLower() == code.ToLower() && v.IsActive);
+
+                                        if (validVoucher != null)
                                         {
-                                            var validVoucher = await _context.Vouchers.FirstOrDefaultAsync(v => 
-                                                v.Code.ToLower() == code.ToLower() && 
-                                                v.IsActive && 
-                                                v.ExpiryDate > DateTime.Now && 
-                                                v.UsedCount < v.UsageLimit);
-
-                                            if (validVoucher != null)
-                                            {
-                                                if (subTotal >= (decimal)validVoucher.MinOrderValue)
-                                                {
-                                                    if (validVoucher.IsFreeship && hasAppliedFreeship)
-                                                    {
-                                                        appliedCouponMessage += $"\n[Lưu ý] Bỏ qua mã '{code}' vì bạn đã áp dụng 1 mã Miễn phí vận chuyển rồi.";
-                                                        continue;
-                                                    }
-                                                    if (!validVoucher.IsFreeship && hasAppliedDiscount)
-                                                    {
-                                                        appliedCouponMessage += $"\n[Lưu ý] Bỏ qua mã '{code}' vì bạn đã áp dụng 1 mã Giảm giá rồi.";
-                                                        continue;
-                                                    }
-
-                                                    appliedVoucherCodes.Add(validVoucher.Code); 
-
-                                                    if (validVoucher.IsFreeship) 
-                                                    {
-                                                        shippingFee = 0; 
-                                                        hasAppliedFreeship = true; 
-                                                        appliedCouponMessage += $"\n[Ưu đãi] Đã áp dụng mã: **{validVoucher.Code}** (Miễn phí vận chuyển)";
-                                                    }
-                                                    else 
-                                                    {
-                                                        hasAppliedDiscount = true; 
-                                                        decimal currentDiscount = 0;
-                                                
-                                                        if (validVoucher.DiscountValue.HasValue) 
-                                                            currentDiscount = (decimal)validVoucher.DiscountValue.Value;
-                                                        else if (validVoucher.DiscountPercent.HasValue)
-                                                        {
-                                                            currentDiscount = subTotal * (decimal)validVoucher.DiscountPercent.Value;
-                                                            if (validVoucher.MaxDiscountAmount.HasValue && currentDiscount > (decimal)validVoucher.MaxDiscountAmount.Value)
-                                                                currentDiscount = (decimal)validVoucher.MaxDiscountAmount.Value;
-                                                        }
-                                                        
-                                                        discountAmount += currentDiscount; 
-                                                        appliedCouponMessage += $"\n[Ưu đãi] Đã áp dụng mã: **{validVoucher.Code}** (Giảm {currentDiscount:N0}đ)";
-                                                    }
-                                                    
-                                                    validVoucher.UsedCount += 1; 
-                                                }
-                                                else appliedCouponMessage += $"\n[Lưu ý] Mã '{code}' chưa được áp vì đơn cần tối thiểu {validVoucher.MinOrderValue:N0}đ.";
+                                            // 2. Kiểm tra thời gian và số lượng
+                                            if (validVoucher.StartDate > DateTime.Now) {
+                                                appliedCouponMessage += $"\n[Lưu ý] Mã '{code}' chưa mở. Vui lòng quay lại lúc {validVoucher.StartDate:HH:mm dd/MM} nhé!";
+                                                continue;
                                             }
-                                            else appliedCouponMessage += $"\n[Lưu ý] Mã '{code}' không tồn tại, hết hạn hoặc đã hết lượt.";
+                                            if (validVoucher.ExpiryDate < DateTime.Now || validVoucher.UsedCount >= validVoucher.UsageLimit) {
+                                                appliedCouponMessage += $"\n[Lưu ý] Mã '{code}' đã hết hạn hoặc hết lượt dùng.";
+                                                continue;
+                                            }
+                                            if (subTotal < (decimal)validVoucher.MinOrderValue) {
+                                                appliedCouponMessage += $"\n[Lưu ý] Bỏ qua mã '{code}' vì đơn cần tối thiểu {validVoucher.MinOrderValue:N0}đ.";
+                                                continue;
+                                            }
+
+                                            // 3. KIỂM TRA THỜI GIAN HỒI MÃ (RESET INTERVAL)
+                                            if (validVoucher.MaxUsagePerUser > 0)
+                                            {
+                                                DateTime startTime = DateTime.MinValue;
+                                                if (validVoucher.ResetInterval == "10s") startTime = DateTime.Now.AddSeconds(-10);
+                                                else if (validVoucher.ResetInterval == "Hourly") startTime = DateTime.Now.AddHours(-1);
+                                                else if (validVoucher.ResetInterval == "Daily") startTime = DateTime.Today;
+
+                                                var userUsedCount = await _context.Orders
+                                                    .Where(o => o.UserId == secureUserId.Value 
+                                                            && o.AppliedVoucherCode != null 
+                                                            && o.AppliedVoucherCode.ToUpper().Contains(validVoucher.Code.ToUpper()) 
+                                                            && o.Status != "Cancelled"
+                                                            && o.OrderDate >= startTime)
+                                                    .CountAsync();
+
+                                                if (userUsedCount >= validVoucher.MaxUsagePerUser)
+                                                {
+                                                    string intervalMsg = validVoucher.ResetInterval switch {
+                                                        "10s" => "Bạn vừa dùng mã này, vui lòng đợi 10 giây.",
+                                                        "Hourly" => "Bạn đã hết lượt dùng mã này trong giờ này.",
+                                                        "Daily" => "Bạn đã dùng hết lượt mã này trong hôm nay.",
+                                                        _ => $"Bạn đã dùng tối đa {validVoucher.MaxUsagePerUser} lần."
+                                                    };
+                                                    appliedCouponMessage += $"\n[Lưu ý] Mã '{code}' không áp dụng được: {intervalMsg}";
+                                                    continue; // Dừng, không cho áp mã này nữa
+                                                }
+                                            }
+
+                                            // 4. KIỂM TRA CHỐNG TRÙNG LỌC VÀ TRỪ TIỀN (Giữ nguyên logic cũ của sếp)
+                                            if (validVoucher.IsFreeship && hasAppliedFreeship)
+                                            {
+                                                appliedCouponMessage += $"\n[Lưu ý] Bỏ qua mã '{code}' vì bạn đã áp dụng 1 mã Miễn phí vận chuyển rồi.";
+                                                continue;
+                                            }
+                                            if (!validVoucher.IsFreeship && hasAppliedDiscount)
+                                            {
+                                                appliedCouponMessage += $"\n[Lưu ý] Bỏ qua mã '{code}' vì bạn đã áp dụng 1 mã Giảm giá rồi.";
+                                                continue;
+                                            }
+
+                                            appliedVoucherCodes.Add(validVoucher.Code); 
+
+                                            if (validVoucher.IsFreeship) 
+                                            {
+                                                shippingFee = 0; 
+                                                hasAppliedFreeship = true; 
+                                                appliedCouponMessage += $"\n[Ưu đãi] Đã áp dụng mã: **{validVoucher.Code}** (Miễn phí vận chuyển)";
+                                            }
+                                            else 
+                                            {
+                                                hasAppliedDiscount = true; 
+                                                decimal currentDiscount = 0;
+                                        
+                                                if (validVoucher.DiscountValue.HasValue) 
+                                                    currentDiscount = (decimal)validVoucher.DiscountValue.Value;
+                                                else if (validVoucher.DiscountPercent.HasValue)
+                                                {
+                                                    currentDiscount = subTotal * (decimal)validVoucher.DiscountPercent.Value;
+                                                    if (validVoucher.MaxDiscountAmount.HasValue && currentDiscount > (decimal)validVoucher.MaxDiscountAmount.Value)
+                                                        currentDiscount = (decimal)validVoucher.MaxDiscountAmount.Value;
+                                                }
+                                        
+                                                discountAmount += currentDiscount; 
+                                                appliedCouponMessage += $"\n[Ưu đãi] Đã áp dụng mã: **{validVoucher.Code}** (Giảm {currentDiscount:N0}đ)";
+                                            }
+                                            
+                                            validVoucher.UsedCount += 1; 
+                                        }
+                                        else 
+                                        {
+                                            appliedCouponMessage += $"\n[Lưu ý] Mã '{code}' không tồn tại hoặc đã bị khóa.";
                                         }
                                     }
 

@@ -26,7 +26,7 @@ namespace BE.Controllers
         public async Task<IActionResult> GetActiveVouchers()
         {
             var vouchers = await _context.Vouchers
-                .Where(v => v.IsActive && v.ExpiryDate > DateTime.Now && v.UsedCount < v.UsageLimit)
+                .Where(v => v.IsActive && !v.IsHidden && v.ExpiryDate > DateTime.Now && v.UsedCount < v.UsageLimit)
                 .OrderByDescending(v => v.IsFreeship) 
                 .Select(v => new {
                     id = v.Id, 
@@ -192,6 +192,7 @@ namespace BE.Controllers
             voucher.StartDate = updateData.StartDate;
             voucher.UsageLimit = updateData.UsageLimit;
             voucher.IsActive = updateData.IsActive;
+            voucher.IsHidden = updateData.IsHidden;
             
             voucher.MaxUsagePerUser = updateData.MaxUsagePerUser; 
             voucher.ResetInterval = updateData.ResetInterval; // Đã thêm dòng lưu ResetInterval

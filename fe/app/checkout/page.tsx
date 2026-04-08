@@ -230,6 +230,14 @@ function CheckoutContent() {
             exp: `Hết hạn: ${new Date(res.data.voucher.expiryDate).toLocaleString('vi-VN')}`
         };
 
+        setVouchersList(prevList => {
+            const isAlreadyInList = prevList.some(v => v.code === finalVoucher.code);
+            if (!isAlreadyInList) {
+                return [finalVoucher, ...prevList]; // Đẩy lên đầu danh sách
+            }
+            return prevList;
+        });
+
         // xóa khối lệnh if alert đi
         if (finalVoucher.isFreeship) {
           // Bỏ cái alert chặn người dùng ở đây, chỉ cần set state bật lên là được

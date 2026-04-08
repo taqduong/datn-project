@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Ticket, Plus, Search, Edit, Trash2, Loader2, Truck, XCircle, Clock } from "lucide-react";
 import { voucherAPI, type VoucherDto } from "@/services/api";
+import { is } from "date-fns/locale";
 
 export default function AdminVouchersPage() {
   const [vouchers, setVouchers] = useState<VoucherDto[]>([]);
@@ -49,6 +50,7 @@ export default function AdminVouchersPage() {
         ...voucher, 
         maxUsagePerUser: voucher.maxUsagePerUser > 0 ? voucher.maxUsagePerUser : 1, 
         resetInterval: voucher.resetInterval || "None", 
+        isHidden: voucher.isHidden || false,
         // Gọi hàm trị múi giờ ở đây:
         startDate: voucher.startDate ? getLocalDatetimeLocal(voucher.startDate) : getLocalDatetimeLocal(),
         expiryDate: voucher.expiryDate ? getLocalDatetimeLocal(voucher.expiryDate) : getLocalDatetimeLocal()
@@ -57,7 +59,7 @@ export default function AdminVouchersPage() {
       setIsEditing(false);
       setCurrentVoucher({
         code: "", title: "", description: "", isFreeship: false, minOrderValue: 0,
-        usageLimit: 100, maxUsagePerUser: 1, resetInterval: "None", isActive: true, discountValue: 0, discountPercent: 0, maxDiscountAmount: 0,
+        usageLimit: 100, maxUsagePerUser: 1, resetInterval: "None", isActive: true, isHidden: false, discountValue: 0, discountPercent: 0, maxDiscountAmount: 0,
         startDate: getLocalDatetimeLocal(),
         expiryDate: getLocalDatetimeLocal(new Date().setMonth(new Date().getMonth() + 1))
       });
@@ -172,7 +174,10 @@ export default function AdminVouchersPage() {
                   return (
                   <tr key={v.id} className="hover:bg-slate-50 transition-colors">
                     <td className="px-6 py-4">
-                      <span className="font-black text-blue-700 bg-blue-50 border border-blue-200 px-2 py-1 rounded tracking-widest">{v.code}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-black text-blue-700 bg-blue-50 border border-blue-200 px-2 py-1 rounded tracking-widest">{v.code}</span>
+                        {v.isHidden && <span className="bg-rose-100 text-rose-700 text-[10px] font-bold px-2 py-0.5 rounded-full border border-rose-200">Mã Ẩn</span>}
+                      </div>
                       <p className="text-xs text-slate-500 mt-1 font-medium">{v.title}</p>
                     </td>
                     <td className="px-6 py-4 font-medium text-slate-700">
@@ -241,10 +246,19 @@ export default function AdminVouchersPage() {
               </div>
 
               <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-4">
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input type="checkbox" checked={currentVoucher.isFreeship} onChange={e => setCurrentVoucher({...currentVoucher, isFreeship: e.target.checked, discountValue: 0, discountPercent: 0})} className="w-5 h-5 rounded border-slate-300 accent-blue-600" />
-                  <span className="font-bold text-slate-800">Đây là mã Miễn phí vận chuyển (Freeship)</span>
-                </label>
+                {/* THÊM flex gap-6 ĐỂ 2 CHECKBOX NẰM CẠNH NHAU */}
+                <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input type="checkbox" checked={currentVoucher.isFreeship} onChange={e => setCurrentVoucher({...currentVoucher, isFreeship: e.target.checked, discountValue: 0, discountPercent: 0})} className="w-5 h-5 rounded border-slate-300 accent-blue-600" />
+                    <span className="font-bold text-slate-800">Là mã Miễn phí vận chuyển</span>
+                  </label>
+
+                  {/* CHECKBOX MỚI CHO VỤ ẨN MÃ */}
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input type="checkbox" checked={currentVoucher.isHidden} onChange={e => setCurrentVoucher({...currentVoucher, isHidden: e.target.checked})} className="w-5 h-5 rounded border-slate-300 accent-rose-600" />
+                    <span className="font-bold text-rose-600 italic">Mã Bí Mật (Không hiện lên danh sách)</span>
+                  </label>
+                </div>
 
                 {!currentVoucher.isFreeship && (
                   <div className="grid grid-cols-2 gap-5 pt-2 border-t border-slate-200">

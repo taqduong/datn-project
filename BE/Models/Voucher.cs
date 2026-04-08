@@ -38,5 +38,7 @@ namespace BE.Models
         public string ResetInterval { get; set; } = "None";
 
         public bool IsActive { get; set; } = true; // Bật/Tắt mã thủ công
+
+        public bool IsHidden { get; set; } = false; // Mặc định là hiện (false)
     }
 }

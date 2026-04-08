@@ -221,13 +221,19 @@ export default function ChatBox() {
     const el = textareaRef.current;
     if (!el) return;
 
-    el.style.height = "auto";
-    el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
+    // Reset lại chiều cao mặc định trước khi tính toán
+    el.style.height = "44px"; // 44px là chiều cao tương đương min-h-11.5
+    
+    // Nếu có chữ thì mới tính toán kéo dãn
+    if (inputValue) {
+        el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
+    }
   };
 
+  // Cần theo dõi cả biến isOpen để khi vừa mở lên là nó chạy lại hàm này
   useEffect(() => {
     autoResizeTextarea();
-  }, [inputValue]);
+  }, [inputValue, isOpen]); // Thêm isOpen vào mảng dependency
 
   const typeIntoMessage = async (
     targetId: string,
