@@ -275,11 +275,24 @@ export default function OrderDetailPage() {
                             {formatVND(item.price * item.quantity)}
                           </p>
                         </div>
+                        {/* NÚT ĐÁNH GIÁ */}
+                         {isCompleted && (
+                        <div className="mt-4 flex justify-end border-t border-slate-100 pt-4">
+                          <button
+                            onClick={() => router.push(`/review?productId=${item.productId}&orderId=${order.orderId}`)}
+                            className="flex items-center gap-2 rounded-xl border border-orange-500 text-orange-600 px-5 py-2.5 text-sm font-semibold hover:bg-orange-50 hover:text-orange-700 transition-colors"
+                          >
+                            <Star size={16} fill="currentColor" /> Đánh giá
+                          </button>
+                        </div>
+                      )}
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
+
+              
 
               {/* BOX TỔNG KẾT TIỀN */}
               <div className="p-6 bg-slate-50/80 border-t border-slate-100">
