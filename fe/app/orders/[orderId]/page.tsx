@@ -453,7 +453,7 @@ export default function OrderDetailPage() {
                   <td style={{ verticalAlign: 'top', width: '60%' }}>
                     <h1 style={{ fontSize: '32px', fontWeight: 'bold', color: '#2563eb', margin: '0 0 5px 0' }}>HOMEMART</h1>
                     <p style={{ margin: '0 0 5px 0', fontSize: '14px', color: '#64748b' }}>Hệ thống phân phối hàng đầu Việt Nam</p>
-                    <p style={{ margin: '0', fontSize: '14px', color: '#64748b' }}>SĐT: 1900 1080 | Email: support@hmstore.com</p>
+                    <p style={{ margin: '0', fontSize: '14px', color: '#64748b' }}>SĐT: 1900 1080 | Email: homemartcskh@gmail.com</p>
                   </td>
                   <td style={{ verticalAlign: 'top', textAlign: 'right', width: '40%' }}>
                     <h2 style={{ fontSize: '24px', fontWeight: 'bold', margin: '0 0 10px 0', textTransform: 'uppercase' }}>HÓA ĐƠN BÁN HÀNG</h2>

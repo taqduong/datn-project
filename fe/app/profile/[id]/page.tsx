@@ -206,9 +206,31 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
       } else {
         alert('Cập nhật thất bại, vui lòng thử lại!');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Lỗi khi cập nhật thông tin:', error);
-      alert('Có lỗi xảy ra khi cập nhật thông tin người dùng.');
+      
+      let errorMsg = 'Có lỗi xảy ra khi cập nhật thông tin người dùng.';
+      
+      if (error.response?.data) {
+        const data = error.response.data;
+        
+        // Trường hợp 1: Lỗi mình tự quăng ra (trùng Email, trùng SĐT)
+        if (data.message) {
+          errorMsg = data.message;
+        } 
+        // Trường hợp 2: Lỗi Validation tự động của .NET (nhập sai định dạng SĐT)
+        else if (data.errors) {
+          // Lấy câu lỗi đầu tiên trong danh sách lỗi trả về
+          const firstErrorKey = Object.keys(data.errors)[0];
+          errorMsg = data.errors[firstErrorKey][0];
+        }
+        // Trường hợp 3: Trả về chuỗi đơn giản
+        else if (typeof data === 'string') {
+          errorMsg = data;
+        }
+      }
+
+      alert("❌ " + errorMsg);
     }
   };
 // SỬA LẠI HÀM NÀY: Tự động lưu ảnh ngay khi vừa chọn xong!

@@ -118,7 +118,7 @@ export default function RegisterPage() {
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1.5 ml-1 uppercase tracking-wide">Username</label>
+                <label className="block text-sm font-bold text-slate-700 mb-1.5 ml-1 uppercase tracking-wide">Tên đăng nhập</label>
                 <div className="relative group">
                   <AtSign className="absolute left-3 top-3 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={18} />
                   <input

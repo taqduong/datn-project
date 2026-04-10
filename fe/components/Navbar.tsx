@@ -147,7 +147,10 @@ export default function Navbar() {
     // 1. Quét sạch mọi thông tin của user cũ trong kho chứa
     localStorage.removeItem("token");
     localStorage.removeItem("user");
-    localStorage.removeItem("wishlist"); // (Tùy chọn) Xóa luôn nếu sếp có lưu
+    localStorage.removeItem("wishlist"); 
+
+    // Xóa lịch sử chat đi
+    localStorage.removeItem("homemart_chat_messages_v2");
     
     // 2. TÁT VẬT LÝ: Ép trình duyệt tải lại toàn bộ trang từ con số 0
     // Thay vì dùng router.push, ta dùng cái này để dọn sạch 100% rác bộ nhớ
