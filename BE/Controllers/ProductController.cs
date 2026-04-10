@@ -483,8 +483,16 @@ namespace BE.Controllers
                     if (!new[] { ".jpg", ".jpeg", ".png", ".webp" }.Contains(extension)) continue;
 
                     var originalName = Path.GetFileNameWithoutExtension(file.FileName);
-                    var fileName = $"{originalName}_{DateTime.Now:yyyyMMddHHmmss}{extension}";
+                    var fileName = $"{originalName}{extension}";
                     var filePath = Path.Combine(uploadPath, fileName);
+
+                    int count = 1;
+                    while (System.IO.File.Exists(filePath))
+                    {
+                        fileName = $"{originalName}_{count}{extension}";
+                        filePath = Path.Combine(uploadPath, fileName);
+                        count++;
+                    }
 
                     using (var stream = new FileStream(filePath, FileMode.Create))
                     {

@@ -167,8 +167,8 @@ namespace BE.Controllers
             
             if (user == null)
             {
-                // Bảo mật: Trả về thông báo thành công ảo để tránh bị dò quét email
-                return Ok(new { message = "Nếu email tồn tại trong hệ thống, chúng tôi đã gửi liên kết đặt lại mật khẩu." });
+                // Báo lỗi thẳng tay để Frontend bắt được và hiển thị Toast đỏ
+                return NotFound(new { message = "Email này chưa được đăng ký trong hệ thống." });
             }
 
             // 2. Tạo mã Token ngẫu nhiên (dạng chuỗi 32 ký tự)

@@ -394,7 +394,7 @@ export default function ProductPage() {
     try {
       const fd = new FormData();
       fd.append("files", file); // Chú ý: Backend yêu cầu field "files"
-      const res = await uploadImage(fd);
+      const res = await uploadImage(fd, "products");
       const newUrl = res.data.imageUrls?.[0] || ""; // Backend trả về imageUrls
       if (newUrl) {
         handleVariantChange(index, "imageUrl", newUrl);
@@ -946,7 +946,7 @@ export default function ProductPage() {
                       try {
                         const fd = new FormData();
                         fd.append("files", firstFile);
-                        const res = await uploadImage(fd);
+                        const res = await uploadImage(fd, "products");
                         const firstUrl = res.data.imageUrls?.[0] || "";
                         if (firstUrl) {
                           setForm((prev) => ({ ...prev, imageUrl: firstUrl }));

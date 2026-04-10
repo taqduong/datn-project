@@ -452,8 +452,9 @@ export const authAPI = {
 
 
 // ================= Upload API =================
-export const uploadImage = (formData: FormData) => {
-  return api.post<UploadImageResponse>("/files/upload", formData, {
+export const uploadImage = (formData: FormData, folder: string = "products") => {
+  // SỬA THÀNH ĐƯỜNG DẪN CHUẨN RESTful: /files/upload/tên_thư_mục
+  return api.post<UploadImageResponse>(`/files/upload/${folder}`, formData, {
     headers: {
       "Content-Type": "multipart/form-data",
     },

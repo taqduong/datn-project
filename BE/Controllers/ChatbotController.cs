@@ -260,7 +260,7 @@ namespace BE.Controllers
                 // ==========================================
                 var currentUser = secureUserId.HasValue ? await _context.Users.FindAsync(secureUserId.Value) : null;
                 string userInfoContext = currentUser != null
-                    ? $"KHÁCH HÀNG ĐANG CHAT: Tên: '{currentUser.FullName}', SĐT: '{currentUser.Phone}'. Khi khách muốn đặt hàng, HÃY CHỦ ĐỘNG hỏi xem khách có muốn dùng Tên và SĐT này để nhận hàng không, hay muốn giao cho người khác."
+                    ? $"KHÁCH HÀNG ĐANG CHAT: Tên: '{currentUser.FullName}', SĐT: '{currentUser.Phone}', Email: '{currentUser.Email}'. Khi khách muốn đặt hàng, HÃY CHỦ ĐỘNG hỏi xem khách có muốn dùng Tên, SĐT và Email này để nhận thông báo đơn hàng không, hay muốn dùng thông tin khác."
                     : "TÌNH TRẠNG: KHÁCH CHƯA ĐĂNG NHẬP. NẾU KHÁCH CÓ BẤT KỲ Ý ĐỊNH MUA HOẶC ĐẶT HÀNG NÀO, BẮT BUỘC TRẢ LỜI ĐÚNG CÂU NÀY: 'Dạ, để HomeMart có thể lên đơn, bạn vui lòng Đăng nhập tài khoản ở góc trên màn hình nhé!'. TUYỆT ĐỐI KHÔNG TẠO MÃ ORDER_INFO NẾU CHƯA ĐĂNG NHẬP.";
 
                 var activeVouchers = await _context.Vouchers
@@ -304,16 +304,17 @@ QUY TẮC TƯ VẤN & CHỐT SALE:
 - KỸ NĂNG CHỐT SALE (RẤT QUAN TRỌNG): Sau khi giới thiệu sản phẩm xong, TUYỆT ĐỐI KHÔNG được im lặng. BẮT BUỘC phải đặt câu hỏi mồi để giục khách mua hàng. (Ví dụ: 'Bạn ưng màu nào để shop lên đơn ạ?', 'Bạn có muốn chốt luôn mã này để shop báo kho đóng gói không ạ?').
 
 QUY TẮC TỰ ĐỘNG LÊN ĐƠN HÀNG (QUAN TRỌNG NHẤT):
-Khi khách hàng ngỏ ý muốn mua/đặt hàng, bạn PHẢI thu thập ĐỦ 6 thông tin sau:
+Khi khách hàng ngỏ ý muốn mua/đặt hàng, bạn PHẢI thu thập ĐỦ 7 thông tin sau:
 1. Sản phẩm (và Phân loại nếu có)
 2. Số lượng
 3. Địa chỉ nhận hàng (Tuyệt đối KHÔNG tự bịa địa chỉ. Nếu khách chưa cho địa chỉ cụ thể thì BẮT BUỘC phải hỏi khách).
 4. Tên người nhận (Phải hỏi xác nhận có dùng tên '{currentUser?.FullName}' không hay đổi tên khác)
 5. Số điện thoại (Phải hỏi xác nhận có dùng SĐT '{currentUser?.Phone}' không hay đổi số khác)
-6. Mã giảm giá (BẮT BUỘC liệt kê ĐẦY ĐỦ TẤT CẢ các mã ưu đãi đang có trong danh sách để khách biết. ĐẶC BIỆT: Nếu khách chủ động cung cấp một mã ưu đãi bất kỳ, BẠN PHẢI CHẤP NHẬN MÃ ĐÓ và điền vào JSON, tuyệt đối không từ chối dù mã đó không có trong danh sách của bạn. QUAN TRỌNG: Khách ĐƯỢC PHÉP áp dụng cùng lúc 2 mã là 1 mã Miễn phí vận chuyển và 1 mã Giảm tiền. Nếu khách dùng 2 mã, hãy nối chúng bằng dấu phẩy. Nếu không dùng thì để trống).
-Nếu thiếu 1 trong 6 thông tin trên, hãy chủ động hỏi lại khách một cách khéo léo.
+6. Email nhận thông báo (Phải hỏi xác nhận có dùng Email '{currentUser?.Email}' không hay dùng Email khác)
+7. Mã giảm giá (BẮT BUỘC liệt kê ĐẦY ĐỦ TẤT CẢ các mã ưu đãi đang có trong danh sách để khách biết. ĐẶC BIỆT: Nếu khách chủ động cung cấp một mã ưu đãi bất kỳ, BẠN PHẢI CHẤP NHẬN MÃ ĐÓ và điền vào JSON, tuyệt đối không từ chối dù mã đó không có trong danh sách của bạn. QUAN TRỌNG: Khách ĐƯỢC PHÉP áp dụng cùng lúc 2 mã là 1 mã Miễn phí vận chuyển và 1 mã Giảm tiền. Nếu khách dùng 2 mã, hãy nối chúng bằng dấu phẩy. Nếu không dùng thì để trống).
+Nếu thiếu 1 trong 7 thông tin trên, hãy chủ động hỏi lại khách một cách khéo léo.
 Khi ĐÃ ĐỦ thông tin và khách CHỐT MUA, hãy cảm ơn và BẮT BUỘC chèn đoạn mã JSON sau ở cuối câu:
-[ORDER_INFO: {{ ""productId"": 1, ""variantName"": ""Màu Đỏ"", ""quantity"": 1, ""address"": ""Hà Nội"", ""fullName"": ""Tên người nhận"", ""phone"": ""SĐT người nhận"", ""couponCode"": ""FREESHIP, SIEUSALE"" }}]
+[ORDER_INFO: {{ ""productId"": 1, ""variantName"": ""Màu Đỏ"", ""quantity"": 1, ""address"": ""Hà Nội"", ""fullName"": ""Tên người nhận"", ""phone"": ""SĐT người nhận"", ""email"": ""Email người nhận"", ""couponCode"": ""FREESHIP, SIEUSALE"" }}]
 Lưu ý: Không tạo mã ORDER_INFO nếu thiếu thông tin hoặc khách chưa chốt. Nếu sản phẩm ko có phân loại hoặc khách ko dùng mã, điền """".
 ".Trim();
 
@@ -348,9 +349,20 @@ Lưu ý: Không tạo mã ORDER_INFO nếu thiếu thông tin hoặc khách chư
                     var jsonString = orderMatch.Groups[1].Value;
                     aiText = aiText.Replace(orderMatch.Value, "").Trim();
 
+                    // VÁ LỖI 1: Xóa bỏ các thẻ Markdown do AI tự ý vẽ thêm
+                    jsonString = jsonString.Replace("```json", "").Replace("```", "").Trim();
+
                     try
                     {
-                        var orderData = JsonSerializer.Deserialize<OrderPayload>(jsonString);
+                        // VÁ LỖI 2: Dạy C# đọc JSON "dễ dãi" hơn
+                        var jsonOptions = new JsonSerializerOptions
+                        {
+                            PropertyNameCaseInsensitive = true,
+                            AllowTrailingCommas = true,
+                            NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowReadingFromString
+                        };
+                        var orderData = JsonSerializer.Deserialize<OrderPayload>(jsonString, jsonOptions);
+                        
                         if (orderData != null && orderData.productId > 0 && orderData.quantity > 0 && !string.IsNullOrWhiteSpace(orderData.address))
                         {
                             var product = await _context.Products.Include(p => p.ProductVariants).FirstOrDefaultAsync(p => p.Id == orderData.productId);
@@ -518,6 +530,7 @@ Lưu ý: Không tạo mã ORDER_INFO nếu thiếu thông tin hoặc khách chư
                                             UserId = secureUserId.Value,
                                             FullName = !string.IsNullOrWhiteSpace(orderData.fullName) ? orderData.fullName : (fallbackUser?.FullName ?? "Khách hàng"),
                                             Phone = !string.IsNullOrWhiteSpace(orderData.phone) ? orderData.phone : (fallbackUser?.Phone ?? ""),
+                                            Email = !string.IsNullOrWhiteSpace(orderData.email) ? orderData.email : (fallbackUser?.Email ?? ""),
                                             Address = orderData.address,
                                             Status = "Pending",
                                             OrderDate = DateTime.Now,
@@ -561,7 +574,11 @@ Lưu ý: Không tạo mã ORDER_INFO nếu thiếu thông tin hoặc khách chư
                         }
                         else aiText += "\n\n[Lưu ý] Bạn vui lòng cung cấp đầy đủ số lượng và địa chỉ giao hàng để shop tạo đơn nhé.";
                     }
-                    catch { }
+                    catch (Exception ex)
+                    {
+                        // VÁ LỖI 3: Bắn lỗi ra màn hình nếu JSON bị vỡ
+                        aiText += $"\n\n[Lỗi hệ thống] Không thể lên đơn, do AI phản hồi sai định dạng dữ liệu: {ex.Message}";
+                    }
                 }
 
                 return Ok(new { success = true, answer = aiText, suggestions = suggestions });
@@ -646,6 +663,7 @@ Lưu ý: Không tạo mã ORDER_INFO nếu thiếu thông tin hoặc khách chư
         public string? address { get; set; }
         public string? fullName { get; set; } 
         public string? phone { get; set; } 
+        public string? email { get; set; }
         public string? couponCode { get; set; }
     }
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { use, useEffect, useState } from 'react'
+import { use, useEffect, useState, useMemo } from 'react'
 import Link from 'next/link'
 import {
   User, Mail, Phone, Shield, Edit2, Save, X,
@@ -68,6 +68,20 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
   const [showNewPassword, setShowNewPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isChangingPwd, setIsChangingPwd] = useState(false)
+
+  // ================= LOGIC KIỂM TRA MẬT KHẨU MỚI =================
+  const passwordChecks = useMemo(
+    () => [
+      { label: "Tối thiểu 8 ký tự", valid: newPassword.length >= 8 },
+      { label: "Có ít nhất 1 chữ hoa", valid: /[A-Z]/.test(newPassword) },
+      { label: "Có ít nhất 1 chữ thường", valid: /[a-z]/.test(newPassword) },
+      { label: "Có ít nhất 1 chữ số", valid: /\d/.test(newPassword) },
+      { label: "Có ít nhất 1 ký tự đặc biệt (!@#$%^&*)", valid: /[!@#$%^&*]/.test(newPassword) },
+    ],
+    [newPassword]
+  );
+  
+  const isPasswordStrong = passwordChecks.every((item) => item.valid);
 
  // Load thông tin user (ĐÃ VÁ LỖ HỔNG BẢO MẬT)
   useEffect(() => {
@@ -287,8 +301,10 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
       alert("Mật khẩu mới và xác nhận mật khẩu không khớp!");
       return;
     }
-    if (newPassword.length < 6) {
-      alert("Mật khẩu mới phải có ít nhất 6 ký tự!");
+    // Kiểm tra độ mạnh mật khẩu (chuẩn mới: 8 ký tự, hoa, thường, số, ký tự đặc biệt)
+    // Dùng biến tổng hợp từ useMemo
+    if (!isPasswordStrong) {
+      alert("Mật khẩu mới chưa đáp ứng đầy đủ các tiêu chuẩn bảo mật!");
       return;
     }
 
@@ -832,9 +848,8 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
                           {showNewPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                         </button>
                       </div>
-                      <p className="text-xs text-zinc-400 mt-2 ml-1">Mật khẩu phải có ít nhất 6 ký tự.</p>
+                      {/* <p className="text-xs text-zinc-400 mt-2 ml-1">Mật khẩu từ 8 ký tự, gồm chữ hoa, thường, số và ký tự đặc biệt.</p> */}
                     </div>
-
                     {/* Xác nhận mật khẩu mới */}
                     <div>
                       <label className="block text-sm font-semibold text-zinc-900 mb-2">Xác nhận mật khẩu mới</label>
@@ -855,14 +870,35 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
                           {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                         </button>
                       </div>
+                      {/* Dòng báo khớp mật khẩu */}
+                      {confirmPassword.length > 0 && (
+                        <p className={`mt-2 ml-1 text-sm font-medium ${newPassword === confirmPassword ? "text-emerald-600" : "text-red-500"}`}>
+                          {newPassword === confirmPassword ? "✓ Mật khẩu xác nhận đã khớp." : "✗ Mật khẩu xác nhận chưa khớp."}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* BẢNG 5 TIÊU CHÍ */}
+                    <div className="rounded-2xl bg-zinc-50 border border-zinc-200 p-4">
+                      <p className="mb-3 text-sm font-semibold text-zinc-700">Mật khẩu phải có:</p>
+                      <div className="space-y-2.5">
+                        {passwordChecks.map((item) => (
+                          <div key={item.label} className="flex items-center gap-2.5 text-sm">
+                            <span className={`h-2 w-2 rounded-full transition-colors duration-300 ${item.valid ? "bg-emerald-500" : "bg-zinc-300"}`} />
+                            <span className={`transition-colors duration-300 ${item.valid ? "text-emerald-700 font-medium" : "text-zinc-500"}`}>
+                              {item.label}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
 
                     {/* Submit Button */}
                     <div className="pt-4 border-t border-zinc-100">
                       <button
                         type="submit"
-                        disabled={isChangingPwd || !oldPassword || !newPassword || !confirmPassword}
-                        className="inline-flex items-center justify-center gap-2 px-8 py-3.5 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition shadow-md disabled:bg-zinc-300 disabled:cursor-not-allowed"
+                        disabled={isChangingPwd || !oldPassword || !newPassword || !confirmPassword || !isPasswordStrong || newPassword !== confirmPassword}
+                        className="inline-flex items-center justify-center w-full gap-2 px-8 py-3.5 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition shadow-md disabled:bg-zinc-300 disabled:cursor-not-allowed"
                       >
                         {isChangingPwd ? (
                           <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>

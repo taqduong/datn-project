@@ -17,7 +17,7 @@ public class FileController : ControllerBase
     }
 
     [HttpPost("upload-avatar/{userId}")]
-    [Consumes("multipart/form-data")] // Ép Swagger hiểu đây là form upload
+    [Consumes("multipart/form-data")] 
     public async Task<IActionResult> UploadAvatar(int userId, [FromForm] AvatarUploadRequest request)
     {
         var avatarFile = request.AvatarFile;
@@ -54,16 +54,25 @@ public class FileController : ControllerBase
         return Ok(new { message = "Cập nhật avatar thành công", avatarUrl });
     }
 
-    [HttpPost("upload")]
-    [Consumes("multipart/form-data")] // Ép Swagger hiểu đây là form upload
-    public async Task<IActionResult> UploadImages([FromForm] MultipleFilesUploadRequest request)
+    [HttpPost("upload/{folder}")]
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> UploadImages(string folder, [FromForm] MultipleFilesUploadRequest request)
     {
+        // BẢO MẬT: Chỉ cho phép tên thư mục gồm chữ cái, số, gạch ngang, gạch dưới.
+        // Chặn đứng hoàn toàn việc hacker gõ "../" để phá Server.
+        if (!System.Text.RegularExpressions.Regex.IsMatch(folder, "^[a-zA-Z0-9_-]+$"))
+        {
+            return BadRequest(new { message = "Tên thư mục không hợp lệ." });
+        }
+
         var files = request.Files;
         if (files == null || files.Count == 0)
             return BadRequest(new { message = "Không có tệp nào được tải lên." });
 
         var webRootPath = _env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
-        var uploadPath = Path.Combine(webRootPath, "uploads", "products");
+        
+        // Động hóa thư mục lưu bằng biến 'folder'
+        var uploadPath = Path.Combine(webRootPath, "uploads", folder.ToLower());
 
         if (!Directory.Exists(uploadPath)) Directory.CreateDirectory(uploadPath);
 
@@ -79,15 +88,24 @@ public class FileController : ControllerBase
                 return BadRequest(new { message = $"File {file.FileName} không đúng định dạng." });
 
             var originalName = Path.GetFileNameWithoutExtension(file.FileName);
-            var fileName = $"{originalName}_{DateTime.Now:yyyyMMddHHmmss}{extension}";
+            var fileName = $"{originalName}{extension}";
             var filePath = Path.Combine(uploadPath, fileName);
+
+            int count = 1;
+            while (System.IO.File.Exists(filePath))
+            {
+                fileName = $"{originalName}_{count}{extension}";
+                filePath = Path.Combine(uploadPath, fileName);
+                count++;
+            }
 
             using (var stream = new FileStream(filePath, FileMode.Create))
             {
                 await file.CopyToAsync(stream);
             }
 
-            var fileUrl = $"/uploads/products/{fileName}";
+            // Động hóa URL trả về bằng biến 'folder'
+            var fileUrl = $"/uploads/{folder.ToLower()}/{fileName}";
             uploadedFiles.Add(fileUrl);
         }
 

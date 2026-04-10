@@ -57,9 +57,11 @@ export default function CategoryPage() {
     try {
       const toastId = toast.loading("Đang tải ảnh lên...");
       const fd = new FormData();
-      fd.append("Files", file); // Phải viết hoa chữ F cho khớp với Backend
+      fd.append("Files", file); 
       
-      const res = await uploadImage(fd);
+      // Truyền thêm "categories" để Backend biết đường cất ảnh
+      const res = await uploadImage(fd, "categories");
+      
       if (res.data.imageUrls && res.data.imageUrls.length > 0) {
         setForm(prev => ({ ...prev, imageUrl: res.data.imageUrls[0] }));
         toast.success("Tải ảnh thành công", { id: toastId });

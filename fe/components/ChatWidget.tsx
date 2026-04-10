@@ -85,22 +85,38 @@ export default function ChatWidget() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser?.id]); // <- Điểm mấu chốt: Chỉ chạy lại khi ID của user thay đổi
 
-  // ================= 3. LẮNG NGHE TIN NHẮN TỚI =================
+ // ================= 3. LẮNG NGHE TIN NHẮN TỚI =================
   useEffect(() => {
-    if (connection) {
-      connection.start()
-        .then(() => {
-          console.log("🟢 Đã kết nối Tổng đài Chat Real-time!");
-          
-          connection.off("ReceiveMessage"); // Chống nhân đôi tin nhắn
-          connection.on("ReceiveMessage", (msg: ChatMessageDto) => {
-            if (msg.isFromAdmin || (!msg.isFromAdmin && msg.message)) {
-                setMessages((prev) => [...prev, msg]);
-            }
-          });
-        })
-        .catch(e => console.error("🔴 Lỗi kết nối Chat:", e));
-    }
+    let isMounted = true; 
+
+    const startConnection = async () => {
+      if (connection) {
+        try {
+          await connection.start();
+          if (isMounted) {
+            console.log("🟢 Đã kết nối Tổng đài Chat Real-time!");
+            
+            connection.off("ReceiveMessage"); // Chống nhân đôi tin nhắn
+            connection.on("ReceiveMessage", (msg: ChatMessageDto) => {
+              if (msg.isFromAdmin || (!msg.isFromAdmin && msg.message)) {
+                  setMessages((prev) => [...prev, msg]);
+              }
+            });
+          }
+        } catch (e: any) {
+          // Bỏ qua lỗi Negotiation bị ngắt do đổi trang hoặc unmount
+          if (isMounted && e.message !== "The connection was stopped during negotiation.") {
+             console.error("🔴 Lỗi kết nối Chat:", e);
+          }
+        }
+      }
+    };
+
+    startConnection();
+
+    return () => {
+      isMounted = false; // Khi unmount, bật cờ này để ngắt log đỏ
+    };
   }, [connection]);
 
   const handleSendMessage = async (e: React.FormEvent) => {
