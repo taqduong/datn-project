@@ -268,6 +268,7 @@ export interface ReviewDto {
   createdAt: string;
   isVerifiedPurchase: boolean;
   variantName?: string;
+  variantColor?: string;
 }
 
 export interface CreateReviewPayload {
@@ -345,7 +346,7 @@ export const categoriesAPI = {
     api.get<Category>(`/categories/${id}`),
 
   create: (data: CreateCategoryPayload) =>
-    api.post<Category>("/categories", data),
+    api.post<Category>("/categories/create-manual", data),
 
   update: (id: number | string, data: CreateCategoryPayload) =>
     api.put(`/categories/${id}`, data),

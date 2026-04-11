@@ -15,10 +15,27 @@ namespace BE.Hubs
             _context = context;
         }
 
+        // ========================================================
+        // THÊM LOGIC ĐỂ PHÂN LUỒNG KẾT NỐI VÀO CÁC PHÒNG (ROOMS)
+        // ========================================================
+        
+        // Khách hàng gọi hàm này ngay khi kết nối SignalR thành công
+        public async Task JoinUserRoom(int userId)
+        {
+            await Groups.AddToGroupAsync(Context.ConnectionId, $"User_{userId}");
+        }
+
+        // Admin gọi hàm này ngay khi kết nối SignalR thành công
+        public async Task JoinAdminRoom()
+        {
+            await Groups.AddToGroupAsync(Context.ConnectionId, "Admins");
+        }
+
+        // ========================================================
+
         // 1. Khách gửi tin nhắn cho Admin
         public async Task SendMessageToAdmin(int userId, string message)
         {
-            // Lưu vào Database
             var chatMsg = new ChatMessage 
             { 
                 UserId = userId, 
@@ -29,14 +46,14 @@ namespace BE.Hubs
             _context.ChatMessages.Add(chatMsg);
             await _context.SaveChangesAsync();
 
-            // Phát sóng tin nhắn cho TẤT CẢ mọi người đang kết nối (FE sẽ tự lọc)
-            await Clients.All.SendAsync("ReceiveMessage", chatMsg);
+            // CẢI TIẾN: Chỉ gửi cho Admin và chính User đó (để đồng bộ nếu User mở nhiều tab)
+            await Clients.Group("Admins").SendAsync("ReceiveMessage", chatMsg);
+            await Clients.Group($"User_{userId}").SendAsync("ReceiveMessage", chatMsg);
         }
 
         // 2. Admin trả lời Khách
         public async Task SendMessageToUser(int userId, string message)
         {
-            // Lưu vào Database
             var chatMsg = new ChatMessage 
             { 
                 UserId = userId, 
@@ -47,8 +64,9 @@ namespace BE.Hubs
             _context.ChatMessages.Add(chatMsg);
             await _context.SaveChangesAsync();
 
-            // Phát sóng tin nhắn mới
-            await Clients.All.SendAsync("ReceiveMessage", chatMsg);
+            // CẢI TIẾN: Chỉ gửi cho đúng User đó và các Admin khác (để đồng bộ hộp thoại Admin)
+            await Clients.Group($"User_{userId}").SendAsync("ReceiveMessage", chatMsg);
+            await Clients.Group("Admins").SendAsync("ReceiveMessage", chatMsg);
         }
     }
 }

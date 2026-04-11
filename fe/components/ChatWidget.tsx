@@ -90,12 +90,14 @@ export default function ChatWidget() {
     let isMounted = true; 
 
     const startConnection = async () => {
-      if (connection) {
+      if (connection && currentUser) { // Nhớ check thêm currentUser
         try {
           await connection.start();
           if (isMounted) {
             console.log("🟢 Đã kết nối Tổng đài Chat Real-time!");
             
+            await connection.invoke("JoinUserRoom", currentUser.id);
+
             connection.off("ReceiveMessage"); // Chống nhân đôi tin nhắn
             connection.on("ReceiveMessage", (msg: ChatMessageDto) => {
               if (msg.isFromAdmin || (!msg.isFromAdmin && msg.message)) {

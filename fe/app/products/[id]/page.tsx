@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useRef } from "react";
-import { Heart, Star, CheckCircle, User as UserIcon, ZoomIn, ZoomOut, X } from "lucide-react";
+import { Heart, Star, CheckCircle, User as UserIcon, ZoomIn, ZoomOut, X, Expand, Shrink } from "lucide-react";
 import { fetchProductById, addToCart, addToWishlist, type Product, fetchReviewsByProduct, type ReviewDto, logUserActivity, fetchSimilarProducts, trackProductView } from "@/services/api";
 import ProductCard from "@/components/ProductCard";
 
@@ -27,6 +27,7 @@ export default function ProductDetailPage() {
 
   const [openLightbox, setOpenLightbox] = useState(false);
   const [previewZoom, setPreviewZoom] = useState(1);
+  const [isFillView, setIsFillView] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 });
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
@@ -104,10 +105,18 @@ export default function ProductDetailPage() {
     setPreviewZoom(1);
     setDragPosition({ x: 0, y: 0 });
     setIsDragging(false);
-  };
+    setIsFillView(false);
+};
 
   const handleZoomIn = () => setPreviewZoom((prev) => Math.min(prev + 0.6, 4));
   const handleZoomOut = () => setPreviewZoom((prev) => Math.max(prev - 0.6, 1));
+
+  const handleToggleFillView = () => {
+    setIsFillView((prev) => !prev);
+    setPreviewZoom(1);
+    setDragPosition({ x: 0, y: 0 });
+    setIsDragging(false);
+  };
 
   useEffect(() => {
     if (!openLightbox) return;
@@ -840,9 +849,10 @@ export default function ProductDetailPage() {
                             ))}
                           </div>
                           
-                          {review.variantName && (
+                          {/* HIỂN THỊ ĐẦY ĐỦ MÀU VÀ SIZE TRONG BÌNH LUẬN */}
+                          {(review.variantName || review.variantColor) && (
                             <span className="text-xs text-slate-500 font-medium border-l border-slate-300 pl-2">
-                              Phân loại: {review.variantName}
+                              Phân loại: {review.variantColor ? `${review.variantColor} - ` : ''}{review.variantName}
                             </span>
                           )}
 
@@ -869,22 +879,37 @@ export default function ProductDetailPage() {
 
         <SimilarProducts productId={product.id} />
 
+        {/* ========================================================= */}
+        {/* LIGHTBOX KHU VỰC ẢNH PHÓNG TO (ĐÃ FIX FULLSCREEN CHUẨN) */}
+        {/* ========================================================= */}
         {openLightbox && allImages.length > 0 && (
-          <div className="fixed inset-0 z-[100] bg-black/35" onClick={closeLightbox}>
+          <div className={`fixed inset-0 z-[100] transition-all duration-300 ${isFillView ? "bg-black" : "bg-black/40 backdrop-blur-sm"}`} onClick={closeLightbox}>
             <div
-              className="absolute left-1/2 top-1/2 w-[92vw] max-w-6xl -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-white shadow-2xl"
+              className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white transition-all duration-300 overflow-hidden ${
+                isFillView 
+                  ? "w-screen h-screen max-w-none rounded-none bg-black" 
+                  : "w-[92vw] max-w-6xl rounded-2xl shadow-2xl"
+              }`}
               onClick={(e) => e.stopPropagation()}
             >
+              {/* NÚT TẮT LIGHTBOX (LUÔN HIỂN THỊ) */}
               <button
                 onClick={closeLightbox}
-                className="absolute right-4 top-4 z-20 flex h-10 w-10 items-center justify-center rounded-full bg-black/20 text-white shadow-sm transition hover:bg-white hover:text-slate-900"
+                className={`absolute right-4 top-4 z-50 flex h-10 w-10 items-center justify-center rounded-full shadow-sm transition hover:bg-red-500 hover:text-white ${
+                  isFillView ? "bg-white/10 text-white hover:bg-white/30" : "bg-black/10 text-slate-700 hover:bg-black/20"
+                }`}
               >
                 <X size={22} strokeWidth={1.5} />
               </button>
 
-              <div className="grid grid-cols-1 gap-6 p-6 lg:grid-cols-[1fr_280px]">
+              {/* CHIA LAYOUT: NẾU FULLSCREEN THÌ 1 CỘT, BÌNH THƯỜNG THÌ 2 CỘT */}
+              <div className={`relative grid h-full w-full ${isFillView ? "grid-cols-1 p-0" : "gap-6 p-6 lg:grid-cols-[1fr_280px]"}`}>
+                
+                {/* KHU VỰC ẢNH CHÍNH */}
                 <div
-                  className={`relative flex min-h-[520px] items-center justify-center overflow-hidden rounded-2xl bg-slate-50 p-4 select-none ${
+                  className={`relative flex items-center justify-center overflow-hidden select-none ${
+                    isFillView ? "h-screen w-screen bg-black" : "min-h-[520px] rounded-2xl bg-slate-50 p-4"
+                  } ${
                     previewZoom > 1 ? (isDragging ? "cursor-grabbing" : "cursor-grab") : "cursor-default"
                   }`}
                   onMouseDown={handleLightboxMouseDown}
@@ -892,66 +917,116 @@ export default function ProductDetailPage() {
                   onMouseUp={handleLightboxMouseUp}
                   onMouseLeave={handleLightboxMouseUp}
                 >
-                  <div className="absolute right-20 top-4 z-20 flex items-center gap-3">
+                  {/* THANH CÔNG CỤ ZOOM & FULLSCREEN */}
+                  <div className={`absolute z-40 flex items-center gap-3 ${isFillView ? "top-4 right-20" : "top-4 right-4"}`}>
+                    
+                    {/* Các nút Zoom In/Out (Chỉ hiện khi chưa Fullscreen) */}
+                    {!isFillView && (
+                      <>
+                        <button
+                          onClick={handleZoomIn}
+                          disabled={isMaxZoom}
+                          className={`flex h-11 w-11 items-center justify-center rounded-full transition ${
+                            isMaxZoom ? "bg-gray-200 text-gray-400 cursor-not-allowed" : "bg-white/90 text-slate-600 hover:bg-white hover:text-slate-900 shadow-sm"
+                          }`}
+                        >
+                          <ZoomIn size={24} strokeWidth={2.2} />
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            handleZoomOut();
+                            if (previewZoom - 0.6 <= 1) setDragPosition({ x: 0, y: 0 });
+                          }}
+                          disabled={isMinZoom}
+                          className={`flex h-11 w-11 items-center justify-center rounded-full transition ${
+                            isMinZoom ? "bg-gray-200 text-gray-400 cursor-not-allowed" : "bg-white/90 text-slate-600 hover:bg-white hover:text-slate-900 shadow-sm"
+                          }`}
+                        >
+                          <ZoomOut size={24} strokeWidth={2.2} />
+                        </button>
+                      </>
+                    )}
+
+                    {/* Nút Phóng to/Thu nhỏ màn hình (Luôn hiện) */}
                     <button
-                      onClick={handleZoomIn}
-                      disabled={isMaxZoom}
-                      className={`flex h-11 w-11 items-center justify-center rounded-full transition ${
-                        isMaxZoom ? "bg-gray-200 text-gray-400 cursor-not-allowed" : "bg-white/90 text-slate-600 hover:bg-white hover:text-slate-900 shadow-sm"
+                      onClick={handleToggleFillView}
+                      className={`flex h-11 w-11 items-center justify-center rounded-full shadow-sm transition ${
+                        isFillView ? "bg-white/10 text-white hover:bg-white/30" : "bg-white/90 text-slate-600 hover:bg-white hover:text-slate-900"
                       }`}
+                      title={isFillView ? "Thu nhỏ về mặc định" : "Phóng đầy khung"}
                     >
-                      <ZoomIn size={24} strokeWidth={2.2} />
-                    </button>
-                    <button
-                      onClick={() => {
-                        handleZoomOut();
-                        if (previewZoom - 0.6 <= 1) setDragPosition({ x: 0, y: 0 });
-                      }}
-                      disabled={isMinZoom}
-                      className={`flex h-11 w-11 items-center justify-center rounded-full transition ${
-                        isMinZoom ? "bg-gray-200 text-gray-400 cursor-not-allowed" : "bg-white/90 text-slate-600 hover:bg-white hover:text-slate-900 shadow-sm"
-                      }`}
-                    >
-                      <ZoomOut size={24} strokeWidth={2.2} />
+                      {isFillView ? <Shrink size={22} strokeWidth={2.2} /> : <Expand size={22} strokeWidth={2.2} />}
                     </button>
                   </div>
 
+                  {/* ẢNH HIỂN THỊ */}
                   <img
                     src={allImages[photoIndex]}
                     alt={`preview-${photoIndex}`}
                     draggable={false}
-                    className={`max-h-[75vh] w-auto max-w-full rounded-xl object-contain ${!isDragging ? "transition-transform duration-200" : ""}`}
-                    style={{ transform: `translate(${dragPosition.x}px, ${dragPosition.y}px) scale(${previewZoom})` }}
+                    className={`${
+                      isFillView
+                        ? "h-full w-full object-contain"
+                        : "max-h-[75vh] w-auto max-w-full object-contain"
+                    } ${!isDragging ? "transition-transform duration-200" : ""}`}
+                    style={{
+                      transform: `translate(${dragPosition.x}px, ${dragPosition.y}px) scale(${previewZoom})`,
+                      transformOrigin: "center center",
+                    }}
                   />
 
+                  {/* NÚT NEXT/PREV */}
                   {allImages.length > 1 && (
                     <>
                       <button
-                        onClick={(e) => { e.stopPropagation(); setPreviewZoom(1); setDragPosition({ x: 0, y: 0 }); setPhotoIndex((prev) => (prev === 0 ? allImages.length - 1 : prev - 1)); }}
-                        className="absolute left-4 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-xl bg-slate-800/75 text-3xl text-white transition hover:bg-slate-900"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPreviewZoom(1);
+                          setDragPosition({ x: 0, y: 0 });
+                          setPhotoIndex((prev) => (prev === 0 ? allImages.length - 1 : prev - 1));
+                        }}
+                        className={`absolute left-4 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full text-3xl text-white transition ${
+                          isFillView ? "bg-white/10 hover:bg-white/30" : "bg-slate-800/75 hover:bg-slate-900"
+                        }`}
                       >‹</button>
                       <button
-                        onClick={(e) => { e.stopPropagation(); setPreviewZoom(1); setDragPosition({ x: 0, y: 0 }); setPhotoIndex((prev) => (prev === allImages.length - 1 ? 0 : prev + 1)); }}
-                        className="absolute right-4 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-xl bg-slate-800/75 text-3xl text-white transition hover:bg-slate-900"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPreviewZoom(1);
+                          setDragPosition({ x: 0, y: 0 });
+                          setPhotoIndex((prev) => (prev === allImages.length - 1 ? 0 : prev + 1));
+                        }}
+                        className={`absolute right-4 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full text-3xl text-white transition ${
+                          isFillView ? "bg-white/10 hover:bg-white/30" : "bg-slate-800/75 hover:bg-slate-900"
+                        }`}
                       >›</button>
                     </>
                   )}
                 </div>
 
-                <div className="flex flex-col">
-                  <h3 className="line-clamp-2 pr-10 text-xl font-semibold text-slate-900">{product?.name}</h3>
-                  <div className="mt-5 grid grid-cols-3 gap-3">
-                    {allImages.map((img, idx) => (
-                      <button
-                        key={idx}
-                        onClick={() => { setPreviewZoom(1); setDragPosition({ x: 0, y: 0 }); setPhotoIndex(idx); }}
-                        className={`overflow-hidden rounded-xl border-2 bg-white transition ${photoIndex === idx ? "border-red-500 ring-2 ring-red-100" : "border-slate-200 hover:border-slate-400"}`}
-                      >
-                        <img src={img} alt={`thumb-${idx}`} className="aspect-square h-full w-full object-cover" />
-                      </button>
-                    ))}
+                {/* KHU VỰC THÔNG TIN (BỊ ẨN NẾU LÀ FULLSCREEN) */}
+                {!isFillView && (
+                  <div className="flex flex-col animate-in fade-in duration-300">
+                    <h3 className="line-clamp-2 pr-10 text-xl font-semibold text-slate-900">{product?.name}</h3>
+                    <div className="mt-5 grid grid-cols-3 gap-3">
+                      {allImages.map((img, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => {
+                            setPreviewZoom(1);
+                            setDragPosition({ x: 0, y: 0 });
+                            setPhotoIndex(idx);
+                          }}
+                          className={`overflow-hidden rounded-xl border-2 bg-white transition ${photoIndex === idx ? "border-blue-500 ring-2 ring-blue-100" : "border-slate-200 hover:border-slate-400"}`}
+                        >
+                          <img src={img} alt={`thumb-${idx}`} className="aspect-square h-full w-full object-cover" />
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
+
               </div>
             </div>
           </div>

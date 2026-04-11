@@ -138,14 +138,16 @@ export default function AdminChatPage() {
           await connection.start();
           setIsConnected(true);
           console.log("🟢 Admin đã kết nối Tổng đài Chat!");
+          await connection.invoke("JoinAdminRoom");
         }
 
         connection.off("ReceiveMessage", handleReceiveMessage);
         connection.on("ReceiveMessage", handleReceiveMessage);
 
         connection.onreconnecting(() => setIsConnected(false));
-        connection.onreconnected(() => {
+        connection.onreconnected(async () => {
           setIsConnected(true);
+          await connection.invoke("JoinAdminRoom");
           loadUsers();
         });
         connection.onclose(() => setIsConnected(false));

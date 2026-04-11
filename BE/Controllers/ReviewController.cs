@@ -40,7 +40,8 @@ namespace BE.Controllers
                     Comment = r.Comment,
                     CreatedAt = r.CreatedAt,
                     IsVerifiedPurchase = r.IsVerifiedPurchase,
-                    VariantName = r.OrderDetail.ProductVariant != null ? r.OrderDetail.ProductVariant.VariantName : null
+                    VariantName = r.OrderDetail.ProductVariant != null ? r.OrderDetail.ProductVariant.VariantName : null,
+                    VariantColor = r.OrderDetail.ProductVariant != null ? r.OrderDetail.ProductVariant.Color : null 
                 })
                 .ToListAsync();
 
@@ -145,6 +146,7 @@ namespace BE.Controllers
             public DateTime CreatedAt { get; set; }
             public bool IsVerifiedPurchase { get; set; }
             public string? VariantName { get; set; } 
+            public string? VariantColor { get; set; }
         }
 
         public class CreateReviewDto

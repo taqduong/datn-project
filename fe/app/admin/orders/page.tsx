@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { 
   FileText, Calendar, ShoppingCart, User, 
   MapPin, Phone, Mail, ChevronDown, ChevronUp, Trash2, PackageOpen,
-  Download
+  Download, Printer 
 } from "lucide-react";
 import { fetchAdminOrders, deleteOrder, updateOrderStatus, type OrderDto, confirmRefundOrder } from "@/services/api";
 import * as XLSX from "xlsx";
@@ -118,6 +118,126 @@ export default function AdminOrdersPage() {
     XLSX.writeFile(workbook, `ThongKeDonHang_${new Date().toISOString().slice(0, 10)}.xlsx`);
   };
   // ==================== KẾT THÚC CODE EXCEL ====================
+
+  // ==================== BẮT ĐẦU CODE IN PHIẾU GIAO HÀNG ====================
+  const handlePrintLabel = (e: React.MouseEvent, order: OrderDto) => {
+    e.stopPropagation();
+    
+    // Mở một tab ẩn để in
+    const printWindow = window.open('', '_blank', 'width=1000,height=800');
+    if (!printWindow) {
+      alert("Vui lòng cho phép mở Popup trên trình duyệt để in đơn hàng.");
+      return;
+    }
+
+    const addressParts = [order.address, order.ward, order.city].filter(p => p && p.trim() !== "");
+    const displayAddress = addressParts.length > 0 ? addressParts.join(", ") : "Chưa cung cấp";
+    
+    const totalQty = order.orderDetails.reduce((sum, item) => sum + item.quantity, 0);
+    const isPaid = order.paymentMethod?.toLowerCase().includes('vnpay');
+    const codAmount = isPaid ? "0 VNĐ (ĐÃ THANH TOÁN)" : formatVND(order.totalAmount);
+
+    let productsHtml = "";
+    order.orderDetails.forEach((item, index) => {
+      const variantText = item.variantName ? `(${item.variantColor ? item.variantColor + ' - ' : ''}${item.variantName})` : '';
+      productsHtml += `
+        <div style="margin-bottom: 10px; font-size: 16px; padding-bottom: 8px; border-bottom: 1px dotted #ccc;">
+          <b>${index + 1}.</b> ${item.productName} ${variantText} <br/> 
+          <span style="margin-left: 20px; color: #333;">Số lượng: <b>${item.quantity}</b></span>
+        </div>`;
+    });
+
+    // Tạo vạch barcode giả bằng CSS
+    const fakeBarcode = Array.from({length: 50}).map(() => {
+      const width = Math.floor(Math.random() * 5) + 1;
+      const margin = Math.floor(Math.random() * 3);
+      return `<div style="width: ${width}px; margin-right: ${margin}px; background-color: black; height: 100%;"></div>`;
+    }).join('');
+
+    const html = `
+      <!DOCTYPE html>
+      <html lang="vi">
+      <head>
+        <meta charset="UTF-8">
+        <title>Mã Vận Đơn - #${order.orderId}</title>
+        <style>
+          body { font-family: 'Helvetica Neue', Arial, sans-serif; padding: 20px; color: #000; }
+          /* Tăng kích thước lên A5 để nhìn rõ hơn trên A4 */
+          .label-box { width: 14.5cm; min-height: 20cm; border: 3px dashed #000; padding: 25px; margin: 0 auto; box-sizing: border-box; display: flex; flex-direction: column; }
+          .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #000; padding-bottom: 15px; margin-bottom: 15px; }
+          .logo { font-size: 32px; font-weight: 900; letter-spacing: -1px; display: flex; align-items: center; gap: 8px; }
+          .logo span { background: #000; color: #fff; padding: 4px 8px; border-radius: 6px; font-size: 24px; }
+          .barcode-section { display: flex; flex-direction: column; align-items: center; }
+          .barcode-bars { display: flex; height: 55px; justify-content: center; }
+          .info-row { display: flex; border-bottom: 3px solid #000; margin-bottom: 15px; }
+          .info-col { width: 50%; padding-bottom: 15px; }
+          .info-col.left { border-right: 3px solid #000; padding-right: 15px; }
+          .info-col.right { padding-left: 15px; }
+          .title { font-weight: bold; font-size: 16px; margin-bottom: 8px; }
+          .text { font-size: 15px; line-height: 1.5; }
+          .large-code { text-align: center; font-size: 36px; font-weight: 900; border-bottom: 3px dashed #000; padding-bottom: 15px; margin-bottom: 15px; letter-spacing: 3px; }
+          .product-section { flex: 1; border-bottom: 3px solid #000; padding-bottom: 15px; margin-bottom: 15px; }
+          .footer { display: flex; justify-content: space-between; align-items: flex-end; }
+          .cod-title { font-size: 15px; margin-bottom: 5px; font-weight: bold;}
+          .cod-amount { font-size: 28px; font-weight: 900; }
+          .signature { border: 2px dashed #000; width: 170px; height: 80px; display: flex; justify-content: center; padding-top: 10px; font-size: 15px; font-weight: bold; background-color: #f9f9f9; }
+          .warning { font-size: 13px; font-weight: bold; text-align: center; margin-top: 20px; border-top: 2px solid #000; padding-top: 10px; }
+        </style>
+      </head>
+      <body onload="window.print(); window.close();">
+        <div class="label-box">
+          <div class="header">
+            <div class="logo"><span>H</span> HomeMart</div>
+            <div class="barcode-section">
+              <div class="barcode-bars">${fakeBarcode}</div>
+              <div style="font-size: 13px; margin-top: 5px; font-family: monospace; font-weight: bold;">Mã đơn: HM${new Date().getFullYear()}${order.orderId}</div>
+            </div>
+          </div>
+          
+          <div class="info-row">
+            <div class="info-col left">
+              <div class="title">Từ: HomeMart Official</div>
+              <div class="text">Tầng 1, Tòa nhà Đại học Công Nghiệp Hà Nội</div>
+              <div class="text" style="margin-top: 5px;">SĐT: 1900 1080</div>
+            </div>
+            <div class="info-col right">
+              <div class="title">Đến: ${order.fullName}</div>
+              <div class="text">${displayAddress}</div>
+              <div class="text" style="margin-top: 5px; font-weight: bold; font-size: 15px;">SĐT: ${order.phone}</div>
+            </div>
+          </div>
+          
+          <div class="large-code">HM-EXPRESS-${order.orderId}</div>
+          
+          <div class="product-section">
+            <div class="title" style="margin-bottom: 12px; font-size: 17px;">Nội dung hàng (Tổng SL: ${totalQty})</div>
+            ${productsHtml}
+          </div>
+          
+          <div class="footer">
+            <div>
+              <div class="cod-title">Tiền thu Người nhận:</div>
+              <div class="cod-amount">${codAmount}</div>
+              <div style="font-size: 12px; margin-top: 8px; max-width: 250px; color: #555;">
+                * Kiểm tra tên sản phẩm và đối chiếu mã vận đơn trước khi nhận hàng.
+              </div>
+            </div>
+            <div class="signature">
+              Chữ ký người nhận
+            </div>
+          </div>
+          
+          <div class="warning">
+            Chỉ dẫn giao hàng: Không đồng kiểm; Chuyển hoàn sau 3 lần phát; Lưu kho tối đa 5 ngày.
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(html);
+    printWindow.document.close();
+  };
   
   const formatVND = (val: number) =>
     new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(val);
@@ -268,6 +388,15 @@ export default function AdminOrdersPage() {
                           </span>
                         )}
                         {/* ========================================== */}
+
+                        {/* THÊM MỚI: NÚT IN PHIẾU GIAO HÀNG */}
+                        <button 
+                          onClick={(e) => handlePrintLabel(e, order)} 
+                          className="p-2 text-slate-400 hover:text-blue-600 transition-colors"
+                          title="In mã vận đơn dán lên kiện hàng"
+                        >
+                          <Printer size={20}/>
+                        </button>
 
                         {/* NÚT XÓA CHỈ HIỆN KHI ĐƠN ĐÃ BỊ HỦY VÀ (Không cần hoàn tiền HOẶC Đã hoàn xong) */}
                         {['cancelled', 'đã hủy', 'đã hủy đơn'].includes(order.status.toLowerCase()) && 

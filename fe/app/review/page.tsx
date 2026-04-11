@@ -105,10 +105,12 @@ export default function ReviewPage() {
                 <h2 className="font-bold text-slate-900 text-lg leading-tight">{orderItem.productName}</h2>
                 
                 {/* HIỂN THỊ PHÂN LOẠI Ở ĐÂY */}
-                {orderItem.variantName ? (
+                {(orderItem.variantName || orderItem.variantColor) ? (
                   <div className="flex items-center gap-1.5 mt-2 text-orange-600 bg-orange-50 w-fit px-3 py-1 rounded-lg border border-orange-100">
                     <Tag size={14} />
-                    <span className="text-sm font-semibold">Phân loại: {orderItem.variantName}</span>
+                    <span className="text-sm font-semibold uppercase tracking-wider">
+                      Phân loại: {orderItem.variantColor ? `${orderItem.variantColor} - ` : ''}{orderItem.variantName}
+                    </span>
                   </div>
                 ) : (
                   <p className="text-sm text-slate-500 mt-1 italic">Sản phẩm cơ bản</p>
