@@ -136,10 +136,10 @@ export default function UserPage() {
           <button
             className="flex items-center justify-center gap-2 bg-gradient-to-r from-sky-500 to-teal-400 text-white px-5 py-3 rounded-xl shadow-lg hover:brightness-110 transition shrink-0"
             onClick={() => setModalOpen(true)}
-            title="Thêm nhân viên mới"
+            title="Thêm tài khoản"
           >
             <UserPlus className="w-6 h-6" />
-            <span className="font-semibold">Thêm nhân viên</span>
+            <span className="font-semibold">Thêm tài khoản</span>
           </button>
         )}
       </div>

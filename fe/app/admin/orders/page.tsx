@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { 
   FileText, Calendar, ShoppingCart, User, 
   MapPin, Phone, Mail, ChevronDown, ChevronUp, Trash2, PackageOpen,
-  Download, Printer 
+  Download, Printer, CheckCircle2, AlertCircle 
 } from "lucide-react";
 import { fetchAdminOrders, deleteOrder, updateOrderStatus, type OrderDto, confirmRefundOrder } from "@/services/api";
 import * as XLSX from "xlsx";
@@ -301,10 +301,12 @@ export default function AdminOrdersPage() {
                         <span className="text-xs font-bold text-slate-500">#{order.orderId}</span>
                       </div>
                       <div>
-                        <div className="flex items-center gap-3 mb-1">
+                        <div className="flex flex-wrap items-center gap-3 mb-1">
                           <h3 className="text-lg font-bold text-slate-900">{order.fullName}</h3>
                           
-                          {/* Dropdown Duyệt đơn (Đã thêm Khóa bảo vệ) */}
+                          {/* ========================================== */}
+                          {/* ĐÃ CHUYỂN DROPDOWN DUYỆT ĐƠN LÊN TRƯỚC TAG */}
+                          {/* ========================================== */}
                           <select
                             value={order.status}
                             onChange={(e) => handleStatusChange(e, order.orderId)}
@@ -345,6 +347,27 @@ export default function AdminOrdersPage() {
                             {/* Riêng Hủy đơn thì lúc nào Admin cũng được phép */}
                             <option value="Cancelled">Đã hủy đơn</option>
                           </select>
+
+                          {/* ========================================== */}
+                          {/* TAG THANH TOÁN  */}
+                          {/* ========================================== */}
+                          
+                          {/* TAG 1: ĐÃ THANH TOÁN (Màu xanh) */}
+                          {order.paymentMethod === 'VNPay_Paid' && (
+                            // Thay đổi ở đây: px-3 py-1.5, text-sm, size={16}
+                            <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-100 text-emerald-700 border border-emerald-200 text-sm font-bold shadow-sm">
+                              <CheckCircle2 size={16} /> Đã thanh toán
+                            </span>
+                          )}
+
+                          {/* TAG 2: CHƯA THANH TOÁN (Màu đỏ nhạt) */}
+                          {order.paymentMethod?.toLowerCase() === 'vnpay' && order.status.toLowerCase() === 'pending' && (
+                            // Thay đổi ở đây: px-3 py-1.5, text-sm, size={16}
+                            <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 text-red-700 border border-red-200 text-sm font-bold shadow-sm">
+                              <AlertCircle size={16} /> Chưa thanh toán
+                            </span>
+                          )}
+
                         </div>
                         <div className="flex items-center gap-4 text-sm text-slate-500">
                           <span className="flex items-center gap-1"><Phone size={14}/> {order.phone}</span>
@@ -375,16 +398,16 @@ export default function AdminOrdersPage() {
                                     }
                                 }
                             }}
-                            className="mr-3 px-4 py-1.5 bg-green-600 text-white rounded-lg text-sm font-bold shadow-sm hover:bg-green-700 hover:shadow-md transition-all active:scale-95"
+                            className="mr-3 px-4 py-1.5 bg-orange-500 text-white rounded-lg text-sm font-bold shadow-sm hover:bg-orange-600 hover:shadow-md transition-all active:scale-95 flex items-center gap-1"
                           >
-                            Xác nhận hoàn tiền
+                            <AlertCircle size={16}/> Xác nhận hoàn tiền
                           </button>
                         )}
                         
                         {/* Tag hiển thị khi đã hoàn */}
                         {order.status.toLowerCase() === 'cancelled' && order.refundStatus?.toLowerCase() === 'refunded' && (
-                          <span className="mr-3 px-3 py-1 bg-green-100 text-green-700 border border-green-200 rounded-md text-xs font-bold uppercase">
-                             Đã hoàn tiền
+                          <span className="mr-3 px-3 py-1.5 bg-green-100 text-green-700 border border-green-200 rounded-lg text-xs font-bold uppercase flex items-center gap-1">
+                             <CheckCircle2 size={14}/> Đã hoàn tiền
                           </span>
                         )}
                         {/* ========================================== */}

@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { Ticket, Plus, Search, Edit, Trash2, Loader2, Truck, XCircle, Clock } from "lucide-react";
 import { voucherAPI, type VoucherDto } from "@/services/api";
-import { is } from "date-fns/locale";
 
 export default function AdminVouchersPage() {
   const [vouchers, setVouchers] = useState<VoucherDto[]>([]);
@@ -101,11 +100,19 @@ export default function AdminVouchersPage() {
     }
   };
 
+  // ==========================================
+  // HÀM BẬT TẮT TRẠNG THÁI 
+  // ==========================================
   const toggleActive = async (v: any) => {
     try {
+      // Tối ưu UX: Cập nhật state nội bộ ngay lập tức để UI thay đổi mượt mà
+      setVouchers(prev => prev.map(item => item.id === v.id ? { ...item, isActive: !v.isActive } : item));
+      
+      // Gọi API ngầm dưới nền
       await voucherAPI.update(v.id, { ...v, isActive: !v.isActive });
-      loadVouchers();
     } catch (err) {
+      // Nếu API lỗi thì rollback lại state cũ
+      loadVouchers();
       alert("Cập nhật trạng thái thất bại");
     }
   };
@@ -202,11 +209,24 @@ export default function AdminVouchersPage() {
                         Tối đa {v.maxUsagePerUser}/khách ({getIntervalText(v.resetInterval)})
                       </p>
                     </td>
+
+                    {/* ========================================== */}
+                    {/* THAY ĐỔI GIAO DIỆN NÚT TRẠNG THÁI THÀNH TOGGLE SWITCH */}
+                    {/* ========================================== */}
                     <td className="px-6 py-4">
-                      <button onClick={() => toggleActive(v)} className={`px-3 py-1 rounded-full text-xs font-bold border transition-colors ${v.isActive ? 'bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100' : 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200'}`}>
-                        {v.isActive ? 'Đang bật' : 'Đã tắt'}
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button 
+                          onClick={() => toggleActive(v)} 
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${v.isActive ? 'bg-emerald-500' : 'bg-slate-300'}`}
+                        >
+                          <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${v.isActive ? 'translate-x-6' : 'translate-x-1'}`} />
+                        </button>
+                        <span className={`text-xs font-bold ${v.isActive ? 'text-emerald-600' : 'text-slate-400'}`}>
+                          {v.isActive ? 'Đang bật' : 'Đã tắt'}
+                        </span>
+                      </div>
                     </td>
+
                     <td className="px-6 py-4 text-right space-x-2">
                       <button onClick={() => handleOpenModal(v)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"><Edit size={16} /></button>
                       <button onClick={() => handleDelete(v.id)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={16} /></button>

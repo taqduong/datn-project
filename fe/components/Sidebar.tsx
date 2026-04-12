@@ -43,7 +43,7 @@ export default function Sidebar() {
       {
         href: "/admin/categories",
         label: "Danh mục",
-        description: "Quản lý nhóm sản phẩm",
+        description: "Quản lý danh mục",
         icon: FolderTree,
       },
       {
