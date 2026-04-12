@@ -23,15 +23,25 @@ namespace BE.Controllers
             _context = context;
         }
 
-        // API đăng nhập
+
+        // API đăng nhập (Hỗ trợ cả Username và Email)
         [HttpPost("login")]
         public async Task<ActionResult> Login([FromBody] LoginRequest request)
         {
+            // TÌM USER THEO USERNAME HOẶC EMAIL
             var user = await _context.Users
-                .FirstOrDefaultAsync(u => u.Username == request.Username);
+                .FirstOrDefaultAsync(u => u.Username == request.Username || u.Email == request.Username);
 
             if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.Password))
-                return Unauthorized(new { title = "Sai tên đăng nhập hoặc mật khẩu" });
+                return Unauthorized(new { title = "Sai tên đăng nhập, email hoặc mật khẩu" });
+
+            // ==========================================
+            // THÊM ĐOẠN NÀY: CHẶN CỬA TÀI KHOẢN BỊ KHÓA
+            // ==========================================
+            if (!user.IsActive)
+            {
+                return BadRequest(new { message = "Tài khoản của bạn đã bị vô hiệu hóa. Vui lòng liên hệ Admin!" });
+            }
 
             var token = GenerateJwtToken(user);
 

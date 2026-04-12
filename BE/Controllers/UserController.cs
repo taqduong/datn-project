@@ -4,6 +4,7 @@ using BE.Models;
 using BE.Data;
 using System.ComponentModel.DataAnnotations;
 using BE.Services;
+using System.Security.Claims;
 
 namespace BE.Controllers
 {
@@ -24,28 +25,78 @@ namespace BE.Controllers
         public async Task<ActionResult<User>> CreateUser([FromBody] CreateUserRequest request)
         {
             if (await _context.Users.AnyAsync(u => u.Username == request.Username))
-                return BadRequest("Username đã tồn tại.");
+                return BadRequest(new { message = "Tên đăng nhập đã tồn tại." });
 
-            // THÊM MỚI: Khóa chặt 1 Email chỉ được tạo 1 tài khoản (dành cho Admin)
             if (await _context.Users.AnyAsync(u => u.Email == request.Email))
                 return BadRequest(new { message = "Email này đã được sử dụng cho một tài khoản khác." });
+
+            string newRole = !string.IsNullOrWhiteSpace(request.Role) ? request.Role.ToLower() : "nguoimua";
+            
+            // 1. Phân quyền: Chỉ Admin mới được tạo Admin/Nhân viên
+            if (newRole == "admin" || newRole switch { "nhanvien" => true, _ => false })
+            {
+                var currentUserRole = User.FindFirstValue(ClaimTypes.Role);
+                if (currentUserRole == null || currentUserRole.ToLower() != "admin")
+                {
+                    return StatusCode(403, new { message = "Lỗi bảo mật: Chỉ Quản trị viên mới được phép tạo tài khoản nội bộ!" });
+                }
+            }
+
+            // 2. Chuẩn bị Token kích hoạt (Dùng chung logic với Quên mật khẩu)
+            var activationToken = Guid.NewGuid().ToString("N");
+            
+            // 3. Xử lý mật khẩu: 
+            // Nếu là Người mua: Tự sinh mật khẩu ngẫu nhiên (Admin không biết)
+            // Nếu là Nhân sự: Dùng mật khẩu Admin nhập vào form
+            string rawPassword = (newRole == "nguoimua") 
+                ? Guid.NewGuid().ToString("P").Substring(0, 12) // Tạo chuỗi ngẫu nhiên 12 ký tự
+                : request.Password;
 
             var user = new User
             {
                 Username = request.Username,
-                Password = BCrypt.Net.BCrypt.HashPassword(request.Password),
+                Password = BCrypt.Net.BCrypt.HashPassword(rawPassword),
                 FullName = request.FullName,
-                Role = !string.IsNullOrWhiteSpace(request.Role) ? request.Role : "nhanvien",
+                Role = newRole,
                 Phone = request.Phone,
                 Email = request.Email,
                 IsActive = true,
                 Gender = request.Gender,
                 Age = request.Age,
-                CreatedAt = DateTime.Now
+                CreatedAt = DateTime.Now,
+                // Gán token để khách hàng có thể dùng link Reset Password đặt lại mật khẩu
+                ResetPasswordToken = (newRole == "nguoimua") ? activationToken : null,
+                ResetTokenExpires = (newRole == "nguoimua") ? DateTime.Now.AddDays(1) : null
             };
 
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
+
+            // 4. Gửi Email kích hoạt cho Khách hàng
+            if (newRole == "nguoimua")
+            {
+                var activationLink = $"http://localhost:3000/reset-password?token={activationToken}";
+                var emailBody = $@"
+                    <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 10px; padding: 20px;'>
+                        <h2 style='color: #2563eb; text-align: center;'>Chào mừng bạn đến với HomeMart!</h2>
+                        <p>Xin chào <strong>{user.FullName}</strong>,</p>
+                        <p>Tài khoản của bạn đã được quản trị viên khởi tạo trên hệ thống của chúng tôi.</p>
+                        <p>Để bắt đầu mua sắm, vui lòng nhấn vào nút bên dưới để <strong>thiết lập mật khẩu</strong> cho tài khoản của mình:</p>
+                        <div style='text-align: center; margin: 30px 0;'>
+                            <a href='{activationLink}' style='background-color: #2563eb; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;'>Thiết lập mật khẩu ngay</a>
+                        </div>
+                        <p style='font-size: 13px; color: #6b7280;'>Tên đăng nhập của bạn là: <strong>{user.Username}</strong></p>
+                        <p style='font-size: 12px; color: #ef4444;'>* Liên kết này có hiệu lực trong vòng 24 giờ.</p>
+                        <hr style='border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;' />
+                        <p style='font-size: 11px; color: #9ca3af; text-align: center;'>Đây là email tự động, vui lòng không trả lời.</p>
+                    </div>";
+
+                try {
+                    await _emailService.SendEmailAsync(user.Email, "Kích hoạt tài khoản HomeMart", emailBody);
+                } catch (Exception ex) {
+                    // Log lỗi nếu cần: Console.WriteLine(ex.Message);
+                }
+            }
 
             return CreatedAtAction(nameof(GetUser), new { id = user.Id }, user);
         }
@@ -70,6 +121,12 @@ namespace BE.Controllers
             var user = await _context.Users.FindAsync(id);
             if (user == null) return NotFound(new { message = "Không tìm thấy người dùng." });
 
+            var currentUserRole = User.FindFirstValue(ClaimTypes.Role)?.ToLower();
+            if (currentUserRole == "nhanvien" && user.Role.ToLower() != "nguoimua")
+            {
+                return StatusCode(403, new { message = "Lỗi bảo mật: Nhân viên không có quyền chỉnh sửa tài khoản nội bộ!" });
+            }
+
             // THÊM MỚI: Kiểm tra xem Email muốn đổi sang đã có ai dùng chưa
             if (!string.IsNullOrEmpty(request.Email) && request.Email != user.Email)
             {
@@ -83,8 +140,57 @@ namespace BE.Controllers
             user.Gender = request.Gender ?? user.Gender;
             user.Age = request.Age ?? user.Age;
 
+            // LOGIC PHÂN QUYỀN MỚI: Khóa chặn 2 chiều
+            if (!string.IsNullOrWhiteSpace(request.Role)) 
+            {
+                // 1. Chặn thăng cấp Khách hàng
+                if (user.Role.ToLower() == "nguoimua" && request.Role.ToLower() != "nguoimua")
+                {
+                    return BadRequest(new { message = "Lỗi bảo mật: Không thể thăng cấp Khách hàng thành Nhân sự." });
+                }
+                // 2. Chặn giáng cấp Nhân sự xuống Khách hàng
+                else if (user.Role.ToLower() != "nguoimua" && request.Role.ToLower() == "nguoimua")
+                {
+                    return BadRequest(new { message = "Lỗi bảo mật: Không thể chuyển Nhân sự xuống làm Khách hàng." });
+                }
+                // 3. Hợp lệ (Nội bộ đổi cho nhau, hoặc Khách hàng giữ nguyên)
+                else
+                {
+                    user.Role = request.Role;
+                }
+            }
+
             await _context.SaveChangesAsync();
             return Ok(new { message = "Cập nhật thông tin thành công.", user });
+        }
+
+        // API Khóa / Mở khóa tài khoản
+        [HttpPut("{id}/toggle-status")]
+        public async Task<IActionResult> ToggleUserStatus(int id)
+        {
+            var user = await _context.Users.FindAsync(id);
+            if (user == null) return NotFound(new { message = "Không tìm thấy người dùng." });
+
+            var currentUserIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
+            if (int.TryParse(currentUserIdStr, out int currentUserId) && currentUserId == id)
+            {
+                return BadRequest(new { message = "Bạn không thể tự khóa tài khoản của chính mình!" });
+            }
+
+            // ====================================================
+            // THÊM ĐOẠN NÀY: CHẶN NHÂN VIÊN KHÓA ADMIN / NHÂN VIÊN
+            // ====================================================
+            var currentUserRole = User.FindFirstValue(ClaimTypes.Role)?.ToLower();
+            if (currentUserRole == "nhanvien" && user.Role.ToLower() != "nguoimua")
+            {
+                return StatusCode(403, new { message = "Lỗi bảo mật: Nhân viên chỉ được phép khóa tài khoản Khách hàng!" });
+            }
+
+            user.IsActive = !user.IsActive;
+            await _context.SaveChangesAsync();
+
+            string statusMsg = user.IsActive ? "Đã mở khóa tài khoản." : "Đã khóa tài khoản.";
+            return Ok(new { message = statusMsg, isActive = user.IsActive });
         }
 
         [HttpPost("register")]
@@ -259,6 +365,8 @@ namespace BE.Controllers
 
         [RegularExpression("^(male|female)$", ErrorMessage = "Giới tính không hợp lệ (chỉ nhận male hoặc female).")]
         public string? Gender { get; set; }
+
+        [Range(1, 120, ErrorMessage = "Tuổi phải nằm trong khoảng từ 1 đến 120.")]
         public int? Age { get; set; }
         public string? Role { get; set; }
     }
@@ -276,7 +384,11 @@ namespace BE.Controllers
 
         [RegularExpression("^(male|female)$", ErrorMessage = "Giới tính không hợp lệ (chỉ nhận male hoặc female).")]
         public string? Gender { get; set; }
+        
+        [Range(1, 120, ErrorMessage = "Tuổi phải nằm trong khoảng từ 1 đến 120.")]
         public int? Age { get; set; }
+        // Bổ sung trường Role để C# nhận được data khi Admin đổi quyền
+        public string? Role { get; set; }
     }
 
     public class UserAvatarUploadRequest

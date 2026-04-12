@@ -120,16 +120,16 @@ export default function LoginPage() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Username */}
+            {/* Username hoặc Email */}
             <div>
               <label className="block text-sm font-bold text-slate-700 mb-1.5 ml-1 uppercase tracking-wide">
-                Tên đăng nhập
+                Tên đăng nhập hoặc Email
               </label>
               <div className="relative group">
                 <Mail className="absolute left-4 top-3.5 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={20} />
                 <input
                   type="text"
-                  placeholder="Nhập username"
+                  placeholder="Nhập username hoặc email..."
                   value={formData.username}
                   onChange={(e) => setFormData({...formData, username: e.target.value})}
                   className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all placeholder:text-slate-300"

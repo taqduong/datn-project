@@ -137,18 +137,13 @@ function ResetPasswordForm() {
             </div>
 
             <h1 className="text-4xl xl:text-5xl font-semibold leading-tight tracking-normal text-slate-900">
-              Tạo mật khẩu mới{" "}
-              <span className="block text-blue-600">
-                an toàn cho tài khoản
-              </span>
-              <span className="block text-slate-900">
-                của bạn
-              </span>
+              Thiết lập mật khẩu{" "}
+              <span className="block text-blue-600">bảo mật cho tài khoản</span>
+              <span className="block text-slate-900">của bạn</span>
             </h1>
 
             <p className="mt-4 max-w-lg text-base leading-7 text-slate-600">
-              Hãy chọn một mật khẩu đủ mạnh để bảo vệ tài khoản. Sau khi cập nhật
-              thành công, bạn sẽ được chuyển về trang đăng nhập để tiếp tục sử dụng.
+              Chào mừng bạn! Hãy chọn một mật khẩu đủ mạnh để bảo vệ tài khoản và bắt đầu trải nghiệm mua sắm tuyệt vời tại HomeMart.
             </p>
 
             <div className="mt-8 grid gap-4 sm:grid-cols-2">
@@ -180,10 +175,10 @@ function ResetPasswordForm() {
             </div>
 
             <h2 className="text-center text-2xl font-semibold tracking-normal text-slate-900">
-              Đặt lại mật khẩu
+              Xác nhận mật khẩu
             </h2>
             <p className="mt-2 text-center text-sm leading-6 text-slate-500">
-              Nhập mật khẩu mới của bạn bên dưới để hoàn tất quá trình khôi phục tài khoản.
+              Vui lòng nhập mật khẩu mới bên dưới để hoàn tất việc thiết lập tài khoản.
             </p>
 
             {/* GIAO DIỆN KHUNG BÁO LỖI (CHỈ HIỆN KHI CÓ LỖI) */}
@@ -293,7 +288,7 @@ function ResetPasswordForm() {
                 disabled={loading}
                 className="flex h-12 w-full items-center justify-center rounded-2xl bg-blue-600 px-4 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-70"
               >
-                {loading ? "Đang cập nhật..." : "Cập nhật mật khẩu"}
+                {loading ? "Đang xử lý..." : "Hoàn tất thiết lập"}
               </button>
             </form>
 

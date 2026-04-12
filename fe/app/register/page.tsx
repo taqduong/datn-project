@@ -37,6 +37,14 @@ export default function RegisterPage() {
       return
     }
 
+    // 0. KIỂM TRA ĐỘ TUỔI HỢP LỆ (Chặn nhập tay số âm hoặc quá cao)
+    const ageNum = Number(formData.age);
+    if (ageNum < 1 || ageNum > 120) {
+      setError('Độ tuổi không hợp lệ (Phải từ 1 đến 120)')
+      setIsLoading(false)
+      return
+    }
+
     // 1. KIỂM TRA SĐT (10 số, đầu 03, 05, 07, 08, 09)
     const phoneRegex = /^(0[3|5|7|8|9])+([0-9]{8})$/;
     if (!phoneRegex.test(formData.phone)) {
@@ -136,6 +144,8 @@ export default function RegisterPage() {
                 <input
                   type="number"
                   placeholder="22"
+                  min="1"
+                  max="120"
                   value={formData.age}
                   onChange={(e) => setFormData({ ...formData, age: e.target.value })}
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all"

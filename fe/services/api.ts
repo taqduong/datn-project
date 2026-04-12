@@ -463,11 +463,13 @@ export const uploadImage = (formData: FormData, folder: string = "products") => 
 };
 // ================= Users API =================
 export const fetchUsers = () =>
-  api.get('/users', { headers: { 'Content-Type': 'application/json' } })
+  api.get('/users', { headers: { 'Content-Type': 'application/json' } });
 
-export const createUser = (data: RegisterPayload) => api.post('/users', data)
+export const createUser = (data: any) => api.post('/users', data);
 
-export const updateUser = (id: number, data: RegisterPayload) => api.put(`/users/${id}`, data)
+export const updateUser = (id: number, data: any) => api.put(`/users/${id}`, data);
+
+export const toggleUserStatus = (id: number) => api.put(`/users/${id}/toggle-status`);
 
 export const uploadAvatar = (userId: number, avatarFile: File) => {
   const formData = new FormData();

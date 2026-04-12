@@ -172,6 +172,14 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
   const handleSave = async () => {
     if (!editData || !userData?.id) return;
 
+    // THÊM ĐOẠN CHẶN TUỔI ÂM NÀY VÀO
+    if (editData.age !== undefined && editData.age !== null) {
+      if (editData.age < 1 || editData.age > 120) {
+        alert("❌ Tuổi phải là số dương từ 1 đến 120!");
+        return; // Dừng luôn, không gửi lên Backend
+      }
+    }
+
     try {
       const payload = {
         username: userData.username,  
@@ -336,7 +344,7 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
   // Role Formatter
   const getRoleDisplayName = (role: string) => {
     switch (role.toLowerCase()) {
-      case 'admin': return 'Quản trị viên'
+      case 'admin': return 'Admin'
       case 'nhanvien': return 'Nhân viên'
       case 'nguoimua': return 'Khách hàng'
       default: return role
@@ -633,6 +641,8 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
                         <label className="block text-sm font-semibold text-zinc-900 mb-2">Tuổi</label>
                         <input
                           type="number"
+                          min="1"        
+                          max="120"
                           value={isEditing ? editData?.age || '' : userData?.age || ''}
                           onChange={(e) => editData && setEditData({ ...(editData as any), age: parseInt(e.target.value) })}
                           disabled={!isEditing}
