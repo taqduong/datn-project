@@ -33,13 +33,19 @@ namespace BE.Models
 
         public bool IsActive { get; set; }
 
+        [StringLength(255)]
+        [Unicode(false)]
         public string Email { get; set; } = null!;
         
+        [StringLength(20)]
+        [Unicode(false)]
         public string? Gender { get; set; }
 
         public int? Age { get; set; }
 
-        public string? Avatar { get; set; }  // Để Avatar có thể nhận giá trị null 
+        [StringLength(500)]
+        [Unicode(false)]
+        public string? Avatar { get; set; }
 
         [StringLength(255)]
         [Unicode(false)]

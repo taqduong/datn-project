@@ -29,6 +29,7 @@ public partial class Product
     public int? Discount { get; set; }
 
     [StringLength(500)]
+    [Unicode(false)]
     public string? ImageUrl { get; set; }
 
     [InverseProperty("Product")]

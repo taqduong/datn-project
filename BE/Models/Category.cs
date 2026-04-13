@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.EntityFrameworkCore;
 
 namespace BE.Models;
 
@@ -16,6 +17,7 @@ public partial class Category
     public string? Description { get; set; }
     
     [StringLength(500)]
+    [Unicode(false)]
     public string? ImageUrl { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.Now;

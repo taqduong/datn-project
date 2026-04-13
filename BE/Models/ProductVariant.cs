@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.EntityFrameworkCore;
 
 namespace BE.Models 
 {
@@ -28,6 +29,7 @@ namespace BE.Models
         public int Stock { get; set; } // Tồn kho riêng
 
         [StringLength(500)]
+        [Unicode(false)]
         public string? ImageUrl { get; set; } // Ảnh riêng (khi bấm vào màu Trắng thì hiện ảnh Trắng)
 
         [ForeignKey(nameof(ProductId))]

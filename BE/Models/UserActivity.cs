@@ -2,6 +2,7 @@ using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Serialization;
+using Microsoft.EntityFrameworkCore;
 
 namespace BE.Models
 {
@@ -20,6 +21,7 @@ namespace BE.Models
         // Các loại hành vi: "View", "AddToWishlist", "AddToCart", "Purchase"
         [Required]
         [StringLength(20)]
+        [Unicode(false)]
         public string ActionType { get; set; } = null!;
 
         // Điểm: 1, 2, 3, 5

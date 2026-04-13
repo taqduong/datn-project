@@ -22,7 +22,8 @@ public partial class Order
 
     // ===== Thông tin giảm giá & Phí vận chuyển =====
     [StringLength(50)]
-    public string? AppliedVoucherCode { get; set; } // Lưu lại mã Voucher khách đã nhập (VD: "FREESHIP")
+    [Unicode(false)]
+    public string? AppliedVoucherCode { get; set; }
 
     [Column(TypeName = "decimal(18, 2)")]
     public decimal DiscountAmount { get; set; } = 0; // Số tiền được giảm
@@ -32,12 +33,15 @@ public partial class Order
 
     [Required]
     [StringLength(50)]
+    [Unicode(false)]
     public string Status { get; set; } = "Pending";
 
     [StringLength(50)]
-    public string PaymentMethod { get; set; } = "COD"; // Mặc định là COD
+    [Unicode(false)]
+    public string PaymentMethod { get; set; } = "COD";
 
     [StringLength(50)]
+    [Unicode(false)]
     public string RefundStatus { get; set; } = "None"; //"None", "Pending" (Chờ hoàn), "Refunded" (Đã hoàn)
 
     // ===== Thông tin giao hàng =====
@@ -47,10 +51,12 @@ public partial class Order
     public string FullName { get; set; } = null!;
 
     [StringLength(100)]
+    [Unicode(false)]
     public string? Email { get; set; } // Email có thể không cần thiết với một số khách
 
     [Required]
     [StringLength(20)]
+    [Unicode(false)]
     public string Phone { get; set; } = null!;
 
     [Required]

@@ -1,5 +1,6 @@
 using System;
 using System.ComponentModel.DataAnnotations;
+using Microsoft.EntityFrameworkCore;
 
 namespace BE.Models
 {
@@ -9,8 +10,9 @@ namespace BE.Models
         public int Id { get; set; }
 
         [Required]
-        [MaxLength(50)]
-        public string Code { get; set; } = null!; // VD: "GIAM100", "FREESHIP"
+        [StringLength(50)] 
+        [Unicode(false)]
+        public string Code { get; set; } = null!;
 
         public string Title { get; set; } = "";
         public string Description { get; set; } = "";

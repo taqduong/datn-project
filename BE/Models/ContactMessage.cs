@@ -1,5 +1,6 @@
 using System;
 using System.ComponentModel.DataAnnotations;
+using Microsoft.EntityFrameworkCore;
 
 namespace BE.Models
 {
@@ -12,6 +13,8 @@ namespace BE.Models
         public string FullName { get; set; }
         
         [Required]
+        [StringLength(255)]
+        [Unicode(false)]
         public string Email { get; set; }
         
         public string Subject { get; set; }
