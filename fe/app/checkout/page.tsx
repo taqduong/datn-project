@@ -48,7 +48,15 @@ function CheckoutContent() {
       try {
         setLoadingCart(true);
         // Load Vouchers từ Database
-        const voucherRes = await api.get("/Voucher");
+        // Lấy ID khách hàng để gửi xuống C#
+        let currentUserId = "";
+        const storedUser = localStorage.getItem("user");
+        if (storedUser) {
+          currentUserId = JSON.parse(storedUser).id;
+        }
+
+        // Gọi API có kèm userId
+        const voucherRes = await api.get(`/Voucher${currentUserId ? `?userId=${currentUserId}` : ''}`);
         setVouchersList(voucherRes.data);
 
         // TRƯỜNG HỢP 1: Mua ngay (Buy Now)
@@ -499,22 +507,69 @@ function CheckoutContent() {
                   <div className="space-y-4">
                     {/* Map từ danh sách API trả về */}
                     {vouchersList.map(v => {
-                      const isEligible = subtotal >= v.minOrder;
-                      const isSelected = appliedFreeshipVoucher?.code === v.code || appliedDiscountVoucher?.code === v.code;
-                      return (
-                        <div key={v.code} onClick={() => isEligible && handleApplyVoucher(v.code, v)} className={`relative cursor-pointer bg-white border rounded-xl p-3 flex gap-3 overflow-hidden transition-all duration-200 ${isSelected ? 'border-blue-500 shadow-md shadow-blue-500/10 bg-blue-50/30' : 'border-slate-200 hover:border-blue-300'} ${!isEligible ? 'opacity-50 grayscale-[50%] cursor-not-allowed' : ''}`}>
-                          {v.isBest && <div className="absolute top-0 left-0 bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-br-lg z-10 shadow-sm">Lựa chọn tốt nhất</div>}
-                          <div className={`w-20 rounded-lg flex flex-col items-center justify-center border border-dashed mt-2 ${v.isFreeship ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-blue-50 text-blue-600 border-blue-200'}`}><span className="font-black text-2xl">{v.isFreeship ? '🚚' : '🏷️'}</span></div>
-                          <div className="flex-1 py-1 mt-1">
-                            <h4 className="font-bold text-sm text-slate-800">{v.title}</h4>
-                            <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-2 leading-relaxed">{v.desc}</p>
-                            <p className="text-[10px] bg-slate-100 text-slate-600 font-medium w-max px-1.5 py-0.5 rounded mt-1.5 border border-slate-200">Mã: <span className="font-bold text-slate-800">{v.code}</span></p>
-                            <div className="flex items-center justify-between mt-2.5">
-                              <span className={`text-[10px] font-medium ${isEligible ? 'text-red-500' : 'text-slate-400'}`}>{isEligible ? v.exp : `Đơn tối thiểu ${formatVND(v.minOrder)}`}</span>
-                              <div className={`h-6 w-6 rounded-full flex items-center justify-center transition-all ${isSelected ? 'bg-blue-600 text-white' : 'border-2 border-slate-300 text-transparent'}`}><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg></div>
+                    // 1. Kiểm tra các điều kiện để mã "KHÔNG DÙNG ĐƯỢC"
+                    const isMinOrderNotMet = subtotal < v.minOrder;
+                    const isUsedUp = v.isSystemOut || v.isUserOut;
+                    const canNotUse = isMinOrderNotMet || isUsedUp;
+
+                    const isSelected = appliedFreeshipVoucher?.code === v.code || appliedDiscountVoucher?.code === v.code;
+                    
+                    // 2. Xác định thông báo lỗi để hiện cho khách
+                    let errorMessage = "";
+                    if (v.isSystemOut) errorMessage = "Mã đã hết lượt sử dụng toàn hệ thống";
+                    else if (v.isUserOut) errorMessage = "Bạn đã dùng hết lượt mã này";
+                    else if (isMinOrderNotMet) errorMessage = `Mua thêm ${formatVND(v.minOrder - subtotal)} để dùng mã`;
+
+                    return (
+                      <div 
+                        key={v.code} 
+                        onClick={() => !canNotUse && handleApplyVoucher(v.code, v)} 
+                        className={`relative p-3 flex gap-3 border rounded-xl overflow-hidden transition-all duration-200 
+                          ${isSelected ? 'border-blue-500 bg-blue-50/30' : 'bg-white border-slate-200'} 
+                          ${canNotUse ? 'cursor-not-allowed opacity-60 grayscale-[0.8]' : 'cursor-pointer hover:border-blue-300'}
+                        `}
+                      >
+                        {/* TAG x3 CÁ NHÂN */}
+                        {!v.isUserOut && v.remainingForUser < 100 && (
+                          <div className="absolute top-0 right-0 bg-red-50 text-red-500 text-[11px] font-black px-2 py-0.5 rounded-bl-lg z-10 border-l border-b border-red-100">
+                            x{v.remainingForUser}
+                          </div>
+                        )}
+
+                        {/* ICON VOUCHER */}
+                        <div className={`w-20 rounded-lg flex flex-col items-center justify-center border border-dashed mt-2 
+                          ${v.isFreeship ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-blue-50 text-blue-600 border-blue-200'}
+                        `}>
+                          <span className="text-2xl">{v.isFreeship ? '🚚' : '🏷️'}</span>
+                        </div>
+
+                        <div className="flex-1 py-1 mt-1">
+                          <h4 className="font-bold text-sm text-slate-800 pr-8">{v.title}</h4>
+                          <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-1">{v.desc}</p>
+
+
+                          {/*  DÒNG MÃ VOUCHER Ở ĐÂY */}
+                          <p className="text-[10px] bg-slate-100 text-slate-600 font-medium w-max px-1.5 py-0.5 rounded mt-1.5 border border-slate-200">
+                            Mã: <span className="font-bold text-slate-800">{v.code}</span>
+                          </p>
+                          
+                          {/* HIỆN LÝ DO KHÔNG DÙNG ĐƯỢC (Nếu có) */}
+                          {errorMessage ? (
+                            <p className="text-[10px] font-bold text-orange-600 mt-2 italic">⚠️ {errorMessage}</p>
+                          ) : (
+                            <div className="mt-2 h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                              <div className="h-full bg-blue-500" style={{width: `${(v.usedCount/v.usageLimit)*100}%`}}></div>
+                            </div>
+                          )}
+
+                          <div className="flex items-center justify-between mt-2.5">
+                            <span className="text-[10px] text-slate-400 font-medium">{v.exp}</span>
+                            <div className={`h-5 w-5 rounded-full flex items-center justify-center transition-all ${isSelected ? 'bg-blue-600 text-white' : 'border border-slate-300 text-transparent'}`}>
+                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={4}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
                             </div>
                           </div>
                         </div>
+                      </div>
                       )
                     })}
                     {vouchersList.length === 0 && (

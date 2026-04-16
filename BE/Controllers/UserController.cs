@@ -244,6 +244,7 @@ namespace BE.Controllers
             var avatarFile = request.AvatarFile;
             if (avatarFile != null && avatarFile.Length > 0)
             {
+                // Đã trả lại đường dẫn lưu vật lý về thư mục cũ: wwwroot/avatars
                 var avatarsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "avatars");
                 if (!Directory.Exists(avatarsFolder)) Directory.CreateDirectory(avatarsFolder);
 
@@ -255,6 +256,7 @@ namespace BE.Controllers
                     await avatarFile.CopyToAsync(stream);
                 }
 
+                // Sửa định dạng lưu DB: Bỏ http://localhost, chỉ giữ lại /avatars/...
                 user.Avatar = "/avatars/" + fileName;
                 await _context.SaveChangesAsync();
 

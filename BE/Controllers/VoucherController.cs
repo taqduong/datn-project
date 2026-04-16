@@ -23,12 +23,43 @@ namespace BE.Controllers
 
         // 1. Lấy danh sách Voucher khả dụng để hiển thị
         [HttpGet]
-        public async Task<IActionResult> GetActiveVouchers()
+        public async Task<IActionResult> GetActiveVouchers([FromQuery] int? userId)
         {
-            var vouchers = await _context.Vouchers
-                .Where(v => v.IsActive && !v.IsHidden && v.ExpiryDate > DateTime.Now && v.UsedCount < v.UsageLimit)
-                .OrderByDescending(v => v.IsFreeship) 
-                .Select(v => new {
+            // 1. Chỉ lọc: Còn hạn, Đang kích hoạt và Không bị ẩn (Dù hết lượt vẫn lấy lên)
+            var allVouchers = await _context.Vouchers
+                .Where(v => v.IsActive && !v.IsHidden && v.ExpiryDate > DateTime.Now)
+                .OrderByDescending(v => v.IsFreeship)
+                .ToListAsync();
+
+            var result = new List<object>();
+
+            foreach (var v in allVouchers)
+            {
+                int remainingForUser = v.MaxUsagePerUser;
+                bool isSystemOut = v.UsedCount >= v.UsageLimit; // Hệ thống đã hết lượt chưa?
+
+                if (userId.HasValue && userId.Value > 0 && v.MaxUsagePerUser > 0)
+                {
+                    // ... (Giữ nguyên logic tính startTime như cũ) ...
+                    DateTime startTime = v.ResetInterval switch {
+                        "10s" => DateTime.Now.AddSeconds(-10),
+                        "Hourly" => DateTime.Now.AddHours(-1),
+                        "Daily" => DateTime.Today,
+                        _ => DateTime.MinValue
+                    };
+
+                    var userUsedCount = await _context.Orders
+                        .Where(o => o.UserId == userId.Value 
+                                && o.AppliedVoucherCode != null 
+                                && o.AppliedVoucherCode.ToUpper().Contains(v.Code.ToUpper()) 
+                                && o.Status != "Cancelled"
+                                && o.OrderDate >= startTime)
+                        .CountAsync();
+
+                    remainingForUser = v.MaxUsagePerUser - userUsedCount;
+                }
+
+                result.Add(new {
                     id = v.Id, 
                     code = v.Code,
                     title = v.Title,
@@ -38,13 +69,19 @@ namespace BE.Controllers
                     discountValue = v.DiscountValue,
                     discountPercent = v.DiscountPercent,
                     maxDiscount = v.MaxDiscountAmount,
-                    startDate = v.StartDate,
                     exp = $"Hết hạn: {v.ExpiryDate:dd/MM/yyyy HH:mm}", 
-                    isBest = false 
-                })
-                .ToListAsync();
+                    
+                    usedCount = v.UsedCount,
+                    usageLimit = v.UsageLimit,
+                    remainingForUser = remainingForUser,
+                    
+                    // TRẠNG THÁI MỚI ĐỂ FE XỬ LÝ
+                    isSystemOut = isSystemOut, // Hết lượt tổng
+                    isUserOut = remainingForUser <= 0 && v.MaxUsagePerUser > 0 // Mình đã dùng hết lượt
+                });
+            }
 
-            return Ok(vouchers);
+            return Ok(result);
         }
 
         // 2. Check mã khi khách bấm "Áp dụng"

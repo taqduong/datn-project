@@ -20,6 +20,10 @@ public class FileController : ControllerBase
     [Consumes("multipart/form-data")] 
     public async Task<IActionResult> UploadAvatar(int userId, [FromForm] AvatarUploadRequest request)
     {
+        // 1. Tìm user trước, nếu không có thì khỏi làm gì cả đỡ rác máy
+        var user = await _context.Users.FindAsync(userId);
+        if (user == null) return NotFound(new { message = "Không tìm thấy người dùng." });
+
         var avatarFile = request.AvatarFile;
         if (avatarFile == null || avatarFile.Length == 0)
             return BadRequest(new { message = "Không có tệp ảnh nào được tải lên." });
@@ -29,6 +33,28 @@ public class FileController : ControllerBase
 
         if (!Directory.Exists(avatarPath)) Directory.CreateDirectory(avatarPath);
 
+        // ==========================================
+        // ĐÃ THÊM: LOGIC XÓA AVATAR CŨ CHO GỌN
+        // ==========================================
+        if (!string.IsNullOrEmpty(user.Avatar))
+        {
+            // Cắt đường dẫn (dù là URL có localhost hay đường dẫn tương đối) để lấy đúng tên file
+            var oldFileName = user.Avatar.Split('/').LastOrDefault();
+            
+            if (!string.IsNullOrEmpty(oldFileName))
+            {
+                var oldFilePath = Path.Combine(avatarPath, oldFileName);
+                // Nếu file cũ thực sự tồn tại trên ổ cứng thì băm nó luôn
+                if (System.IO.File.Exists(oldFilePath))
+                {
+                    System.IO.File.Delete(oldFilePath);
+                }
+            }
+        }
+
+        // ==========================================
+        // TIẾP TỤC LƯU AVATAR MỚI
+        // ==========================================
         var extension = Path.GetExtension(avatarFile.FileName).ToLower();
         var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp" };
         if (!allowedExtensions.Contains(extension))
@@ -42,14 +68,10 @@ public class FileController : ControllerBase
             await avatarFile.CopyToAsync(stream);
         }
 
-        var avatarUrl = $"{Request.Scheme}://{Request.Host}/avatars/{fileName}";
-
-        var user = await _context.Users.FindAsync(userId);
-        if (user != null)
-        {
-            user.Avatar = avatarUrl;
-            await _context.SaveChangesAsync();
-        }
+        // Lưu đường dẫn gọn gàng vào DB
+        var avatarUrl = $"/avatars/{fileName}";
+        user.Avatar = avatarUrl;
+        await _context.SaveChangesAsync();
 
         return Ok(new { message = "Cập nhật avatar thành công", avatarUrl });
     }

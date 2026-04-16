@@ -171,7 +171,8 @@ export default function Navbar() {
   };
 
   // SỬA LẠI HÀM NÀY ĐỂ NHẬN CẢ EVENT HOẶC STRING
-  const handleSearch = async (e?: React.FormEvent<HTMLFormElement> | string) => {
+  //  Bỏ chữ "async" đi vì mình không cần gọi API chờ đợi ở đây nữa
+  const handleSearch = (e?: React.FormEvent<HTMLFormElement> | string) => {
     // Nếu là Event (khi nhấn Enter/nút Search) thì mới chặn reload trang
     if (e && typeof e !== "string") e.preventDefault();
     
@@ -181,19 +182,11 @@ export default function Navbar() {
     if (!keyword) return;
 
     saveToHistory(keyword); // Lưu lại lịch sử
-    setShowHistory(false);
+    setShowHistory(false);  // Ẩn bảng lịch sử đi
     
-    try {
-      const results = await searchProducts(keyword);
-      if (results.data.length > 0) {
-        router.push(`/products?keyword=${encodeURIComponent(keyword)}`);
-      } else {
-        alert("Không tìm thấy sản phẩm với từ khóa: " + keyword);
-      }
-    } catch (error) {
-      alert("Đã xảy ra lỗi khi tìm kiếm sản phẩm.");
-      console.error(error);
-    }
+    // ĐÃ SỬA: Cho khách hàng sang trang kết quả luôn!
+    // Kệ cho trang ProductsPage tự gọi API và bung giao diện hộp rỗng nếu không có hàng
+    router.push(`/products?keyword=${encodeURIComponent(keyword)}`);
   };
 
   if (!mounted) return null;
