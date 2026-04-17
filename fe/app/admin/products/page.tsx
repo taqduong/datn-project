@@ -409,19 +409,35 @@ export default function ProductPage() {
   // HÀM CHUYỂN ĐỔI ẢNH BIẾN THỂ (ĐÃ CÓ SẴN) LÊN LÀM ẢNH BÌA SẢN PHẨM
   const setVariantAsCover = (index: number) => {
     const clickedUrl = variants[index].imageUrl;
-    const oldCover = form.imageUrl;
+    const oldCover = form.imageUrl; // Đây là cái ảnh sắp bị thay thế
     
     if (!clickedUrl) {
       toast.error("Biến thể này chưa có ảnh!");
       return;
     }
     
+    // 1. Đưa ảnh biến thể lên làm ảnh chính
     setForm(prev => ({ ...prev, imageUrl: clickedUrl }));
+
+    // 2. Cất ảnh cũ đi để không bị mất
     if (oldCover) {
-      // Nếu có ảnh bìa cũ, cho nó xuống làm ảnh phụ, khỏi mất
-      setExistingImages(prev => [...prev, oldCover]);
+      // Nếu ảnh cũ có chứa "blob:" -> Nó là ảnh mới upload (additionalFiles)
+      // Nếu không có "blob:" -> Nó là ảnh cũ từ Server (existingImages)
+      if (oldCover.startsWith("blob:") || oldCover.startsWith("data:")) {
+        // Trường hợp ảnh mới: Hiện tại code sếp đang quản lý additionalFiles là File[]
+        // nên đoạn này hơi khó xử lý nếu chỉ có URL. 
+        // Tạm thời ta cứ đẩy vào existingImages để nó hiện lên UI  đã:
+        setExistingImages(prev => [...prev, oldCover]);
+      } else {
+        // Trường hợp ảnh cũ từ server: Đẩy vào danh sách ảnh phụ cũ
+        setExistingImages(prev => {
+          if (prev.includes(oldCover)) return prev; // Tránh trùng lặp
+          return [...prev, oldCover];
+        });
+      }
     }
-    toast.success("Đã đổi ảnh bìa!");
+    
+    toast.success("Đã tráo đổi ảnh bìa thành công!");
   };
 
   return (
@@ -864,18 +880,52 @@ export default function ProductPage() {
                             {/* ... (Giữ nguyên logic upload ảnh biến thể của sếp) ... */}
                             <div className="relative mx-auto flex h-14 w-14 items-center justify-center overflow-hidden rounded border border-gray-200 bg-gray-50 group">
                               {variant.imageUrl ? (
-                                <>
-                                  <img src={resolveImgUrl(variant.imageUrl)} alt="variant" className="h-full w-full object-cover" />
-                                  <div className="absolute inset-0 hidden cursor-pointer items-center justify-center bg-black/50 text-white group-hover:flex">
-                                    <label className="cursor-pointer text-xs p-1">Sửa<input type="file" className="hidden" accept="image/*" onChange={(e) => { if (e.target.files?.[0]) handleVariantImageUpload(index, e.target.files[0]); }} /></label>
-                                  </div>
-                                </>
-                              ) : (
-                                <label className="flex h-full w-full cursor-pointer items-center justify-center text-gray-400 hover:text-blue-500">
-                                  <span className="text-2xl">+</span>
-                                  <input type="file" className="hidden" accept="image/*" onChange={(e) => { if (e.target.files?.[0]) handleVariantImageUpload(index, e.target.files[0]); }} />
-                                </label>
-                              )}
+                              <div className="relative mx-auto flex h-14 w-14 items-center justify-center overflow-hidden rounded border border-gray-200 bg-gray-50 group">
+                                <img 
+                                  src={resolveImgUrl(variant.imageUrl)} 
+                                  alt="variant" 
+                                  className="h-full w-full object-cover" 
+                                />
+                                
+                                <div className="absolute inset-0 hidden cursor-pointer flex-col items-center justify-center bg-black/60 text-white group-hover:flex">
+                                  
+                                  {/* 1. Nút Sửa ảnh */}
+                                  <label className="w-full cursor-pointer py-1 text-center text-[10px] font-bold hover:bg-blue-500">
+                                    SỬA
+                                    <input 
+                                      type="file" 
+                                      className="hidden" 
+                                      accept="image/*" 
+                                      onChange={(e) => { 
+                                        if (e.target.files?.[0]) handleVariantImageUpload(index, e.target.files[0]); 
+                                      }} 
+                                    />
+                                  </label>
+
+                                  {/* 2. Nút Làm ảnh bìa (Đường kẻ ngăn cách ở giữa cho đẹp) */}
+                                  <button 
+                                    type="button" 
+                                    onClick={() => setVariantAsCover(index)} 
+                                    className="w-full border-t border-white/30 py-1 text-center text-[9px] font-bold hover:bg-yellow-500 uppercase"
+                                  >
+                                    Làm bìa
+                                  </button>
+
+                                </div>
+                              </div>
+                            ) : (
+                              <label className="flex h-14 w-14 mx-auto cursor-pointer items-center justify-center rounded border border-dashed border-gray-300 text-gray-400 hover:text-blue-500 hover:border-blue-500">
+                                <span className="text-xl">+</span>
+                                <input 
+                                  type="file" 
+                                  className="hidden" 
+                                  accept="image/*" 
+                                  onChange={(e) => { 
+                                    if (e.target.files?.[0]) handleVariantImageUpload(index, e.target.files[0]); 
+                                  }} 
+                                />
+                              </label>
+                            )}
                             </div>
                           </td>
 
