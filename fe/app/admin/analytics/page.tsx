@@ -82,7 +82,9 @@ export default function AnalyticsPage() {
   const totalCarts = useMemo(() => data.reduce((sum, item) => sum + item.addToCartCount, 0), [data])
   const totalPurchases = useMemo(() => data.reduce((sum, item) => sum + item.purchaseCount, 0), [data])
 
-  const overallConversionRate = totalViews > 0 ? (totalPurchases / totalViews) * 100 : 0
+  // FIX TỶ LỆ CHUYỂN ĐỔI TỔNG: Lấy mẫu số là hành động có số lượng lớn nhất để không bao giờ vượt 100%
+  const maxTotalInteraction = Math.max(totalViews, totalCarts, totalPurchases);
+  const overallConversionRate = maxTotalInteraction > 0 ? (totalPurchases / maxTotalInteraction) * 100 : 0
 
   const bestProduct = useMemo(() => {
     if (!data.length) return null
@@ -94,14 +96,24 @@ export default function AnalyticsPage() {
     })[0]
   }, [data])
 
-  const chartData = useMemo(
-    () =>
-      data.map((item) => ({
-        ...item,
-        shortName: truncateLabel(item.productName, 22),
-      })),
-    [data]
-  )
+  //1. Lọc ra Top 8 sản phẩm điểm cao nhất để vẽ biểu đồ cho đẹp
+  const chartData = useMemo(() => {
+    // 1. Sắp xếp lại toàn bộ data theo điểm (y hệt cách tìm Best Product)
+    const sorted = [...data].sort((a, b) => {
+      const aScore = a.purchaseCount * 100 + a.addToCartCount * 10 + a.views;
+      const bScore = b.purchaseCount * 100 + b.addToCartCount * 10 + b.views;
+      return bScore - aScore;
+    });
+
+    // 2. Cắt lấy đúng 8 ông top đầu
+    const top8 = sorted.slice(0, 8);
+
+    // 3. Format lại tên cho ngắn gọn (cắt còn 15 ký tự thay vì 22 như cũ)
+    return top8.map((item) => ({
+      ...item,
+      shortName: truncateLabel(item.productName, 15), 
+    }));
+  }, [data]);
 
   if (loading) {
     return (
@@ -145,16 +157,15 @@ export default function AnalyticsPage() {
             </h1>
 
             <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600 md:text-base">
-              Theo dõi lượt xem, thêm giỏ, đơn mua thành công và đánh giá hiệu quả chuyển đổi
-              của từng sản phẩm theo giao diện trực quan hơn.
+              Theo dõi lượt xem chi tiết, thêm giỏ, đơn mua thành công và đánh giá hiệu quả chuyển đổi của từng sản phẩm.
             </p>
           </div>
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:min-w-[420px]">
             <MiniStat label="Sản phẩm" value={data.length} />
-            <MiniStat label="Tổng view" value={totalViews} />
+            <MiniStat label="Xem chi tiết" value={totalViews} />
             <MiniStat label="Thêm giỏ" value={totalCarts} />
-            <MiniStat label="Đã mua" value={totalPurchases} />
+            <MiniStat label="Đã bán" value={totalPurchases} />
           </div>
         </div>
       </section>
@@ -162,38 +173,38 @@ export default function AnalyticsPage() {
       {/* SUMMARY CARDS */}
       <section className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
-          title="Tổng lượt xem"
+          title="Lượt xem chi tiết"
           value={formatNumber(totalViews)}
           icon={<Eye size={24} />}
           iconWrap="bg-blue-100 text-blue-700"
-          subText="Tổng số lần người dùng xem sản phẩm"
+          subText="Số lần khách vào xem trang sản phẩm"
           accent="from-blue-500/10 to-transparent"
         />
 
         <StatCard
-          title="Thêm vào giỏ"
+          title="Lượt thêm vào giỏ"
           value={formatNumber(totalCarts)}
           icon={<ShoppingCart size={24} />}
           iconWrap="bg-amber-100 text-amber-600"
-          subText="Số lượt khách thêm sản phẩm vào giỏ"
+          subText="Số lần khách bấm thêm hàng vào giỏ"
           accent="from-amber-500/10 to-transparent"
         />
 
         <StatCard
-          title="Mua thành công"
+          title="Sản phẩm đã bán"
           value={formatNumber(totalPurchases)}
           icon={<CreditCard size={24} />}
           iconWrap="bg-emerald-100 text-emerald-600"
-          subText="Số đơn hàng hoàn tất từ sản phẩm"
+          subText="Tổng số lượng đã giao thành công"
           accent="from-emerald-500/10 to-transparent"
         />
 
         <StatCard
-          title="Tỷ lệ chuyển đổi"
+          title="Tỷ lệ chuyển đổi chung"
           value={formatPercent(overallConversionRate)}
           icon={<ArrowUpRight size={24} />}
           iconWrap="bg-violet-100 text-violet-600"
-          subText="Tính theo tổng mua thành công / tổng lượt xem"
+          subText="Tỷ lệ mua hàng trên tổng số lượt tương tác"
           accent="from-violet-500/10 to-transparent"
         />
       </section>
@@ -232,7 +243,7 @@ export default function AnalyticsPage() {
               </div>
 
               <div className="grid grid-cols-3 gap-3">
-                <SmallMetric label="View" value={bestProduct.views} valueClass="text-blue-600" />
+                <SmallMetric label="Chi tiết" value={bestProduct.views} valueClass="text-blue-600" />
                 <SmallMetric
                   label="Giỏ hàng"
                   value={bestProduct.addToCartCount}
@@ -250,8 +261,8 @@ export default function AnalyticsPage() {
                   Tỷ lệ chuyển đổi:{' '}
                   <span className="font-bold">
                     {formatPercent(
-                      bestProduct.views > 0
-                        ? (bestProduct.purchaseCount / bestProduct.views) * 100
+                      Math.max(bestProduct.views, bestProduct.addToCartCount, bestProduct.purchaseCount) > 0
+                        ? (bestProduct.purchaseCount / Math.max(bestProduct.views, bestProduct.addToCartCount, bestProduct.purchaseCount)) * 100
                         : 0
                     )}
                   </span>
@@ -270,7 +281,7 @@ export default function AnalyticsPage() {
             <div>
               <h2 className="text-lg font-bold text-slate-900">Biểu đồ hành vi sản phẩm</h2>
               <p className="mt-1 text-sm text-slate-500">
-                So sánh lượt xem, thêm giỏ và mua thành công theo từng sản phẩm.
+                So sánh chỉ số tương tác của Top 8 sản phẩm có hiệu suất cao nhất.
               </p>
             </div>
           </div>
@@ -307,7 +318,7 @@ export default function AnalyticsPage() {
                     labelFormatter={(_, payload) => payload?.[0]?.payload?.productName || ''}
                   />
 
-                  <Bar dataKey="views" name="Lượt xem" radius={[8, 8, 0, 0]} maxBarSize={36}>
+                  <Bar dataKey="views" name="Xem chi tiết" radius={[8, 8, 0, 0]} maxBarSize={36}>
                     {chartData.map((_, index) => (
                       <Cell key={`views-${index}`} fill={chartColors.views} />
                     ))}
@@ -319,7 +330,7 @@ export default function AnalyticsPage() {
                     ))}
                   </Bar>
 
-                  <Bar dataKey="purchaseCount" name="Mua thành công" radius={[8, 8, 0, 0]} maxBarSize={36}>
+                  <Bar dataKey="purchaseCount" name="Đã bán" radius={[8, 8, 0, 0]} maxBarSize={36}>
                     {chartData.map((_, index) => (
                       <Cell key={`purchase-${index}`} fill={chartColors.purchases} />
                     ))}
@@ -330,9 +341,9 @@ export default function AnalyticsPage() {
           )}
 
           <div className="mt-4 flex flex-wrap gap-4 text-sm">
-            <LegendItem color="bg-blue-500" label="Lượt xem" />
+            <LegendItem color="bg-blue-500" label="Xem chi tiết" />
             <LegendItem color="bg-amber-500" label="Thêm giỏ" />
-            <LegendItem color="bg-emerald-500" label="Mua thành công" />
+            <LegendItem color="bg-emerald-500" label="Đã bán" />
           </div>
         </div>
       </section>
@@ -342,7 +353,7 @@ export default function AnalyticsPage() {
         <div className="border-b border-slate-200 bg-slate-50/80 px-6 py-5">
           <h2 className="text-lg font-bold text-slate-900">Chi tiết số liệu sản phẩm</h2>
           <p className="mt-1 text-sm text-slate-500">
-            Bảng tổng hợp lượt xem, thêm giỏ, số lượng bán và tỷ lệ chuyển đổi.
+            Bảng tổng hợp xem chi tiết, thêm giỏ, số lượng bán và tỷ lệ chuyển đổi.
           </p>
         </div>
 
@@ -351,7 +362,7 @@ export default function AnalyticsPage() {
             <thead className="bg-white text-xs uppercase tracking-wide text-slate-500">
               <tr className="border-b border-slate-200">
                 <th className="px-6 py-4 font-bold">Sản phẩm</th>
-                <th className="px-6 py-4 text-center font-bold">Lượt xem</th>
+                <th className="px-6 py-4 text-center font-bold">Xem chi tiết</th>
                 <th className="px-6 py-4 text-center font-bold">Thêm giỏ</th>
                 <th className="px-6 py-4 text-center font-bold">Đã bán</th>
                 <th className="px-6 py-4 text-center font-bold">Tỷ lệ chuyển đổi</th>
@@ -361,8 +372,9 @@ export default function AnalyticsPage() {
             <tbody className="divide-y divide-slate-100">
               {data.length > 0 ? (
                 data.map((item) => {
-                  const conversionRate =
-                    item.views > 0 ? (item.purchaseCount / item.views) * 100 : 0
+                  // FIX TỶ LỆ CHUYỂN ĐỔI TRONG BẢNG: So với tương tác lớn nhất
+                  const maxInteraction = Math.max(item.views, item.addToCartCount, item.purchaseCount);
+                  const conversionRate = maxInteraction > 0 ? (item.purchaseCount / maxInteraction) * 100 : 0
 
                   return (
                     <tr key={item.productId} className="transition hover:bg-slate-50">

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Heart, XCircle, ArrowRight, ShoppingCart, Trash2, Tag } from 'lucide-react';
-import { fetchWishlist, removeFromWishlist, clearWishlist, addToCart, trackProductAddToCart } from '@/services/api';
+import { fetchWishlist, removeFromWishlist, clearWishlist, addToCart, trackProductAddToCart, logUserActivity } from '@/services/api';
 import Modal from '@/components/Modal'; 
 
 type Product = {
@@ -129,6 +129,9 @@ export default function WishlistPage() {
       setIsAdding(true);
       await addToCart(selectedModalProduct.id, quantity, modalHasVariants ? selectedVariant.id : undefined);
       trackProductAddToCart(selectedModalProduct.id).catch(err => console.error(err));
+
+      // BÁO CHO AI (THÊM DÒNG NÀY): Cộng 3 điểm AddToCart
+      logUserActivity({ productId: selectedModalProduct.id, actionType: "AddToCart" }).catch(err => console.error(err));
       
       window.dispatchEvent(new Event('cartUpdated'));
       setShowVariantModal(false);

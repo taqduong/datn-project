@@ -480,6 +480,29 @@ namespace BE.Controllers
                 await RestoreStockAsync(order); 
             }
 
+            // 1. Nếu chuyển sang trạng thái Completed (và trước đó chưa phải Completed)
+            if (request.Status == "Completed" && order.Status != "Completed")
+            {
+                foreach (var detail in order.OrderDetails)
+                {
+                    // Câu lệnh SQL "thần thánh": Nếu chưa có bản ghi trong ProductAnalytics thì Insert, có rồi thì Update cộng dồn
+                    string sql = $@"
+                        IF NOT EXISTS (SELECT 1 FROM ProductAnalytics WHERE ProductId = {detail.ProductId})
+                        BEGIN
+                            INSERT INTO ProductAnalytics(ProductId, Views, AddToCartCount, PurchaseCount, LastUpdated)
+                            VALUES({detail.ProductId}, 0, 0, {detail.Quantity}, GETDATE());
+                        END
+                        ELSE
+                        BEGIN
+                            UPDATE ProductAnalytics 
+                            SET PurchaseCount = PurchaseCount + {detail.Quantity}, LastUpdated = GETDATE() 
+                            WHERE ProductId = {detail.ProductId};
+                        END";
+
+                    await _context.Database.ExecuteSqlRawAsync(sql);
+                }
+            }
+
             order.Status = request.Status;
             await _context.SaveChangesAsync();
 

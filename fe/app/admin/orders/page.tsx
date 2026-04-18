@@ -65,14 +65,27 @@ export default function AdminOrdersPage() {
   };
 
   // Hàm xử lý duyệt đơn
+  //  Cập nhật UI ngay lập tức (Optimistic Update)
   const handleStatusChange = async (e: React.ChangeEvent<HTMLSelectElement>, orderId: number) => {
     e.stopPropagation();
     const newStatus = e.target.value;
+    
+    // Lưu lại trạng thái cũ lỡ như API lỗi để còn rollback
+    const previousOrders = [...orders];
+
+    // BƯỚC 1: Sửa UI ngay tức thì! Người dùng thấy giao diện mượt như bôi mỡ.
+    setOrders(prevOrders => prevOrders.map(order => 
+      order.orderId === orderId ? { ...order, status: newStatus } : order
+    ));
+
+    // BƯỚC 2: Gọi API ngầm phía sau
     try {
       await updateOrderStatus(orderId, newStatus);
-      loadOrders(); 
+      // KHÔNG CẦN gọi loadOrders() nữa vì UI đã update rồi, tiết kiệm tài nguyên Server cực lớn!
     } catch (error) {
-      alert("Cập nhật trạng thái thất bại!");
+      alert("Cập nhật trạng thái thất bại! Hệ thống sẽ quay về trạng thái cũ.");
+      // BƯỚC 3: Nếu lỗi, quay xe về trạng thái cũ
+      setOrders(previousOrders);
     }
   };
   
@@ -444,9 +457,23 @@ export default function AdminOrdersPage() {
                       <div className="lg:col-span-1 space-y-4">
                         <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2"><MapPin size={16} className="text-blue-600"/> Giao hàng đến</h4>
                         <div className="bg-white p-4 rounded-xl border border-slate-200 text-sm space-y-2">
-                          <p className="font-semibold text-slate-900">{order.fullName}</p>
-                          <p className="text-slate-600">{order.phone}</p>
-                          <p className="text-slate-700 leading-relaxed font-medium">{displayAddress}</p>
+                          <p className="font-semibold text-slate-900 flex items-center gap-2">
+                            <User size={14} className="text-slate-400" /> {order.fullName}
+                          </p>
+                          <p className="text-slate-600 flex items-center gap-2">
+                            <Phone size={14} className="text-slate-400" /> {order.phone}
+                          </p>
+                          
+                          {/* ĐOẠN HIỂN THỊ EMAIL*/}
+                          {order.email && order.email.trim() !== "" && (
+                            <p className="text-slate-600 flex items-center gap-2">
+                              <Mail size={14} className="text-slate-400" /> {order.email}
+                            </p>
+                          )}
+                          
+                          <p className="text-slate-700 leading-relaxed font-medium mt-2 pt-2 border-t border-slate-100">
+                            {displayAddress}
+                          </p>
                         </div>
                       </div>
                       <div className="lg:col-span-2">

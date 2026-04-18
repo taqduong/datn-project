@@ -63,14 +63,14 @@ namespace BE.Controllers
             return Ok(new { success = true, message = "Đã ghi nhận lượt thêm giỏ hàng." });
         }
 
-        // 3. Ghi nhận lượt mua (Số lượng sản phẩm bán ra)
-        [HttpPost("purchase/{productId:int}")]
-        public async Task<IActionResult> TrackPurchase([FromRoute] int productId, [FromBody] int quantity)
-        {
-            if (quantity <= 0) quantity = 1;
-            await IncrementAsync(productId, "PurchaseCount", quantity);
-            return Ok(new { success = true, message = $"Đã ghi nhận bán được {quantity} sản phẩm." });
-        }
+        // // 3. Ghi nhận lượt mua (Số lượng sản phẩm bán ra)
+        // [HttpPost("purchase/{productId:int}")]
+        // public async Task<IActionResult> TrackPurchase([FromRoute] int productId, [FromBody] int quantity)
+        // {
+        //     if (quantity <= 0) quantity = 1;
+        //     await IncrementAsync(productId, "PurchaseCount", quantity);
+        //     return Ok(new { success = true, message = $"Đã ghi nhận bán được {quantity} sản phẩm." });
+        // }
 
         // =======================================================
         // API LẤY BÁO CÁO (CHO ADMIN DASHBOARD)
@@ -85,12 +85,12 @@ namespace BE.Controllers
                     ImageUrl = a.Product != null ? a.Product.ImageUrl : "", // <--- THÊM DÒNG LẤY ẢNH NÀY
                     a.Views,
                     a.AddToCartCount,
-                    
-                    PurchaseCount = a.Product != null 
-                        ? a.Product.OrderDetails
-                            .Where(od => od.Order != null && od.Order.Status.ToLower() == "completed")
-                            .Sum(od => (int?)od.Quantity) ?? 0 
-                        : 0,
+                    a.PurchaseCount,
+                    // PurchaseCount = a.Product != null 
+                    //     ? a.Product.OrderDetails
+                    //         .Where(od => od.Order != null && od.Order.Status.ToLower() == "completed")
+                    //         .Sum(od => (int?)od.Quantity) ?? 0 
+                    //     : 0,
                         
                     a.LastUpdated
                 })

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useRef } from "react";
 import { Heart, Star, CheckCircle, User as UserIcon, ZoomIn, ZoomOut, X, Expand, Shrink } from "lucide-react";
-import { fetchProductById, addToCart, addToWishlist, type Product, fetchReviewsByProduct, type ReviewDto, logUserActivity, fetchSimilarProducts, trackProductView } from "@/services/api";
+import { fetchProductById, addToCart, addToWishlist, type Product, fetchReviewsByProduct, type ReviewDto, logUserActivity, fetchSimilarProducts, trackProductView, trackProductAddToCart} from "@/services/api";
 import ProductCard from "@/components/ProductCard";
 
 export default function ProductDetailPage() {
@@ -361,6 +361,8 @@ export default function ProductDetailPage() {
       await addToCart(product.id, quantity, selectedVariant?.id);
 
       logUserActivity({ productId: product.id, actionType: "AddToCart" }).catch((err) => console.error("Hoạt động Tracking [AddToCart] thất bại:", err));
+      // THÊM DÒNG NÀY (Cho Admin)
+      trackProductAddToCart(product.id).catch((err) => console.error(err));
       window.dispatchEvent(new Event("cartUpdated"));
       alert(`Đã thêm ${product.name} ${selectedVariant ? `(${selectedColor ? selectedColor + ' - ' : ''}${selectedVariant.variantName})` : ""} vào giỏ hàng!`);
     } catch (error) {

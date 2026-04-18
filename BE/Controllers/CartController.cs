@@ -25,37 +25,6 @@ namespace BE.Controllers
             return Math.Round(price * (1 - (decimal)discount.Value / 100), 0);
         }
 
-        private async Task IncrementAnalyticsAsync(int productId, string field, int delta = 1)
-        {
-            // field chỉ cho phép 3 cột này để tránh SQL injection
-            string col = field switch
-            {
-                "Views" => "Views",
-                "AddToCartCount" => "AddToCartCount",
-                "PurchaseCount" => "PurchaseCount",
-                _ => throw new ArgumentOutOfRangeException(nameof(field))
-            };
-
-            // Lưu ý: Đảm bảo bạn có bảng ProductAnalytics trong DB trước khi chạy hàm này
-            try 
-            {
-                string sql = $@"
-                    IF NOT EXISTS (SELECT 1 FROM ProductAnalytics WHERE ProductId = @p0)
-                    BEGIN
-                        INSERT INTO ProductAnalytics(ProductId, Views, AddToCartCount, PurchaseCount)
-                        VALUES(@p0, 0, 0, 0);
-                    END
-                    UPDATE ProductAnalytics SET {col} = {col} + @p1 WHERE ProductId = @p0;";
-
-                await _context.Database.ExecuteSqlRawAsync(sql, productId, delta);
-            }
-            catch (Exception ex)
-            {
-                // Tạm thời log lỗi hoặc bỏ qua nếu chưa có bảng Analytics
-                Console.WriteLine("Analytics Error: " + ex.Message);
-            }
-        }
-
         private int? GetUserIdFromToken()
         {
             // Lấy NameIdentifier từ Claim (Sửa lại claim type phổ biến cho JWT)
@@ -103,8 +72,6 @@ namespace BE.Controllers
 
             await _context.SaveChangesAsync();
             
-            // Cập nhật thống kê (Nếu chưa có bảng ProductAnalytics thì hàm này sẽ bị catch lỗi)
-            await IncrementAnalyticsAsync(request.ProductId, "AddToCartCount", 1);
 
             return Ok(new { message = "Thêm hàng vào giỏ hàng thành công." });
         }

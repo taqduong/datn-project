@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ShoppingCart, Heart, Star, ListPlus, X, Truck } from "lucide-react"; 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { addToCart, addToWishlist, trackProductAddToCart } from "@/services/api";
+import { addToCart, addToWishlist, trackProductAddToCart, logUserActivity } from "@/services/api";
 import Modal from "@/components/Modal"; // 
 
 // THÊM TRƯỜNG variants VÀO INTERFACE
@@ -151,6 +151,9 @@ export default function ProductCard({ product }: { product: Product }) {
       await addToCart(product.id, quantity, hasVariants ? selectedVariant.id : undefined); 
 
       trackProductAddToCart(product.id).catch(err => console.error("Lỗi tracking cart:", err));
+
+      // THÊM DÒNG NÀY: Báo cho AI biết khách vừa thêm giỏ hàng (Điểm: 3)
+      logUserActivity({ productId: product.id, actionType: "AddToCart" }).catch(err => console.error(err));
       window.dispatchEvent(new Event('cartUpdated')); 
       
       setShowVariantModal(false); 
@@ -181,6 +184,9 @@ export default function ProductCard({ product }: { product: Product }) {
     try {
       setIsWishlisting(true);
       await addToWishlist(product.id);
+
+      //  Báo cho AI biết khách vừa Tym sản phẩm (Điểm: 2)
+      logUserActivity({ productId: product.id, actionType: "AddToWishlist" }).catch(err => console.error(err));
       window.dispatchEvent(new Event('wishlistUpdated'));
       alert(`Đã thêm ${product.name} vào danh sách yêu thích!`);
     } catch (error: any) {

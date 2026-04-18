@@ -2,7 +2,7 @@
 
 import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import api, { fetchCart, checkoutOrder, type CartItem, trackProductPurchase, fetchProductById, resolveImgUrl } from "@/services/api";
+import api, { fetchCart, checkoutOrder, type CartItem, fetchProductById, resolveImgUrl, logUserActivity } from "@/services/api";
 import { 
   MapPin, Phone, User, FileText, ShoppingBag, 
   ArrowRight, CheckCircle2, CreditCard, Mail, Wallet, Ticket
@@ -302,7 +302,12 @@ function CheckoutContent() {
       }
       
       const orderRes = await checkoutOrder(payload);
-      cartItems.forEach(item => { trackProductPurchase(item.product.id, item.quantity).catch(err => console.error(err)); });
+      cartItems.forEach(item => { 
+        // 1. Cộng doanh số cho Admin
+        // trackProductPurchase(item.product.id, item.quantity).catch(err => console.error(err)); 
+        // 2. Cộng 5 điểm cho AI
+        logUserActivity({ productId: item.product.id, actionType: "Purchase" }).catch(err => console.error(err));
+      });
       const newOrderId = orderRes?.data?.orderId || orderRes?.data?.id || Math.floor(Date.now() / 1000); 
 
       if (formData.paymentMethod === 'vnpay') {

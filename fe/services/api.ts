@@ -519,11 +519,11 @@ export const analyticsAPI = {
   trackAddToCart: (productId: number) => 
     api.post(`/analytics/cart/${productId}`),
 
-  // 3. Ghi nhận lượt mua
-  trackPurchase: (productId: number, quantity: number) => 
-    api.post(`/analytics/purchase/${productId}`, quantity, {
-      headers: { "Content-Type": "application/json" } // Gửi số lượng dạng số
-    }),
+  // // 3. Ghi nhận lượt mua
+  // trackPurchase: (productId: number, quantity: number) => 
+  //   api.post(`/analytics/purchase/${productId}`, quantity, {
+  //     headers: { "Content-Type": "application/json" } // Gửi số lượng dạng số
+  //   }),
 
   // 4. Lấy báo cáo cho Admin
   getSummary: () => 
@@ -635,7 +635,7 @@ export const clearWishlist = wishlistAPI.clear
 export const fetchAnalyticsSummary = analyticsAPI.getSummary;
 export const trackProductView = analyticsAPI.trackView;
 export const trackProductAddToCart = analyticsAPI.trackAddToCart;
-export const trackProductPurchase = analyticsAPI.trackPurchase;
+// export const trackProductPurchase = analyticsAPI.trackPurchase;
 
 export const fetchReviewsByProduct = reviewsAPI.getByProduct;
 export const addReview = reviewsAPI.add;
