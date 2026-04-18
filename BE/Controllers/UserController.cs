@@ -30,6 +30,10 @@ namespace BE.Controllers
             if (await _context.Users.AnyAsync(u => u.Email == request.Email))
                 return BadRequest(new { message = "Email này đã được sử dụng cho một tài khoản khác." });
 
+            // CHẶN TRÙNG SĐT 
+            if (await _context.Users.AnyAsync(u => u.Phone == request.Phone))
+                return BadRequest(new { message = "Số điện thoại này đã được sử dụng cho một tài khoản khác." });
+
             string newRole = !string.IsNullOrWhiteSpace(request.Role) ? request.Role.ToLower() : "nguoimua";
             
             // 1. Phân quyền: Chỉ Admin mới được tạo Admin/Nhân viên
@@ -134,6 +138,12 @@ namespace BE.Controllers
                     return BadRequest(new { message = "Email này đã được sử dụng bởi người khác." });
             }
 
+            if (!string.IsNullOrEmpty(request.Phone) && request.Phone != user.Phone)
+            {
+                if (await _context.Users.AnyAsync(u => u.Phone == request.Phone))
+                    return BadRequest(new { message = "Số điện thoại này đã được sử dụng bởi người khác." });
+            }
+
             user.FullName = request.FullName ?? user.FullName;
             user.Email = request.Email ?? user.Email;
             user.Phone = request.Phone ?? user.Phone;
@@ -202,6 +212,9 @@ namespace BE.Controllers
 
             if (await _context.Users.AnyAsync(u => u.Email == dto.Email))
                 return BadRequest(new { message = "Email này đã được sử dụng cho một tài khoản khác." });
+
+            if (await _context.Users.AnyAsync(u => u.Phone == dto.Phone))
+                return BadRequest(new { message = "Số điện thoại này đã được sử dụng cho một tài khoản khác." });
 
             var user = new User
             {

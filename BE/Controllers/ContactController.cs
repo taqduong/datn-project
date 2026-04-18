@@ -67,19 +67,35 @@ namespace BE.Controllers
 
             try
             {
-                // Format tiêu đề và nội dung Email (HTML)
+                // Format tiêu đề Email
                 string subject = $"[HomeMart] Phản hồi yêu cầu: {message.Subject}";
-                string body = $"<div style='font-family: Arial, sans-serif; line-height: 1.6; color: #333;'>" +
-                              $"<h3 style='color: #2563eb;'>Xin chào {message.FullName},</h3>" +
-                              $"<p>Cảm ơn bạn đã liên hệ với HomeMart. Dưới đây là phản hồi cho yêu cầu của bạn:</p>" +
-                              $"<div style='background-color: #f8fafc; padding: 15px; border-left: 4px solid #2563eb; margin: 20px 0;'>" +
-                              $"{request.ReplyContent.Replace("\n", "<br/>")}" +
-                              $"</div>" +
-                              $"<p>Nếu cần hỗ trợ thêm, bạn vui lòng trả lời trực tiếp email này.</p>" +
-                              $"<p>Trân trọng,<br/><strong>Đội ngũ HomeMart</strong></p>" +
-                              $"</div>";
+                
+                // Format nội dung Email (HTML) - Đã đính kèm phần Trích dẫn câu hỏi gốc
+                string body = $@"
+                <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;'>
+                    <h2 style='color: #2563eb; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px;'>Phản hồi từ HomeMart</h2>
+                    
+                    <p>Xin chào <strong>{message.FullName}</strong>,</p>
+                    <p>Cảm ơn bạn đã liên hệ với HomeMart. Dưới đây là phản hồi cho yêu cầu của bạn:</p>
+                    
+                    <div style='background-color: #f8fafc; padding: 20px; border-radius: 8px; font-size: 15px; line-height: 1.6; margin: 25px 0;'>
+                        {request.ReplyContent.Replace("\n", "<br/>")}
+                    </div>
 
-                // Gọi Service gửi mail của sếp
+                    <div style='margin-top: 30px; padding: 15px 20px; border-left: 4px solid #cbd5e1; background-color: #f1f5f9; color: #64748b; font-style: italic; font-size: 14px;'>
+                        <p style='margin-top: 0; margin-bottom: 8px; font-weight: bold; color: #475569;'>Yêu cầu ban đầu của bạn:</p>
+                        <p style='margin: 0; line-height: 1.5;'>""{message.Content.Replace("\n", "<br/>")}""</p>
+                    </div>
+
+                    <p style='margin-top: 30px;'>Nếu cần hỗ trợ thêm, bạn vui lòng trả lời trực tiếp email này.</p>
+                    
+                    <p>Trân trọng,<br/><strong>Đội ngũ HomeMart</strong></p>
+                    
+                    <hr style='border: none; border-top: 1px solid #e5e7eb; margin: 30px 0 20px 0;' />
+                    <p style='font-size: 12px; color: #9ca3af; text-align: center;'>Đây là email tự động, vui lòng không trả lời.</p>
+                </div>";
+
+                // Gọi Service gửi mail 
                 await _emailService.SendEmailAsync(message.Email, subject, body);
 
                 // Gửi xong thì tự động chuyển trạng thái thành "Đã đọc"

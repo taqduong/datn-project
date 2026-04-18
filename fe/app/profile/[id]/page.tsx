@@ -43,6 +43,15 @@ interface UserData {
   age?: number
 }
 
+// ================== Hàm xử lý link ảnh ==================
+const resolveImgUrl = (url?: string) => {
+  if (!url) return ""; 
+  if (url.startsWith("http")) return url;
+  const baseUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5270/api").replace("/api", "");
+  const cleanUrl = url.startsWith("/") ? url : `/${url}`;
+  return `${baseUrl}${cleanUrl}`;
+};
+
 // ================== Component ==================
 export default function ProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
@@ -403,7 +412,7 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
                         <img 
                           src={
                             avatarPreview || 
-                            userData.avatar || 
+                            (userData.avatar ? resolveImgUrl(userData.avatar) : "") || 
                             `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.fullName || 'User')}&background=0D8ABC&color=fff&size=150`
                           } 
                           alt="User Avatar" 
