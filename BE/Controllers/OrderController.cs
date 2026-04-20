@@ -192,7 +192,11 @@ namespace BE.Controllers
 
             _context.Orders.Add(newOrder);
             await _context.SaveChangesAsync();
-            if (!string.IsNullOrEmpty(newOrder.Email))
+            // =========================================================================
+            // SỬA LỖI GỬI MAIL: CHỈ GỬI MAIL NGAY NẾU LÀ THANH TOÁN COD
+            // Nếu là VNPay, hệ thống sẽ gửi mail sau khi khách thanh toán thành công (ở PaymentController)
+            // =========================================================================
+            if (!string.IsNullOrEmpty(newOrder.Email) && request.PaymentMethod.ToLower() == "cod")
             {
                 try {
                     var fullOrder = await _context.Orders
@@ -206,6 +210,7 @@ namespace BE.Controllers
                     }
                 } catch { /* Bỏ qua lỗi nếu gửi mail thất bại */ }
             }
+            
             return Ok(new { message = "Đặt hàng thành công!", orderId = newOrder.OrderId });
         }
 
