@@ -33,7 +33,22 @@ export default function ProductCard({ product }: { product: Product }) {
   const [selectedVariant, setSelectedVariant] = useState<any | null>(null);
   const [selectedColor, setSelectedColor] = useState<string | null>(null); // THÊM STATE QUẢN LÝ MÀU
 
-  const [quantity, setQuantity] = useState(1);
+  const [quantity, setQuantity] = useState<number | string>(1);
+
+  const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const val = e.target.value.replace(/\D/g, ''); 
+  if (val === '') {
+    setQuantity(''); 
+    return;
+  }
+  setQuantity(Number(val));
+};
+
+const handleQuantityBlur = () => {
+    let validQty = Number(quantity);
+    if (isNaN(validQty) || validQty < 1) validQty = 1; 
+    setQuantity(validQty);
+  };
 
   // LOGIC XỬ LÝ BIẾN THỂ (TÍNH KHOẢNG GIÁ & TỔNG TỒN KHO)
   const hasVariants = product.variants && product.variants.length > 0;
@@ -139,6 +154,11 @@ export default function ProductCard({ product }: { product: Product }) {
       return;
     }
 
+    if (Number(quantity) > maxStockLimit) {
+      alert("Sản phẩm không đủ số lượng trong kho");
+      return;
+    }
+
     const token = localStorage.getItem("token");
     if (!token) {
       alert("Vui lòng đăng nhập để mua hàng!");
@@ -148,7 +168,7 @@ export default function ProductCard({ product }: { product: Product }) {
     try {
       setIsAdding(true);
       // Truyền variantId nếu có biến thể, không thì truyền undefined
-      await addToCart(product.id, quantity, hasVariants ? selectedVariant.id : undefined); 
+      await addToCart(product.id, Number(quantity), hasVariants ? selectedVariant.id : undefined); 
 
       trackProductAddToCart(product.id).catch(err => console.error("Lỗi tracking cart:", err));
 
@@ -498,13 +518,20 @@ export default function ProductCard({ product }: { product: Product }) {
               <div className="flex items-center gap-3">
                 <div className="inline-flex items-center overflow-hidden rounded-lg border border-gray-300">
                   <button 
-                    onClick={() => setQuantity(prev => Math.max(prev - 1, 1))}
+                    onClick={() => setQuantity(prev => Math.max(Number(prev) - 1, 1))}
                     className="px-3 py-1.5 text-lg font-semibold text-slate-700 transition hover:bg-slate-50"
                   >−</button>
-                  <div className="min-w-10 border-x border-slate-300 px-3 py-1.5 text-center font-semibold text-slate-900">{quantity}</div>
+                  <input 
+                    type="text"
+                    value={quantity}
+                    onChange={handleQuantityChange}
+                    onBlur={handleQuantityBlur}
+                    disabled={maxStockLimit <= 0}
+                    className="w-12 border-x border-slate-300 px-2 py-1.5 text-center font-semibold text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-slate-50"
+                  />
                   <button 
-                    onClick={() => setQuantity(prev => Math.min(prev + 1, maxStockLimit))}
-                    disabled={maxStockLimit <= 0 || quantity >= maxStockLimit}
+                    onClick={() => setQuantity(prev => Math.min(Number(prev) + 1, maxStockLimit))}
+                    disabled={maxStockLimit <= 0 || Number(quantity) >= maxStockLimit}
                     className="px-3 py-1.5 text-lg font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
                   >+</button>
                 </div>

@@ -23,6 +23,6 @@ namespace BE.Models
 
         // Mối quan hệ với bảng User (để biết tên khách)
         [ForeignKey("UserId")]
-        public virtual User? User { get; set; }
+        public virtual User User { get; set; } = null!;
     }
 }

@@ -36,6 +36,7 @@ namespace BE.Models
         public virtual User User { get; set; } = null!;
 
         [ForeignKey("ProductId")]
+        [InverseProperty("UserActivities")] 
         [JsonIgnore]
         public virtual Product Product { get; set; } = null!;
     }

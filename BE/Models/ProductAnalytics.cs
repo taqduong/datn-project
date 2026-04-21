@@ -1,8 +1,10 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.EntityFrameworkCore;
 
 namespace BE.Models
 {
+    [Index(nameof(ProductId), IsUnique = true, Name = "IX_ProductAnalytics_ProductId_Unique")]
     public class ProductAnalytics
     {
         [Key]

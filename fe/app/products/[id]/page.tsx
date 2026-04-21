@@ -15,7 +15,7 @@ export default function ProductDetailPage() {
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeImage, setActiveImage] = useState<string>("");
-  const [quantity, setQuantity] = useState(1);
+  const [quantity, setQuantity] = useState<number | string>(1);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [isWishlisting, setIsWishlisting] = useState(false);
@@ -283,11 +283,26 @@ export default function ProductDetailPage() {
   }, [product, currentStock]);
 
   const handleIncrease = () => {
-    if (!product) return;
-    setQuantity((prev) => Math.min(prev + 1, Math.max(currentStock, 1)));
-  };
+  if (!product) return;
+  setQuantity((prev) => Math.min(Number(prev) + 1, Math.max(currentStock, 1)));
+};
 
-  const handleDecrease = () => setQuantity((prev) => Math.max(prev - 1, 1));
+const handleDecrease = () => setQuantity((prev) => Math.max(Number(prev) - 1, 1));
+
+const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const val = e.target.value.replace(/\D/g, ''); 
+  if (val === '') {
+    setQuantity('');
+    return;
+  }
+  setQuantity(Number(val));
+};
+
+const handleQuantityBlur = () => {
+    let validQty = Number(quantity);
+    if (isNaN(validQty) || validQty < 1) validQty = 1;
+    setQuantity(validQty);
+  };
 
   // Hàm chọn Size/Biến thể cuối cùng
   const handleSelectVariant = (variant: any) => {
@@ -325,6 +340,11 @@ export default function ProductDetailPage() {
 
   const handleBuyNow = () => {
     if (!product) return;
+    // THÊM CHECK TỒN KHO
+    if (Number(quantity) > currentStock) {
+      alert("Sản phẩm không đủ số lượng trong kho");
+      return;
+    }
     const token = localStorage.getItem("token");
     if (!token) {
       alert("Vui lòng đăng nhập để mua hàng!");
@@ -338,12 +358,17 @@ export default function ProductDetailPage() {
     }
 
     router.push(
-      `/checkout?buyNowId=${product.id}&qty=${quantity}${selectedVariant ? `&variantId=${selectedVariant.id}` : ""}`
+      `/checkout?buyNowId=${product.id}&qty=${Number(quantity)}${selectedVariant ? `&variantId=${selectedVariant.id}` : ""}`
     );
   };
 
   const handleAddToCart = async () => {
     if (!product) return;
+    // THÊM CHECK TỒN KHO
+    if (Number(quantity) > currentStock) {
+      alert("Sản phẩm không đủ số lượng trong kho");
+      return;
+    }
     const token = localStorage.getItem("token");
     if (!token) {
       alert("Vui lòng đăng nhập để mua hàng!");
@@ -358,7 +383,7 @@ export default function ProductDetailPage() {
 
     try {
       setIsAdding(true);
-      await addToCart(product.id, quantity, selectedVariant?.id);
+      await addToCart(product.id, Number(quantity), selectedVariant?.id);
 
       logUserActivity({ productId: product.id, actionType: "AddToCart" }).catch((err) => console.error("Hoạt động Tracking [AddToCart] thất bại:", err));
       // THÊM DÒNG NÀY (Cho Admin)
@@ -727,10 +752,17 @@ export default function ProductDetailPage() {
                     <button onClick={handleDecrease} className="px-4 py-3 text-lg font-semibold text-slate-700 transition hover:bg-slate-50">
                       −
                     </button>
-                    <div className="min-w-16 border-x border-slate-300 px-5 py-3 text-center font-semibold text-slate-900">{quantity}</div>
+                    <input 
+                      type="text"
+                      value={quantity}
+                      onChange={handleQuantityChange}
+                      onBlur={handleQuantityBlur}
+                      disabled={currentStock <= 0}
+                      className="w-16 border-x border-slate-300 px-2 py-3 text-center font-semibold text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-slate-50"
+                    />
                     <button
                       onClick={handleIncrease}
-                      disabled={currentStock <= 0}
+                      disabled={currentStock <= 0 || Number(quantity) >= currentStock}
                       className="px-4 py-3 text-lg font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
                     >
                       +
