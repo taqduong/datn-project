@@ -47,6 +47,8 @@ namespace BE.Models
         [Unicode(false)]
         public string? Avatar { get; set; }
 
+        public string? SearchHistory { get; set; }
+
         [StringLength(255)]
         [Unicode(false)]
         public string? ResetPasswordToken { get; set; }

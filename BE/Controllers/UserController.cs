@@ -5,6 +5,7 @@ using BE.Data;
 using System.ComponentModel.DataAnnotations;
 using BE.Services;
 using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 
 namespace BE.Controllers
 {
@@ -355,7 +356,45 @@ namespace BE.Controllers
 
             return Ok(new { message = "Đặt lại mật khẩu thành công. Vui lòng đăng nhập lại." });
         }
+
+    // ================== LỊCH SỬ TÌM KIẾM ==================
+
+        [HttpGet("search-history")]
+        [Authorize]
+        public async Task<IActionResult> GetSearchHistory()
+        {
+            var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
+            if (!int.TryParse(userIdStr, out int userId)) return Unauthorized();
+
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null) return NotFound();
+
+            var history = string.IsNullOrEmpty(user.SearchHistory) 
+                ? new List<string>() 
+                : System.Text.Json.JsonSerializer.Deserialize<List<string>>(user.SearchHistory);
+
+            return Ok(history);
+        }
+
+        [HttpPost("search-history")]
+        [Authorize]
+        public async Task<IActionResult> UpdateSearchHistory([FromBody] List<string> historyArray)
+        {
+            var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
+            if (!int.TryParse(userIdStr, out int userId)) return Unauthorized();
+
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null) return NotFound();
+
+            var limitedHistory = historyArray?.Take(8).ToList() ?? new List<string>();
+
+            user.SearchHistory = System.Text.Json.JsonSerializer.Serialize(limitedHistory);
+            
+            await _context.SaveChangesAsync();
+            return Ok(new { message = "Cập nhật lịch sử thành công." });
+        }
     }
+
 
     // ================== DTOs (FIX WARNING CS8618) ==================
     public class CreateUserRequest

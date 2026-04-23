@@ -210,7 +210,7 @@ export default function AdminOrdersPage() {
           <div class="info-row">
             <div class="info-col left">
               <div class="title">Từ: HomeMart Official</div>
-              <div class="text">Tầng 1, Tòa nhà Đại học Công Nghiệp Hà Nội</div>
+              <div class="text">Đường Cầu Diễn, quận Bắc Từ Liêm, Hà Nội</div>
               <div class="text" style="margin-top: 5px;">SĐT: 1900 1080</div>
             </div>
             <div class="info-col right">
@@ -425,14 +425,16 @@ export default function AdminOrdersPage() {
                         )}
                         {/* ========================================== */}
 
-                        {/* THÊM MỚI: NÚT IN PHIẾU GIAO HÀNG */}
-                        <button 
-                          onClick={(e) => handlePrintLabel(e, order)} 
-                          className="p-2 text-slate-400 hover:text-blue-600 transition-colors"
-                          title="In mã vận đơn dán lên kiện hàng"
-                        >
-                          <Printer size={20}/>
-                        </button>
+                        {/* THÊM MỚI: NÚT IN PHIẾU GIAO HÀNG (ẨN ĐI NẾU LÀ ĐƠN VNPAY BỊ LỖI/CHƯA THANH TOÁN) */}
+                        {!(order.paymentMethod?.toLowerCase() === 'vnpay' && order.status.toLowerCase() === 'pending') && (
+                          <button 
+                            onClick={(e) => handlePrintLabel(e, order)} 
+                            className="p-2 text-slate-400 hover:text-blue-600 transition-colors"
+                            title="In mã vận đơn dán lên kiện hàng"
+                          >
+                            <Printer size={20}/>
+                          </button>
+                        )}
 
                         {/* NÚT XÓA CHỈ HIỆN KHI ĐƠN ĐÃ BỊ HỦY VÀ (Không cần hoàn tiền HOẶC Đã hoàn xong) */}
                         {['cancelled', 'đã hủy', 'đã hủy đơn'].includes(order.status.toLowerCase()) && 

@@ -481,6 +481,8 @@ export const uploadAvatar = (userId: number, avatarFile: File) => {
     },
   });
 };
+export const getSearchHistoryApi = () => api.get<string[]>('/users/search-history');
+export const updateSearchHistoryApi = (historyArray: string[]) => api.post('/users/search-history', historyArray);
 
 // ================= Orders API =================
 export const ordersAPI = {

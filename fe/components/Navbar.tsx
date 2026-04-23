@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Search, ShoppingCart, User, Menu, Heart, X, LogOut, LayoutDashboard, Store, Clock } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { searchProducts, fetchCart, fetchWishlist } from "@/services/api";
+import { searchProducts, fetchCart, fetchWishlist, getSearchHistoryApi, updateSearchHistoryApi } from "@/services/api";
 type UserType = {
   id?: number | string;
   username?: string;
@@ -49,6 +49,7 @@ export default function Navbar() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // BƯỚC 1: LOAD THÔNG TIN USER 
   const loadData = () => {
     try {
       const storedUser = localStorage.getItem("user");
@@ -60,7 +61,6 @@ export default function Navbar() {
         setUser(null);
         setRole(null);
       }
-      // ĐÃ XÓA PHẦN CHECK LOCALSTORAGE CỦA WISHLIST Ở ĐÂY
     } catch (error) {
       console.error("Lỗi khi đọc localStorage:", error);
       setUser(null);
@@ -68,124 +68,131 @@ export default function Navbar() {
     }
   };
 
+  // BƯỚC 2: TẢI LỊCH SỬ THÔNG MINH TỪ DB HOẶC LOCAL
+  const loadSearchHistory = async () => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      try {
+        const res = await getSearchHistoryApi(); 
+        setSearchHistory(res.data || []);
+      } catch (error) {
+        console.error("Lỗi tải lịch sử từ DB", error);
+      }
+    } else {
+      const history = localStorage.getItem("searchHistory");
+      if (history) setSearchHistory(JSON.parse(history));
+    }
+  };
+
   const fetchCartCount = async () => {
     const token = localStorage.getItem("token");
-    if (!token) {
-      setCartCount(0); // Chưa đăng nhập thì số giỏ hàng = 0
-      return;
-    }
-    
+    if (!token) { setCartCount(0); return; }
     try {
-      const res = await fetchCart(); // Gọi API lấy giỏ hàng từ DB
+      const res = await fetchCart();
       const data = Array.isArray(res.data) ? res.data : [];
-      // ĐẾM SỐ LƯỢNG MÓN (Số dòng trong giỏ hàng)
       setCartCount(data.length);
     } catch (error: any) {
-      // Nếu lỗi 401 (hết hạn Token) thì im lặng set về 0, không in lỗi đỏ
-      if (error.response?.status !== 401) {
-        console.error("Lỗi đồng bộ số lượng giỏ hàng:", error);
-      }
+      if (error.response?.status !== 401) console.error("Lỗi đồng bộ số lượng giỏ hàng:", error);
       setCartCount(0);
     }
   };
 
-  // Gọi API đếm số lượng Wishlist
   const fetchWishlistCount = async () => {
     const token = localStorage.getItem("token");
-    if (!token) {
-      setWishlistCount(0);
-      return;
-    }
-    
+    if (!token) { setWishlistCount(0); return; }
     try {
       const res = await fetchWishlist();
-      
-      //  API Wishlist nó bọc mảng trong cục data
-      // Check xem res.data có tồn tại không, rồi check tiếp res.data.data có phải Mảng không
       let count = 0;
-      if (res.data && Array.isArray(res.data.data)) {
-        count = res.data.data.length; // Lấy length của mảng bên trong
-      } else if (Array.isArray(res.data)) {
-        count = res.data.length; 
-      }
-      
+      if (res.data && Array.isArray(res.data.data)) count = res.data.data.length;
+      else if (Array.isArray(res.data)) count = res.data.length; 
       setWishlistCount(count);
-      
     } catch (error: any) {
-      if (error.response?.status !== 401) {
-        console.error("Lỗi đồng bộ số lượng wishlist:", error);
-      }
+      if (error.response?.status !== 401) console.error("Lỗi đồng bộ số lượng wishlist:", error);
       setWishlistCount(0);
     }
   };
 
+  // BƯỚC 3: GỌI DATA KHI TRANG LOAD XONG
+  useEffect(() => {
+    if (!mounted) {
+      setMounted(true);
+      return;
+    }
+    loadData();
+    loadSearchHistory(); // Load lịch sử ngay khi trang bật lên
+  }, [mounted]);
+
+  // BƯỚC 4: LẮNG NGHE SỰ KIỆN TOÀN CỤC
   useEffect(() => {
     if (!mounted) return;
-    
-    loadData(); // Load User từ localStorage
-    fetchCartCount(); // Chạy lấy số giỏ hàng
-    fetchWishlistCount(); // Chạy lấy số wishlist
+    fetchCartCount();
+    fetchWishlistCount();
 
     window.addEventListener("storage", loadData);
-    window.addEventListener("userUpdated", loadData as EventListener);
+    window.addEventListener("userUpdated", () => {
+      loadData();
+      loadSearchHistory(); // Đăng nhập xong load ngay lịch sử từ DB về
+    });
     
-    // Gắn tai nghe cho Cart
     window.addEventListener("cartUpdated", fetchCartCount); 
-    
-    // Gắn tai nghe cho Wishlist (Hễ ai báo wishlistUpdated là gọi lại hàm đếm)
     window.addEventListener("wishlistUpdated", fetchWishlistCount);
 
     return () => {
       window.removeEventListener("storage", loadData);
-      window.removeEventListener("userUpdated", loadData as EventListener);
+      window.removeEventListener("userUpdated", loadData);
       window.removeEventListener("cartUpdated", fetchCartCount); 
       window.removeEventListener("wishlistUpdated", fetchWishlistCount); 
     };
   }, [mounted]);
 
   const handleLogout = () => {
-    // 1. Quét sạch mọi thông tin của user cũ trong kho chứa
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     localStorage.removeItem("wishlist"); 
-
-    // Xóa lịch sử chat đi
     localStorage.removeItem("homemart_chat_messages_v2");
-    
-    // 2. TÁT VẬT LÝ: Ép trình duyệt tải lại toàn bộ trang từ con số 0
-    // Thay vì dùng router.push, ta dùng cái này để dọn sạch 100% rác bộ nhớ
     window.location.href = "/login";
   };
 
-  const saveToHistory = (keyword: string) => {
+  // BƯỚC 5: LƯU LỊCH SỬ MỚI
+  const saveToHistory = async (keyword: string) => {
+    const token = localStorage.getItem("token");
     const newHistory = [keyword, ...searchHistory.filter((item) => item !== keyword)].slice(0, 8);
-    setSearchHistory(newHistory);
-    localStorage.setItem("searchHistory", JSON.stringify(newHistory));
+    
+    setSearchHistory(newHistory); // Update UI ngay cho mượt
+
+    if (token) {
+      try { await updateSearchHistoryApi(newHistory); } 
+      catch (error) { console.error("Lỗi lưu lịch sử lên DB", error); }
+    } else {
+      localStorage.setItem("searchHistory", JSON.stringify(newHistory));
+    }
   };
 
-  const deleteHistoryItem = (e: React.MouseEvent, keyword: string) => {
-    e.stopPropagation(); // Không cho nhảy vào hàm tìm kiếm khi bấm nút X
+  // BƯỚC 6: XÓA 1 TỪ KHÓA
+  const deleteHistoryItem = async (e: React.MouseEvent, keyword: string) => {
+    e.stopPropagation();
     const newHistory = searchHistory.filter((item) => item !== keyword);
-    setSearchHistory(newHistory);
-    localStorage.setItem("searchHistory", JSON.stringify(newHistory));
+    
+    setSearchHistory(newHistory); // Update UI ngay cho mượt
+
+    const token = localStorage.getItem("token");
+    if (token) {
+      try { await updateSearchHistoryApi(newHistory); } 
+      catch (error) { console.error("Lỗi xóa lịch sử trên DB", error); }
+    } else {
+      localStorage.setItem("searchHistory", JSON.stringify(newHistory));
+    }
   };
 
-  // SỬA LẠI HÀM NÀY ĐỂ NHẬN CẢ EVENT HOẶC STRING
-  //  Bỏ chữ "async" đi vì mình không cần gọi API chờ đợi ở đây nữa
   const handleSearch = (e?: React.FormEvent<HTMLFormElement> | string) => {
-    // Nếu là Event (khi nhấn Enter/nút Search) thì mới chặn reload trang
     if (e && typeof e !== "string") e.preventDefault();
     
-    // Nếu truyền vào string (từ lịch sử) thì lấy luôn, không thì lấy từ searchQuery
     const keyword = typeof e === "string" ? e : searchQuery.trim();
-    
     if (!keyword) return;
 
-    saveToHistory(keyword); // Lưu lại lịch sử
-    setShowHistory(false);  // Ẩn bảng lịch sử đi
+    saveToHistory(keyword); 
+    setShowHistory(false); 
     
-    // ĐÃ SỬA: Cho khách hàng sang trang kết quả luôn!
-    // Kệ cho trang ProductsPage tự gọi API và bung giao diện hộp rỗng nếu không có hàng
     router.push(`/products?keyword=${encodeURIComponent(keyword)}`);
   };
 
