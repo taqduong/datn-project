@@ -312,10 +312,11 @@ Khi khách hàng ngỏ ý muốn mua/đặt hàng, bạn PHẢI thu thập ĐỦ
 5. Số điện thoại (Phải hỏi xác nhận có dùng SĐT '{currentUser?.Phone}' không hay đổi số khác)
 6. Email nhận thông báo (Phải hỏi xác nhận có dùng Email '{currentUser?.Email}' không hay dùng Email khác)
 7. Mã giảm giá (BẮT BUỘC liệt kê ĐẦY ĐỦ TẤT CẢ các mã ưu đãi đang có trong danh sách để khách biết. ĐẶC BIỆT: Nếu khách chủ động cung cấp một mã ưu đãi bất kỳ, BẠN PHẢI CHẤP NHẬN MÃ ĐÓ và điền vào JSON, tuyệt đối không từ chối dù mã đó không có trong danh sách của bạn. QUAN TRỌNG: Khách ĐƯỢC PHÉP áp dụng cùng lúc 2 mã là 1 mã Miễn phí vận chuyển và 1 mã Giảm tiền. Nếu khách dùng 2 mã, hãy nối chúng bằng dấu phẩy. Nếu không dùng thì để trống).
-Nếu thiếu 1 trong 7 thông tin trên, hãy chủ động hỏi lại khách một cách khéo léo.
-Khi ĐÃ ĐỦ thông tin và khách CHỐT MUA, hãy cảm ơn và BẮT BUỘC chèn đoạn mã JSON sau ở cuối câu:
-[ORDER_INFO: {{ ""productId"": 1, ""variantName"": ""Màu Đỏ"", ""quantity"": 1, ""address"": ""Hà Nội"", ""fullName"": ""Tên người nhận"", ""phone"": ""SĐT người nhận"", ""email"": ""Email người nhận"", ""couponCode"": ""FREESHIP, SIEUSALE"" }}]
-Lưu ý: Không tạo mã ORDER_INFO nếu thiếu thông tin hoặc khách chưa chốt. Nếu sản phẩm ko có phân loại hoặc khách ko dùng mã, điền """".
+KHI ĐÃ ĐỦ 7 THÔNG TIN VÀ KHÁCH CHỐT MUA: 
+Bạn BẮT BUỘC phải tạo hệ thống lên đơn bằng cách chèn ĐÚNG CÚ PHÁP SAU ở dòng cuối cùng của câu trả lời. TUYỆT ĐỐI KHÔNG bọc bằng thẻ Markdown (không dùng ```json). CHỈ TRẢ VỀ ĐÚNG NHƯ SAU:
+[ORDER_INFO: {{ ""productId"": <ID_SẢN_PHẨM>, ""variantName"": ""<TÊN_PHÂN_LOẠI>"", ""quantity"": <SỐ_LƯỢNG>, ""address"": ""<ĐỊA_CHỈ_KHÁCH_CUNG_CẤP>"", ""fullName"": ""<TÊN_NGƯỜI_NHẬN>"", ""phone"": ""<SỐ_ĐIỆN_THOẠI>"", ""email"": ""<EMAIL_NHẬN_THÔNG_BÁO>"", ""couponCode"": ""<MÃ_GIẢM_GIÁ_NẾU_CÓ>"" }}]
+
+(Lưu ý: Thay thế các giá trị trong ngoặc <> bằng thông tin thực tế khách đã chốt. Nếu sản phẩm không có phân loại hoặc khách không dùng mã giảm giá, hãy để rỗng phần đó, ví dụ: ""variantName"": """", ""couponCode"": """").
 ".Trim();
 
                 // GỌI API GEMINI

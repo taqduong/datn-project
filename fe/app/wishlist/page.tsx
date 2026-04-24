@@ -460,41 +460,51 @@ export default function WishlistPage() {
               {modalHasVariants && (
                 <div className="space-y-6">
                   {/* PHẦN 1: MÀU SẮC */}
-                  <div className="space-y-3">
-                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Màu sắc</h3>
-                    <div className="flex flex-wrap gap-3">
-                      {Array.from(new Set(selectedModalProduct.variants?.map(v => v.color))).map(color => {
-                        // Gọi hàm để lấy mã màu Hex chuẩn
-                        const colorHex = getHexColor(color as string);
-                        const isWhite = colorHex === "#ffffff";
+                  {(() => {
+                    // Lọc sạch sẽ null, undefined, chuỗi rỗng
+                    const uniqueColors = Array.from(
+                      new Set(selectedModalProduct.variants?.map((v: any) => v.color).filter(Boolean))
+                    ) as string[];
 
-                        return (
-                          <button
-                            key={color as string}
-                            onClick={() => {
-                              setSelectedColor(color as string);
-                              // Khi đổi màu, tự động chọn biến thể đầu tiên của màu đó
-                              const firstVarOfColor = selectedModalProduct.variants?.find(v => v.color === color);
-                              setSelectedVariant(firstVarOfColor);
-                            }}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-all ${
-                              selectedColor === color 
-                              ? 'border-blue-600 bg-blue-50 text-blue-700 font-bold' 
-                              : 'border-gray-100 bg-white text-gray-600 hover:border-gray-300'
-                            }`}
-                          >
-                            {colorHex && (
-                              <div 
-                                className={`w-4 h-4 rounded-full shadow-sm shrink-0 ${isWhite ? 'border border-gray-300' : ''}`} 
-                                style={{ backgroundColor: colorHex }} 
-                              />
-                            )}
-                            {color as string}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
+                    // NẾU KHÔNG CÓ MÀU NÀO HỢP LỆ THÌ ẨN LUÔN KHU VỰC NÀY
+                    if (uniqueColors.length === 0) return null;
+
+                    return (
+                      <div className="space-y-3">
+                        <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Màu sắc</h3>
+                        <div className="flex flex-wrap gap-3">
+                          {uniqueColors.map(color => {
+                            const colorHex = getHexColor(color);
+                            const isWhite = colorHex === "#ffffff";
+
+                            return (
+                              <button
+                                key={color}
+                                onClick={() => {
+                                  setSelectedColor(color);
+                                  const firstVarOfColor = selectedModalProduct.variants?.find((v: any) => v.color === color);
+                                  setSelectedVariant(firstVarOfColor);
+                                }}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-all ${
+                                  selectedColor === color 
+                                  ? 'border-blue-600 bg-blue-50 text-blue-700 font-bold' 
+                                  : 'border-gray-100 bg-white text-gray-600 hover:border-gray-300'
+                                }`}
+                              >
+                                {colorHex && (
+                                  <div 
+                                    className={`w-4 h-4 rounded-full shadow-sm shrink-0 ${isWhite ? 'border border-gray-300' : ''}`} 
+                                    style={{ backgroundColor: colorHex }} 
+                                  />
+                                )}
+                                {color}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })()}
 
                   {/* PHẦN 2: KÍCH THƯỚC / PHÂN LOẠI */}
                   <div className="space-y-3">

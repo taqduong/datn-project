@@ -413,13 +413,34 @@ const handleQuantityBlur = () => {
                 {/* BỌC GIÁ TIỀN VÀ NÚT CHI TIẾT VÀO CHUNG 1 DÒNG */}
                 <div className="mt-3 flex items-center justify-between gap-4">
                   <div className="flex flex-wrap items-baseline gap-2">
-                    <span className="text-2xl font-bold text-red-600">
-                      {formatVND(modalCurrentPrice)}
-                    </span>
-                    {(modalDiscountRate > 0) && (
-                      <span className="text-sm text-gray-400 line-through">
-                        {formatVND(modalOriginalPrice)}
-                      </span>
+                    {hasVariants && !selectedVariant ? (
+                      /* CHƯA CHỌN ĐỦ PHÂN LOẠI -> HIỆN KHOẢNG GIÁ */
+                      <>
+                        <span className="text-2xl font-bold text-red-600">
+                          {isFinalPriceRange
+                            ? `${formatVND(minFinalPrice)} - ${formatVND(maxFinalPrice)}`
+                            : formatVND(minFinalPrice)}
+                        </span>
+                        {hasDiscount && (
+                          <span className="text-sm text-gray-400 line-through">
+                            {isOriginalPriceRange
+                              ? `${formatVND(minOriginalPrice)} - ${formatVND(maxOriginalPrice)}`
+                              : formatVND(minOriginalPrice)}
+                          </span>
+                        )}
+                      </>
+                    ) : (
+                      /* ĐÃ CHỌN ĐỦ HOẶC KO CÓ PHÂN LOẠI -> HIỆN GIÁ CỤ THỂ */
+                      <>
+                        <span className="text-2xl font-bold text-red-600">
+                          {formatVND(modalCurrentPrice)}
+                        </span>
+                        {modalDiscountRate > 0 && (
+                          <span className="text-sm text-gray-400 line-through">
+                            {formatVND(modalOriginalPrice)}
+                          </span>
+                        )}
+                      </>
                     )}
                   </div>
 
