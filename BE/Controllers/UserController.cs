@@ -126,10 +126,15 @@ namespace BE.Controllers
             var user = await _context.Users.FindAsync(id);
             if (user == null) return NotFound(new { message = "Không tìm thấy người dùng." });
 
+            // Lấy ID và Role của người đang đăng nhập (từ Token)
+            var currentUserIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
+            int.TryParse(currentUserIdStr, out int currentUserId);
             var currentUserRole = User.FindFirstValue(ClaimTypes.Role)?.ToLower();
-            if (currentUserRole == "nhanvien" && user.Role.ToLower() != "nguoimua")
+
+            // ĐÃ FIX: Cho phép nhân viên tự sửa tài khoản của chính mình (thêm điều kiện currentUserId != id)
+            if (currentUserRole == "nhanvien" && user.Role.ToLower() != "nguoimua" && currentUserId != id)
             {
-                return StatusCode(403, new { message = "Lỗi bảo mật: Nhân viên không có quyền chỉnh sửa tài khoản nội bộ!" });
+                return StatusCode(403, new { message = "Lỗi bảo mật: Nhân viên không có quyền chỉnh sửa tài khoản nội bộ của người khác!" });
             }
 
             // THÊM MỚI: Kiểm tra xem Email muốn đổi sang đã có ai dùng chưa

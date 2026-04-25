@@ -225,7 +225,7 @@ export default function UserPage() {
                     </span>
                   </td>
                   <td className="py-4 px-6 text-right">
-                    {(currentUserRole === 'admin' || (currentUserRole === 'nhanvien' && user.role.toLowerCase() === 'nguoimua')) ? (
+                    {(currentUserRole === 'admin' || (currentUserRole === 'nhanvien' && user.role.toLowerCase() === 'nguoimua') || currentUserId === user.id) ? (
                       <div className="flex items-center justify-end gap-2">
                         <button onClick={() => handleOpenEditModal(user)} className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"><Edit size={16} /></button>
                         <button onClick={() => handleToggleStatus(user.id, user.isActive)} className={`p-2 rounded-lg transition-colors ${user.isActive ? 'text-red-500 hover:bg-red-50' : 'text-emerald-600 hover:bg-emerald-50'}`}>
