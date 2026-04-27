@@ -149,6 +149,7 @@ const DEFAULT_BOT_MESSAGE =
 
 export default function ChatBox() {
   const [isOpen, setIsOpen] = useState(false);
+  const [shouldShow, setShouldShow] = useState(true); 
   const [isExpanded, setIsExpanded] = useState(false);
   const [messages, setMessages] = useState<ChatMsg[]>([
     {
@@ -212,6 +213,41 @@ export default function ChatBox() {
   useEffect(() => {
     return () => {
       abortRef.current?.abort();
+    };
+  }, []);
+
+  // KIỂM TRA QUYỀN - ẨN CHATBOT VỚI ADMIN VÀ NHÂN VIÊN
+  useEffect(() => {
+    const checkRole = () => {
+      try {
+        const savedUser = localStorage.getItem('user');
+        if (savedUser) {
+          const parsedUser = JSON.parse(savedUser);
+          const role = (parsedUser.role || parsedUser.Role || '').toLowerCase();
+          
+          // Nếu là admin hoặc nhân viên thì ẩn đi và đóng khung chat
+          if (role === 'admin' || role === 'nhanvien') {
+            setShouldShow(false);
+            setIsOpen(false); 
+          } else {
+            setShouldShow(true);
+          }
+        } else {
+          setShouldShow(true); // Khách chưa đăng nhập thì vẫn hiện
+        }
+      } catch (error) {
+        console.error("Lỗi check role:", error);
+      }
+    };
+
+    checkRole();
+    // Lắng nghe sự kiện để ẩn/hiện ngay lập tức khi đăng nhập/đăng xuất
+    window.addEventListener("storage", checkRole);
+    window.addEventListener("userUpdated", checkRole); 
+
+    return () => {
+      window.removeEventListener("storage", checkRole);
+      window.removeEventListener("userUpdated", checkRole);
     };
   }, []);
 
@@ -415,6 +451,9 @@ export default function ChatBox() {
   };
 
   const showQuickPrompts = !isLoading; // Giữ hiển thị thanh gợi ý luôn (khi không đang tải)
+
+  // CHẶN HIỂN THỊ NẾU LÀ ADMIN/NHÂN VIÊN
+  if (!shouldShow) return null;
 
   return (
     <div className={`fixed bottom-5 right-5 ${isOpen ? "z-[60]" : "z-50"}`}>

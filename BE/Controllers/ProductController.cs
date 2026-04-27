@@ -562,7 +562,7 @@ namespace BE.Controllers
                 return BadRequest(new { message = "Từ khóa không hợp lệ." });
 
             var results = await _context.Products
-                .Include(p => p.ProductImages)
+                // ĐÃ XÓA: .Include(p => p.ProductImages) -> Không kéo ảnh phụ ra làm gì cho nặng
                 .Include(p => p.ProductVariants)
                 .Where(p => p.Name.Contains(keyword))
                 .Select(p => new ProductDto
@@ -578,16 +578,17 @@ namespace BE.Controllers
                     Stock = p.Stock,
                     CategoryId = p.CategoryId,
                     CategoryName = p.Category.Name,
-                    ImageUrl = p.ImageUrl,
+                    ImageUrl = p.ImageUrl, // Chỉ lấy đúng 1 ảnh bìa này là đủ hiển thị card
                     CreatedAt = p.CreatedAt,
-                    AdditionalImages = p.ProductImages.Select(pi => pi.ImageUrl).ToList(),
+                    
+                    // ĐÃ XÓA: AdditionalImages = p.ProductImages...
 
                     Variants = p.ProductVariants.Select(v => new ProductVariantDto
                     {
                         Id = v.Id, VariantName = v.VariantName, Color = v.Color,
                         Price = v.Price, Stock = v.Stock, ImageUrl = v.ImageUrl,
-                        Discount = v.Discount, // THÊM
-                        PriceAfterDiscount = Math.Round(v.Price * (1 - (decimal)(v.Discount ?? p.Discount ?? 0) / 100), 0) // CÔNG THỨC MỚI
+                        Discount = v.Discount,
+                        PriceAfterDiscount = Math.Round(v.Price * (1 - (decimal)(v.Discount ?? p.Discount ?? 0) / 100), 0)
                     }).ToList(),
 
                     SoldCount = p.OrderDetails.Where(od => od.Order != null && od.Order.Status == "Completed").Sum(od => (int?)od.Quantity) ?? 0,

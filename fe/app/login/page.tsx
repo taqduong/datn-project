@@ -71,9 +71,14 @@ export default function LoginPage() {
 
       setSuccess(true)
 
+      // KIỂM TRA QUYỀN ĐỂ ĐIỀU HƯỚNG
+      // Lấy role từ object user trả về, chuyển về chữ thường để check cho chuẩn
+      const userRole = (user?.role || user?.Role || '').toLowerCase();
+      const redirectUrl = (userRole === 'admin' || userRole === 'nhanvien') ? '/admin' : '/';
+
       setTimeout(() => {
         window.dispatchEvent(new Event('storage'))
-        router.push('/')
+        router.push(redirectUrl) // Chuyển hướng linh hoạt theo quyền
       }, 1500)
 
     } catch (error: any) {

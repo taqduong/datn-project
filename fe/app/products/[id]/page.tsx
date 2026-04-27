@@ -182,14 +182,14 @@ export default function ProductDetailPage() {
   }, [id]);
 
   // Tự động chọn màu đầu tiên khi load sản phẩm
-  // useEffect(() => {
-  //   if (product?.variants && product.variants.length > 0) {
-  //     const colors = product.variants.map((v: any) => v.color).filter(Boolean);
-  //     if (colors.length > 0 && !selectedColor) {
-  //       setSelectedColor(colors[0]); 
-  //     }
-  //   }
-  // }, [product]);
+  useEffect(() => {
+    if (product?.variants && product.variants.length > 0) {
+      const colors = product.variants.map((v: any) => v.color).filter(Boolean);
+      if (colors.length > 0 && !selectedColor) {
+        setSelectedColor(colors[0]); 
+      }
+    }
+  }, [product]);
 
   const formatVND = (value: number) =>
     new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(value || 0);

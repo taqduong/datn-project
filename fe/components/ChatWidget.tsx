@@ -134,7 +134,7 @@ export default function ChatWidget() {
   };
 
   // NẾU CHƯA ĐĂNG NHẬP HOẶC LÀ ADMIN/NHÂN VIÊN -> ẨN LUÔN BONG BÓNG
-  if (!currentUser || currentUser.role === "admin" || currentUser.role === "Admin" || currentUser.role === "nhanvien") return null;
+  if (!currentUser || currentUser.role === "admin" || currentUser.role === "nhanvien") return null;
 
   return (
     <div className={`fixed bottom-[90px] right-5 flex flex-col items-end ${isOpen ? "z-[60]" : "z-50"}`}>
