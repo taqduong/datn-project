@@ -389,6 +389,16 @@ namespace BE.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
+            // =========================================================
+            // CHỐT CHẶN: KIỂM TRA XEM SẢN PHẨM CÓ NẰM TRONG ĐƠN HÀNG NÀO CHƯA?
+            // =========================================================
+            bool isProductInOrder = await _context.OrderDetails.AnyAsync(od => od.ProductId == id);
+            if (isProductInOrder)
+            {
+                return BadRequest(new { message = "Không thể xóa! Sản phẩm này đã tồn tại trong lịch sử mua hàng của khách." });
+            }
+
+            // Nếu an toàn (chưa ai mua) thì cho phép xóa tiếp
             var product = await _context.Products
                 .Include(p => p.ProductImages)
                 .Include(p => p.ProductVariants)
@@ -440,16 +450,15 @@ namespace BE.Controllers
             if (wishlists.Any()) _context.Wishlists.RemoveRange(wishlists);
 
             // ==========================================
-            // 5. TRẢM NỐT CÁC BẢNG: ĐÁNH GIÁ, ĐƠN HÀNG, THỐNG KÊ
+            // 5. TRẢM NỐT CÁC BẢNG: ĐÁNH GIÁ, THỐNG KÊ
             // ==========================================
             var reviews = await _context.Reviews.Where(r => r.ProductId == id).ToListAsync();
             if (reviews.Any()) _context.Reviews.RemoveRange(reviews);
 
-            var orderDetails = await _context.OrderDetails.Where(od => od.ProductId == id).ToListAsync();
-            if (orderDetails.Any()) _context.OrderDetails.RemoveRange(orderDetails);
-
             var analytics = await _context.ProductAnalytics.FirstOrDefaultAsync(a => a.ProductId == id);
             if (analytics != null) _context.ProductAnalytics.Remove(analytics);
+
+            // Bỏ cái OrderDetails đi vì đã chặn ở ngay đầu rồi, không cần dọn nữa
 
             // 6. Cuối cùng mới xóa Data Product trong DB
             _context.Products.Remove(product);

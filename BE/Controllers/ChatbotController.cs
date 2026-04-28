@@ -37,7 +37,7 @@ namespace BE.Controllers
                 if (string.IsNullOrWhiteSpace(apiKey)) return StatusCode(500, new { success = false, answer = "Chưa cấu hình API Key." });
 
                 var model = _configuration["GeminiAI:Model"]?.Trim();
-                if (string.IsNullOrWhiteSpace(model)) model = "gemini-2.5-flash";
+                if (string.IsNullOrWhiteSpace(model)) model = "gemini-1.5-flash"; // Fix chuẩn model
 
                 var keyword = request.question.Trim().ToLower();
 
@@ -52,7 +52,6 @@ namespace BE.Controllers
                     if (int.TryParse(claimId, out int parsedId)) secureUserId = parsedId;
                 }
                 
-                // Hỗ trợ cả trường hợp ID truyền từ FE (phòng hờ token có vấn đề)
                 if (secureUserId == null && request.userId.HasValue) secureUserId = request.userId;
 
                 if (secureUserId == null && IsPurchaseIntent(request.question))
@@ -68,7 +67,6 @@ namespace BE.Controllers
                 
                 if (isAskingAboutOrder && secureUserId.HasValue)
                 {
-                    // Lấy 3 đơn hàng gần nhất
                     var recentOrders = await _context.Orders
                         .Where(o => o.UserId == secureUserId.Value)
                         .OrderByDescending(o => o.OrderDate)
@@ -94,7 +92,6 @@ namespace BE.Controllers
 
                 if (isAskingForRecommendation && secureUserId.HasValue)
                 {
-                    // 1. Gom điểm sở thích (như trang Chủ)
                     var userPreferences = await _context.UserActivities
                         .Where(x => x.UserId == secureUserId.Value)
                         .GroupBy(x => x.ProductId)
@@ -128,11 +125,9 @@ namespace BE.Controllers
                 var productsQuery = _context.Products.Include(p => p.ProductVariants).AsQueryable();
                 List<Product> products = new List<Product>();
                 
-                // Nếu là yêu cầu gợi ý và AI có kết quả
                 if (aiRecommendedIds.Any())
                 {
                     products = await productsQuery.Where(p => aiRecommendedIds.Contains(p.Id)).ToListAsync();
-                    // Xếp lại đúng thứ tự AI chỉ định và loại bỏ cảnh báo null
                     products = aiRecommendedIds
                         .Select(id => products.FirstOrDefault(p => p.Id == id))
                         .Where(p => p != null)
@@ -183,7 +178,7 @@ namespace BE.Controllers
                 }
 
                 // =================================================================================
-                //  TẠO NGỮ CẢNH SẢN PHẨM & TÍNH GIÁ CHUẨN XÁC THEO GIẢM GIÁ TỪNG BIẾN THỂ
+                //  TẠO NGỮ CẢNH SẢN PHẨM & TÍNH GIÁ CHUẨN XÁC
                 // =================================================================================
                 var productLines = products.Select(p =>
                 {
@@ -229,7 +224,6 @@ namespace BE.Controllers
                     {
                         var discountedPrices = p.ProductVariants!.Select(v => 
                         {
-                            // THÊM p.Discount VÀO ĐÂY NỮA
                             decimal vDiscount = (decimal)(v.Discount ?? p.Discount ?? 0);
                             return Math.Round((decimal)v.Price * (1 - vDiscount / 100m), 0);
                         }).ToList();
@@ -256,21 +250,52 @@ namespace BE.Controllers
                 }).ToList();
 
                 // ==========================================
-                // TẠO PROMPT GỬI GEMINI VÀ LẤY VOUCHER TỪ DB
+                // TẠO PROMPT GỬI AI 
                 // ==========================================
                 var currentUser = secureUserId.HasValue ? await _context.Users.FindAsync(secureUserId.Value) : null;
                 string userInfoContext = currentUser != null
                     ? $"KHÁCH HÀNG ĐANG CHAT: Tên: '{currentUser.FullName}', SĐT: '{currentUser.Phone}', Email: '{currentUser.Email}'. Khi khách muốn đặt hàng, HÃY CHỦ ĐỘNG hỏi xem khách có muốn dùng Tên, SĐT và Email này để nhận thông báo đơn hàng không, hay muốn dùng thông tin khác."
                     : "TÌNH TRẠNG: KHÁCH CHƯA ĐĂNG NHẬP. NẾU KHÁCH CÓ BẤT KỲ Ý ĐỊNH MUA HOẶC ĐẶT HÀNG NÀO, BẮT BUỘC TRẢ LỜI ĐÚNG CÂU NÀY: 'Dạ, để HomeMart có thể lên đơn, bạn vui lòng Đăng nhập tài khoản ở góc trên màn hình nhé!'. TUYỆT ĐỐI KHÔNG TẠO MÃ ORDER_INFO NẾU CHƯA ĐĂNG NHẬP.";
 
+                // ==========================================
+                // LẤY DANH SÁCH MÃ GIẢM GIÁ (ĐÃ LỌC KỸ LƯỢT DÙNG CÁ NHÂN)
+                // ==========================================
                 var activeVouchers = await _context.Vouchers
-                .Where(v => v.IsActive && !v.IsHidden && v.StartDate <= DateTime.Now && v.ExpiryDate > DateTime.Now && v.UsedCount < v.UsageLimit)
-                .ToListAsync();
+                    .Where(v => v.IsActive && !v.IsHidden && v.StartDate <= DateTime.Now && v.ExpiryDate > DateTime.Now && v.UsedCount < v.UsageLimit)
+                    .ToListAsync();
 
-                string couponContext = "MÃ ƯU ĐÃI ĐANG CÓ SẴN: Hiện tại shop không có mã ưu đãi nào.";
-                if (activeVouchers.Any())
+                var validVouchersForUser = new List<Voucher>();
+                
+                foreach (var v in activeVouchers)
                 {
-                    var voucherLines = activeVouchers.Select(v => {
+                    // Kiểm tra xem khách này đã dùng hết lượt cá nhân chưa
+                    if (secureUserId.HasValue && v.MaxUsagePerUser > 0)
+                    {
+                        DateTime startTime = DateTime.MinValue;
+                        if (v.ResetInterval == "10s") startTime = DateTime.Now.AddSeconds(-10);
+                        else if (v.ResetInterval == "Hourly") startTime = DateTime.Now.AddHours(-1);
+                        else if (v.ResetInterval == "Daily") startTime = DateTime.Today;
+
+                        var userUsedCount = await _context.Orders
+                            .Where(o => o.UserId == secureUserId.Value 
+                                     && o.AppliedVoucherCode != null 
+                                     && o.AppliedVoucherCode.ToUpper().Contains(v.Code.ToUpper()) 
+                                     && o.Status != "Cancelled"
+                                     && o.OrderDate >= startTime)
+                            .CountAsync();
+
+                        if (userUsedCount >= v.MaxUsagePerUser)
+                        {
+                            continue; // BỎ QUA MÃ NÀY! Không mớm cho AI nữa vì sếp xài hết rồi
+                        }
+                    }
+                    validVouchersForUser.Add(v);
+                }
+
+                string couponContext = "MÃ ƯU ĐÃI ĐANG CÓ SẴN: Hiện tại shop không có mã ưu đãi nào (có thể khách đã dùng hết lượt). TUYỆT ĐỐI KHÔNG MỜI CHÀO MÃ.";
+                if (validVouchersForUser.Any())
+                {
+                    var voucherLines = validVouchersForUser.Select(v => {
                         string desc = v.IsFreeship ? "Miễn phí vận chuyển" :
                                       v.DiscountValue.HasValue ? $"Giảm {v.DiscountValue.Value:N0}đ" :
                                       v.DiscountPercent.HasValue ? $"Giảm {v.DiscountPercent.Value * 100}% (tối đa {v.MaxDiscountAmount ?? 0:N0}đ)" : 
@@ -297,31 +322,34 @@ Danh sách sản phẩm hiện có trong shop:
 
 {orderContext}
 
-QUY TẮC TƯ VẤN & CHỐT SALE:
-- NẾU KHÁCH HỎI VỀ ĐƠN HÀNG: Dùng thông tin 'THÔNG TIN ĐƠN HÀNG CỦA KHÁCH' để trả lời.
-- Khi khách hỏi về HÀNG HÓA: CHỈ tư vấn dựa trên danh sách sản phẩm ở trên. Tuyệt đối không bịa thêm sản phẩm.
-- NẾU SẢN PHẨM CÓ PHÂN LOẠI: BẮT BUỘC liệt kê các phân loại đang có để khách chọn.
-- KỸ NĂNG CHỐT SALE (RẤT QUAN TRỌNG): Sau khi giới thiệu sản phẩm xong, TUYỆT ĐỐI KHÔNG được im lặng. BẮT BUỘC phải đặt câu hỏi mồi để giục khách mua hàng. (Ví dụ: 'Bạn ưng màu nào để shop lên đơn ạ?', 'Bạn có muốn chốt luôn mã này để shop báo kho đóng gói không ạ?').
+QUY TẮC TƯ VẤN VÀ LÊN ĐƠN HÀNG (CHIA LÀM 2 BƯỚC RÕ RÀNG):
 
-QUY TẮC TỰ ĐỘNG LÊN ĐƠN HÀNG (QUAN TRỌNG NHẤT):
-Khi khách hàng ngỏ ý muốn mua/đặt hàng, bạn PHẢI thu thập ĐỦ 7 thông tin sau:
-1. Sản phẩm (và Phân loại nếu có)
-2. Số lượng
-3. Địa chỉ nhận hàng (Tuyệt đối KHÔNG tự bịa địa chỉ. Nếu khách chưa cho địa chỉ cụ thể thì BẮT BUỘC phải hỏi khách).
-4. Tên người nhận (Phải hỏi xác nhận có dùng tên '{currentUser?.FullName}' không hay đổi tên khác)
-5. Số điện thoại (Phải hỏi xác nhận có dùng SĐT '{currentUser?.Phone}' không hay đổi số khác)
-6. Email nhận thông báo (Phải hỏi xác nhận có dùng Email '{currentUser?.Email}' không hay dùng Email khác)
-7. Mã giảm giá (BẮT BUỘC liệt kê ĐẦY ĐỦ TẤT CẢ các mã ưu đãi đang có trong danh sách để khách biết. ĐẶC BIỆT: Nếu khách chủ động cung cấp một mã ưu đãi bất kỳ, BẠN PHẢI CHẤP NHẬN MÃ ĐÓ và điền vào JSON, tuyệt đối không từ chối dù mã đó không có trong danh sách của bạn. QUAN TRỌNG: Khách ĐƯỢC PHÉP áp dụng cùng lúc 2 mã là 1 mã Miễn phí vận chuyển và 1 mã Giảm tiền. Nếu khách dùng 2 mã, hãy nối chúng bằng dấu phẩy. Nếu không dùng thì để trống).
-KHI ĐÃ ĐỦ 7 THÔNG TIN VÀ KHÁCH CHỐT MUA: 
-Bạn BẮT BUỘC phải tạo hệ thống lên đơn bằng cách chèn ĐÚNG CÚ PHÁP SAU ở dòng cuối cùng của câu trả lời. TUYỆT ĐỐI KHÔNG bọc bằng thẻ Markdown (không dùng ```json). CHỈ TRẢ VỀ ĐÚNG NHƯ SAU:
+BƯỚC 1: THU THẬP VÀ XÁC NHẬN THÔNG TIN (CHỈ CHAT, TUYỆT ĐỐI KHÔNG LÊN ĐƠN)
+Khi khách có ý định mua hàng, bạn cần chốt đủ thông tin: Sản phẩm, Phân loại, Số lượng, Tên, SĐT, Địa chỉ, Mã giảm giá.
+- NẾU KHÁCH ĐÃ CHỦ ĐỘNG ĐƯA THÔNG TIN (Tên, SĐT, Email, Địa chỉ): TUYỆT ĐỐI KHÔNG HỎI LẠI XÁC NHẬN NỮA. Hãy khen khách cẩn thận.
+- XỬ LÝ MÃ GIẢM GIÁ:
+  + Nếu danh sách MÃ ƯU ĐÃI ĐANG CÓ SẴN có liệt kê mã: BẮT BUỘC phải giới thiệu cho khách và hỏi: ""Bạn có muốn áp dụng mã nào vào đơn luôn không ạ?"".
+  + Nếu danh sách báo ""không có mã ưu đãi nào"": TUYỆT ĐỐI KHÔNG nhắc đến từ ""mã giảm giá"", ""mã ưu đãi"" hay hỏi khách về mã giảm giá nữa. Coi như shop không có chương trình khuyến mãi.
+- NẾU THIẾU PHÂN LOẠI (MÀU/SIZE) HOẶC SỐ LƯỢNG: BẮT BUỘC phải yêu cầu khách chọn.
+- Nếu khách chưa cung cấp thông tin cá nhân: Hãy hỏi xem khách có muốn dùng Tên: '{currentUser?.FullName}', SĐT: '{currentUser?.Phone}', Email: '{currentUser?.Email}' không và yêu cầu khách cung cấp địa chỉ giao hàng cụ thể.
+=> Ở BƯỚC NÀY: Tuyệt đối CHỈ ĐƯỢC CHAT HỎI/ĐÁP. CẤM SỬ DỤNG CÚ PHÁP [ORDER_INFO].
+
+BƯỚC 2: CHỐT ĐƠN (CHỈ LÀM KHI ĐÃ ĐỦ THÔNG TIN VÀ XỬ LÝ XONG VỤ MÃ GIẢM GIÁ)
+CHỈ KHI NÀO khách đã cung cấp ĐỦ thông tin nhận hàng VÀ đã chốt xong vụ mã giảm giá (chọn mã, hoặc shop không có mã), bạn mới được phép lên đơn:
+1. Bạn trả lời 1 câu ngắn gọn: ""Dạ vâng, shop đã nhận đủ thông tin. Hệ thống đang tiến hành lên đơn cho bạn ạ!""
+2. BẮT BUỘC chèn ĐÚNG CÚ PHÁP SAU ở dòng cuối cùng (Tuyệt đối KHÔNG bọc bằng thẻ Markdown ```json):
 [ORDER_INFO: {{ ""productId"": <ID_SẢN_PHẨM>, ""variantName"": ""<TÊN_PHÂN_LOẠI>"", ""quantity"": <SỐ_LƯỢNG>, ""address"": ""<ĐỊA_CHỈ_KHÁCH_CUNG_CẤP>"", ""fullName"": ""<TÊN_NGƯỜI_NHẬN>"", ""phone"": ""<SỐ_ĐIỆN_THOẠI>"", ""email"": ""<EMAIL_NHẬN_THÔNG_BÁO>"", ""couponCode"": ""<MÃ_GIẢM_GIÁ_NẾU_CÓ>"" }}]
 
-(Lưu ý: Thay thế các giá trị trong ngoặc <> bằng thông tin thực tế khách đã chốt. Nếu sản phẩm không có phân loại hoặc khách không dùng mã giảm giá, hãy để rỗng phần đó, ví dụ: ""variantName"": """", ""couponCode"": """").
+(Lưu ý: Khách ĐƯỢC PHÉP áp dụng cùng lúc 2 mã là 1 mã Miễn phí vận chuyển và 1 mã Giảm tiền. Nếu khách dùng 2 mã, hãy nối chúng bằng dấu phẩy. Thay thế các giá trị trong ngoặc <> bằng thông tin thực tế khách đã chốt. Nếu sản phẩm không có phân loại hoặc khách không dùng mã giảm giá, hãy để rỗng phần đó, ví dụ: ""variantName"": """", ""couponCode"": """").
 ".Trim();
 
-                // GỌI API GEMINI
+                // ==========================================
+                // 1. GỌI API GEMINI (KÉP CHÍNH)
+                // ==========================================
+                string aiText = "";
                 var url = $"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={apiKey}";
                 var contentsList = new List<object>();
+                
                 if (request.history != null && request.history.Any())
                 {
                     foreach (var msg in request.history)
@@ -333,13 +361,100 @@ Bạn BẮT BUỘC phải tạo hệ thống lên đơn bằng cách chèn ĐÚN
 
                 var payload = new { contents = contentsList };
                 var content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
-                var response = await _httpClient.PostAsync(url, content);
-                var responseString = await response.Content.ReadAsStringAsync();
 
-                if (!response.IsSuccessStatusCode) return Ok(new { success = false, answer = $"Lỗi từ dịch vụ AI: {responseString}" });
+                try
+                {
+                    using var ctsGemini = new CancellationTokenSource(TimeSpan.FromSeconds(12));
+                    var response = await _httpClient.PostAsync(url, content, ctsGemini.Token);
+                    
+                    if (response.IsSuccessStatusCode)
+                    {
+                        var responseString = await response.Content.ReadAsStringAsync();
+                        aiText = ExtractGeminiText(responseString);
+                    }
+                    else 
+                    {
+                        var errorBody = await response.Content.ReadAsStringAsync();
+                        Console.WriteLine("\n❌ LỖI TỪ GEMINI: " + errorBody + "\n");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("\n❌ LỖI MẠNG TỪ GEMINI: " + ex.Message + "\n");
+                }
 
-                string aiText = ExtractGeminiText(responseString);
-                if (string.IsNullOrWhiteSpace(aiText)) return Ok(new { success = false, answer = "Hệ thống AI không phản hồi nội dung." });
+                // ==========================================
+                // 2. FALLBACK SANG GROQ (LỐP DỰ PHÒNG)
+                // ==========================================
+                if (string.IsNullOrWhiteSpace(aiText))
+                {
+                    try
+                    {
+                        var groqApiKey = _configuration["Groq:ApiKey"]?.Trim();
+                        Console.WriteLine("\n=== MẬT THÁM BÁO CÁO: KEY GROQ ĐANG LÀ: " + (string.IsNullOrWhiteSpace(groqApiKey) ? "TRẮNG BÓC (LỖI)" : "ĐÃ CÓ KEY NHA") + " ===\n");
+
+                        if (!string.IsNullOrWhiteSpace(groqApiKey))
+                        {
+                            var groqUrl = "https://api.groq.com/openai/v1/chat/completions";
+                            
+                            var groqMessages = new List<object>();
+                            if (request.history != null && request.history.Any())
+                            {
+                                foreach (var msg in request.history)
+                                {
+                                    groqMessages.Add(new { role = msg.sender == "bot" ? "assistant" : "user", content = msg.text });
+                                }
+                            }
+                            
+                            groqMessages.Add(new { role = "user", content = prompt + "\n[LƯU Ý CHO AI: Trả lời ngắn gọn, tự nhiên như nhân viên bán hàng.]" });
+
+                            var groqPayload = new
+                            {
+                                model = "llama-3.3-70b-versatile",
+                                messages = groqMessages
+                            };
+
+                            var groqRequest = new HttpRequestMessage(HttpMethod.Post, groqUrl);
+                            groqRequest.Headers.Add("Authorization", $"Bearer {groqApiKey}");
+                            groqRequest.Content = new StringContent(JsonSerializer.Serialize(groqPayload), Encoding.UTF8, "application/json");
+
+                            using var ctsGroq = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                            var groqRes = await _httpClient.SendAsync(groqRequest, ctsGroq.Token);
+
+                            if (groqRes.IsSuccessStatusCode)
+                            {
+                                var groqStr = await groqRes.Content.ReadAsStringAsync();
+                                using var doc = JsonDocument.Parse(groqStr);
+                                aiText = doc.RootElement
+                                    .GetProperty("choices")[0]
+                                    .GetProperty("message")
+                                    .GetProperty("content")
+                                    .GetString() ?? "";
+                            }
+                            else 
+                            {
+                                var errorBody = await groqRes.Content.ReadAsStringAsync();
+                                Console.WriteLine("\n❌ LỖI TỪ GROQ: " + errorBody + "\n");
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine("\n❌ LỖI MẠNG TỪ GROQ: " + ex.Message + "\n");
+                    }
+                }
+
+                // ==========================================
+                // 3. CHỐT CHẶN CUỐI CÙNG (CẢ 2 CÙNG SẬP)
+                // ==========================================
+                if (string.IsNullOrWhiteSpace(aiText))
+                {
+                    return Ok(new { 
+                        success = true, 
+                        answer = "Dạ, hiện tại tổng đài AI tư vấn đang quá tải đôi chút. Để đặt hàng nhanh nhất, anh/chị có thể tự chọn sản phẩm trên trang chủ giúp em nhé ạ!",
+                        suggestions = suggestions 
+                    });
+                }
 
                 // ==========================================
                 // XỬ LÝ LÊN ĐƠN HÀNG [ORDER_INFO] 
@@ -350,12 +465,10 @@ Bạn BẮT BUỘC phải tạo hệ thống lên đơn bằng cách chèn ĐÚN
                     var jsonString = orderMatch.Groups[1].Value;
                     aiText = aiText.Replace(orderMatch.Value, "").Trim();
 
-                    // VÁ LỖI 1: Xóa bỏ các thẻ Markdown do AI tự ý vẽ thêm
                     jsonString = jsonString.Replace("```json", "").Replace("```", "").Trim();
 
                     try
                     {
-                        // VÁ LỖI 2: Dạy C# đọc JSON "dễ dãi" hơn
                         var jsonOptions = new JsonSerializerOptions
                         {
                             PropertyNameCaseInsensitive = true,
@@ -372,10 +485,8 @@ Bạn BẮT BUỘC phải tạo hệ thống lên đơn bằng cách chèn ĐÚN
                                 int? targetVariantId = null;
                                 int availableStock = product.Stock;
                                 
-                                // ĐÃ ÉP KIỂU TẠI ĐÂY THÀNH DECIMAL
                                 decimal finalPrice = (decimal)product.Price;
 
-                                //  TÍNH TIỀN THEO PHÂN LOẠI
                                 if (product.ProductVariants != null && product.ProductVariants.Any())
                                 {
                                     if (string.IsNullOrWhiteSpace(orderData.variantName))
@@ -394,13 +505,11 @@ Bạn BẮT BUỘC phải tạo hệ thống lên đơn bằng cách chèn ĐÚN
                                     targetVariantId = variant.Id;
                                     availableStock = variant.Stock;
                                     
-                                    // THÊM product.Discount VÀO ĐÂY ĐỂ LÊN ĐƠN KHÔNG BỊ SAI TIỀN
                                     decimal vDiscount = (decimal)(variant.Discount ?? product.Discount ?? 0);
                                     finalPrice = Math.Round((decimal)variant.Price * (1 - vDiscount / 100m), 0);
                                 }
                                 else
                                 {
-                                    // ĐÃ ÉP KIỂU TẠI ĐÂY THÀNH DECIMAL
                                     decimal pDiscount = (decimal)(product.Discount ?? 0);
                                     finalPrice = Math.Round((decimal)product.Price * (1 - pDiscount / 100m), 0);
                                 }
@@ -409,7 +518,6 @@ Bạn BẮT BUỘC phải tạo hệ thống lên đơn bằng cách chèn ĐÚN
                                 {
                                     var fallbackUser = await _context.Users.FindAsync(secureUserId.Value);
 
-                                    // --- BẮT ĐẦU XỬ LÝ VOUCHER & TÍNH TIỀN ---
                                     decimal subTotal = finalPrice * orderData.quantity;
                                     decimal shippingFee = 30000;
                                     decimal discountAmount = 0;
@@ -419,17 +527,15 @@ Bạn BẮT BUỘC phải tạo hệ thống lên đơn bằng cách chèn ĐÚN
                                     bool hasAppliedFreeship = false;
                                     bool hasAppliedDiscount = false;
 
-                                    var inputCodes = orderData.couponCode.Split(new[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries); 
+                                    var inputCodes = orderData.couponCode?.Split(new[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries) ?? Array.Empty<string>(); 
 
                                     foreach (var code in inputCodes)
                                     {
-                                        // 1. Lấy mã ra kiểm tra IsActive trước
                                         var validVoucher = await _context.Vouchers.FirstOrDefaultAsync(v => 
                                             v.Code.ToLower() == code.ToLower() && v.IsActive);
 
                                         if (validVoucher != null)
                                         {
-                                            // 2. Kiểm tra thời gian và số lượng
                                             if (validVoucher.StartDate > DateTime.Now) {
                                                 appliedCouponMessage += $"\n[Lưu ý] Mã '{code}' chưa mở. Vui lòng quay lại lúc {validVoucher.StartDate:HH:mm dd/MM} nhé!";
                                                 continue;
@@ -443,7 +549,6 @@ Bạn BẮT BUỘC phải tạo hệ thống lên đơn bằng cách chèn ĐÚN
                                                 continue;
                                             }
 
-                                            // 3. KIỂM TRA THỜI GIAN HỒI MÃ (RESET INTERVAL)
                                             if (validVoucher.MaxUsagePerUser > 0)
                                             {
                                                 DateTime startTime = DateTime.MinValue;
@@ -468,11 +573,10 @@ Bạn BẮT BUỘC phải tạo hệ thống lên đơn bằng cách chèn ĐÚN
                                                         _ => $"Bạn đã dùng tối đa {validVoucher.MaxUsagePerUser} lần."
                                                     };
                                                     appliedCouponMessage += $"\n[Lưu ý] Mã '{code}' không áp dụng được: {intervalMsg}";
-                                                    continue; // Dừng, không cho áp mã này nữa
+                                                    continue; 
                                                 }
                                             }
 
-                                            // 4. KIỂM TRA CHỐNG TRÙNG LỌC VÀ TRỪ TIỀN (Giữ nguyên logic cũ của sếp)
                                             if (validVoucher.IsFreeship && hasAppliedFreeship)
                                             {
                                                 appliedCouponMessage += $"\n[Lưu ý] Bỏ qua mã '{code}' vì bạn đã áp dụng 1 mã Miễn phí vận chuyển rồi.";
@@ -521,7 +625,7 @@ Bạn BẮT BUỘC phải tạo hệ thống lên đơn bằng cách chèn ĐÚN
                                     string? finalAppliedVoucherCode = appliedVoucherCodes.Any() ? string.Join(", ", appliedVoucherCodes) : null;
 
                                     decimal totalAmount = subTotal + shippingFee - discountAmount;
-                                    if (totalAmount < 0) totalAmount = 0; // Chống âm tiền
+                                    if (totalAmount < 0) totalAmount = 0; 
                                     
                                     using var transaction = await _context.Database.BeginTransactionAsync();
                                     try
@@ -577,7 +681,6 @@ Bạn BẮT BUỘC phải tạo hệ thống lên đơn bằng cách chèn ĐÚN
                     }
                     catch (Exception ex)
                     {
-                        // VÁ LỖI 3: Bắn lỗi ra màn hình nếu JSON bị vỡ
                         aiText += $"\n\n[Lỗi hệ thống] Không thể lên đơn, do AI phản hồi sai định dạng dữ liệu: {ex.Message}";
                     }
                 }

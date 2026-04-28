@@ -353,15 +353,23 @@ export default function ProductPage() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!window.confirm("Bạn có chắc chắn muốn xóa sản phẩm này?")) return;
+    if (!window.confirm("Bạn có chắc chắn muốn xóa sản phẩm này? Nó sẽ không thể khôi phục!")) return;
 
     try {
       await deleteProduct(id);
       setProducts((prev) => prev.filter((p) => p.id !== id));
       toast.success("Xóa sản phẩm thành công");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Lỗi khi xóa sản phẩm:", error);
-      toast.error("Có lỗi xảy ra khi xóa sản phẩm");
+      // Hứng chính xác lỗi từ Backend đẩy lên
+      const errorMessage = error.response?.data?.message || error.response?.data;
+      
+      if (typeof errorMessage === "string") {
+        toast.error(errorMessage);
+      } else {
+        // Lỗi dự phòng nếu Backend sập hoặc dính lỗi khóa ngoại (Foreign Key)
+        toast.error("Không thể xóa! Sản phẩm này có thể đã nằm trong đơn hàng của khách.");
+      }
     }
   };
 
