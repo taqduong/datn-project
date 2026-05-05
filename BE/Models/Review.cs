@@ -30,8 +30,6 @@ namespace BE.Models
 
         public DateTime CreatedAt { get; set; } = DateTime.Now; // Tự động lấy giờ hiện tại
 
-        public DateTime? UpdatedAt { get; set; }
-
         public bool IsVerifiedPurchase { get; set; } // Tick xanh "Đã mua hàng"
 
         [Required]
