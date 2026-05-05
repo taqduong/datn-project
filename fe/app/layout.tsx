@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "react-hot-toast";
-import "./globals.css";
+import "./globals.css"
 
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import ChatBox from "@/components/ChatBox";
 import ChatWidget from "@/components/ChatWidget";
+import AuthGuard from "@/components/AuthGuard"; 
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -33,18 +34,21 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-50 text-slate-900`}
       >
-        <Toaster position="top-right" />
-        <div className="min-h-screen flex flex-col">
-          <Navbar />
+        <AuthGuard > 
+        
+          <Toaster position="top-right" />
+          <div className="min-h-screen flex flex-col">
+            <Navbar />
 
-          <main className="flex-1">
-            {children}
-          </main>
+            <main className="flex-1">
+              {children}
+            </main>
 
-          <Footer />
-          <ChatBox />
-          <ChatWidget />
-        </div>
+            <Footer />
+            <ChatBox />
+            <ChatWidget />
+          </div>
+        </AuthGuard>
       </body>
     </html>
   );

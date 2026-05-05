@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { Search, ShoppingCart, User, Menu, Heart, X, LogOut, LayoutDashboard, Store, Clock } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation"; // THÊM: usePathname
 import { searchProducts, fetchCart, fetchWishlist, getSearchHistoryApi, updateSearchHistoryApi } from "@/services/api";
+
 type UserType = {
   id?: number | string;
   username?: string;
@@ -18,6 +19,7 @@ type CartItem = {
 
 export default function Navbar() {
   const router = useRouter();
+  const pathname = usePathname(); // Lấy đường dẫn hiện tại
   const searchRef = useRef<HTMLDivElement>(null); // Để ẩn lịch sử khi click ra ngoài
 
   const [mounted, setMounted] = useState(false);
@@ -197,6 +199,9 @@ export default function Navbar() {
   };
 
   if (!mounted) return null;
+
+  // MỚI THÊM: Ẩn Navbar nếu đang ở trong khu vực Quản trị
+  if (pathname?.startsWith("/admin")) return null;
 
   const displayName = user?.fullName || user?.username || "Người dùng";
 

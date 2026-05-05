@@ -8,16 +8,16 @@ import {
   ShoppingBag,
   FolderTree,
   Users,
-  Settings,
   ChevronLeft,
   ChevronRight,
   ChartArea,
-  Home,
   Ticket,
   MessageSquare,
-  MessageCircle
+  MessageCircle,
+  LogOut,
+  UserCircle // 
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 
 type MenuItem = {
   href: string;
@@ -30,6 +30,25 @@ type MenuItem = {
 export default function Sidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+  const [displayName, setDisplayName] = useState<string>("Admin");
+
+  //  Lấy tên người dùng từ LocalStorage
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      const parsedUser = JSON.parse(storedUser);
+      setDisplayName(parsedUser.fullName || parsedUser.username || "Admin");
+    }
+  }, []);
+
+  //  Hàm xử lý Đăng xuất
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    localStorage.removeItem("wishlist"); 
+    localStorage.removeItem("homemart_chat_messages_v2");
+    window.location.href = "/login";
+  };
 
   const menuItems: MenuItem[] = useMemo(
     () => [
@@ -220,41 +239,49 @@ export default function Sidebar() {
         </nav>
       </div>
 
+      {/* MỚI THÊM: Khu vực Đăng xuất & Thông tin người dùng ở dưới cùng */}
       <div className="border-t border-slate-100 p-4">
         {!collapsed ? (
-          <div className="space-y-3">
-            <Link
-              href="/"
-              className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
-            >
-              <Home className="h-5 w-5 text-slate-500" />
-              <span>Về trang người dùng</span>
-            </Link>
+          <div className="flex flex-col gap-3">
+            {/* Box thông tin user */}
+            <div className="flex items-center gap-3 rounded-2xl bg-slate-50 p-3 border border-slate-100">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+                <UserCircle className="h-6 w-6" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-slate-500">Xin chào,</p>
+                <p className="truncate text-sm font-bold text-slate-800">{displayName}</p>
+              </div>
+            </div>
 
+            {/* Nút Đăng xuất đỏ */}
             <button
               type="button"
-              className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
+              onClick={handleLogout}
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-600 transition hover:bg-red-100"
             >
-              <Settings className="h-5 w-5 text-slate-500" />
-              <span>Cài đặt</span>
+              <LogOut className="h-4 w-4" />
+              <span>Đăng xuất</span>
             </button>
           </div>
         ) : (
-          <div className="flex flex-col items-center gap-2">
-            <Link
-              href="/"
-              className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-600 transition hover:bg-slate-100"
-              title="Về trang người dùng"
+          <div className="flex flex-col items-center gap-3">
+            {/* Hiển thị Icon User khi thu gọn */}
+            <div 
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-50 border border-slate-200 text-slate-600"
+              title={displayName}
             >
-              <Home className="h-5 w-5" />
-            </Link>
-
+              <UserCircle className="h-5 w-5" />
+            </div>
+            
+            {/* Hiển thị Icon Đăng xuất khi thu gọn */}
             <button
               type="button"
-              className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
-              title="Cài đặt"
+              onClick={handleLogout}
+              className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-50 text-red-600 transition hover:bg-red-100"
+              title="Đăng xuất"
             >
-              <Settings className="h-5 w-5" />
+              <LogOut className="h-5 w-5" />
             </button>
           </div>
         )}
