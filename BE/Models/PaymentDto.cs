@@ -1,6 +1,6 @@
 namespace BE.Models
 {
-    // Hứng dữ liệu từ Frontend Next.js gửi xuống
+    // Data Transfer Object (DTO) tiếp nhận payload từ Client
     public class PaymentInformationModel
     {
         public int OrderId { get; set; }
@@ -20,6 +20,6 @@ namespace BE.Models
         public string TransactionId { get; set; } = string.Empty;
         public string Token { get; set; } = string.Empty;
         public string VnPayResponseCode { get; set; } = string.Empty;
-        public string PaymentUrl { get; set; } = string.Empty; // Cái link quan trọng nhất ở đây
+        public string PaymentUrl { get; set; } = string.Empty; // Thuộc tính lưu trữ URL của Cổng thanh toán
     }
 }

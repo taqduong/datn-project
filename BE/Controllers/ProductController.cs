@@ -52,7 +52,7 @@ namespace BE.Controllers
                         PriceAfterDiscount = Math.Round(v.Price * (1 - (decimal)(v.Discount ?? p.Discount ?? 0) / 100), 0) // CÔNG THỨC MỚI
                     }).ToList(),
                     
-                    // BƯỚC 2: CÔNG THỨC ĐẾM LƯỢT BÁN
+                    // Bước 2: Thuật toán tổng hợp số lượng sản phẩm đã bán
                     SoldCount = p.OrderDetails
                         .Where(od => od.Order != null && od.Order.Status == "Completed")
                         .Sum(od => (int?)od.Quantity) ?? 0,
@@ -198,7 +198,7 @@ namespace BE.Controllers
             if (!ModelState.IsValid)
                 return ValidationProblem(ModelState);
 
-            // SỬA LỖI 500: Phải Include(p => p.ProductVariants) để EF Core biết đường tracking
+            // Khắc phục lỗi tham chiếu: Sử dụng (Include) để nạp danh sách ProductVariants
             var product = await _context.Products
                 .Include(p => p.ProductImages) 
                 .Include(p => p.ProductVariants) // BỔ SUNG DÒNG NÀY VÀO ĐÂY
@@ -238,7 +238,7 @@ namespace BE.Controllers
                                 : dto.ImageUrl;
 
                 // ==========================================
-                // DỌN RÁC: Xóa ảnh bìa cũ trên ổ cứng
+                // Giải phóng tài nguyên: Thu hồi tệp ảnh bìa cũ khỏi hệ thống vật lý
                 // ==========================================
                 if (!string.IsNullOrEmpty(product.ImageUrl) && product.ImageUrl != newImageUrl)
                 {
@@ -273,7 +273,7 @@ namespace BE.Controllers
             }
 
             // =========================================================
-            // SỬA LỖI 500: LOGIC CẬP NHẬT BIẾN THỂ THÔNG MINH (CÓ DỌN RÁC)
+            // Logic đồng bộ và cập nhật danh sách biến thể (Tích hợp cơ chế thu hồi tệp đính kèm)
             // =========================================================
             if (dto.Variants != null)
             {
@@ -390,7 +390,7 @@ namespace BE.Controllers
         public async Task<IActionResult> Delete(int id)
         {
             // =========================================================
-            // CHỐT CHẶN: KIỂM TRA XEM SẢN PHẨM CÓ NẰM TRONG ĐƠN HÀNG NÀO CHƯA?
+            // Ràng buộc toàn vẹn: Kiểm tra sản phẩm đã phát sinh giao dịch trong đơn hàng hay chưa
             // =========================================================
             bool isProductInOrder = await _context.OrderDetails.AnyAsync(od => od.ProductId == id);
             if (isProductInOrder)
@@ -458,7 +458,7 @@ namespace BE.Controllers
             var analytics = await _context.ProductAnalytics.FirstOrDefaultAsync(a => a.ProductId == id);
             if (analytics != null) _context.ProductAnalytics.Remove(analytics);
 
-            // Bỏ cái OrderDetails đi vì đã chặn ở ngay đầu rồi, không cần dọn nữa
+            // Lược bỏ logic xóa OrderDetails do đã được bảo vệ bởi ràng buộc toàn vẹn phía trên
 
             // 6. Cuối cùng mới xóa Data Product trong DB
             _context.Products.Remove(product);
@@ -735,7 +735,7 @@ namespace BE.Controllers
             var uploadPath = Path.Combine(_env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot"), "uploads", "products");
             if (!Directory.Exists(uploadPath)) Directory.CreateDirectory(uploadPath);
 
-            // 1. NẾU CÓ FILE ZIP -> GIẢI NÉN TOÀN BỘ ẢNH VÀO FOLDER
+            // 1. Xử lý hàng loạt: Giải nén tệp đính kèm ZIP vào thư mục đích
             if (zipFile != null && zipFile.Length > 0)
             {
                 if (Path.GetExtension(zipFile.FileName).ToLower() != ".zip") return BadRequest(new { message = "Chỉ hỗ trợ file ảnh nén .zip." });
@@ -794,7 +794,7 @@ namespace BE.Controllers
                             if (string.IsNullOrWhiteSpace(stockStr)) stockStr = "0";
                             if (string.IsNullOrWhiteSpace(discountStr)) discountStr = "0";
 
-                            // BẮT LỖI ÉP KIỂU: Nếu cố tình nhập chữ (abc, xyz) thì đá văng luôn!
+                            // Xử lý ngoại lệ Parse Type: Loại bỏ các bản ghi có định dạng dữ liệu không hợp lệ
                             if (!decimal.TryParse(priceStr, out decimal basePrice) ||
                                 !int.TryParse(stockStr, out int baseStock) ||
                                 !int.TryParse(discountStr, out int discount))
@@ -818,7 +818,7 @@ namespace BE.Controllers
                                         decimal.TryParse(props[2].Trim(), out decimal vPrice);
                                         int.TryParse(props[3].Trim(), out int vStock);
                                         
-                                        // Nếu ô màu trống (::) thì gán luôn là null cho sạch Database
+                                        // Tiền xử lý dữ liệu: Chuẩn hóa giá trị rỗng thành NULL trước khi lưu vào CSDL
                                         var vColor = string.IsNullOrWhiteSpace(props[1]) ? null : props[1].Trim();
 
                                         // ==========================================

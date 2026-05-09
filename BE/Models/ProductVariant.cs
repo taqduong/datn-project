@@ -12,7 +12,7 @@ namespace BE.Models
         public int ProductId { get; set; }
 
         [StringLength(150)]
-        public string VariantName { get; set; } = string.Empty; // VD: "Trắng - 24cm"
+        public string VariantName { get; set; } = string.Empty; // Ví dụ minh họa: "Màu Trắng - Kích thước 24cm"
 
         [StringLength(100)]
         public string? Color { get; set; } // Mã màu hoặc tên màu nếu cần lọc
@@ -20,10 +20,8 @@ namespace BE.Models
         [Column(TypeName = "decimal(18,2)")]
         public decimal Price { get; set; } // Giá riêng của option này
 
-        // ========================================================
-        // TÍNH NĂNG MỚI: Giảm giá riêng cho từng biến thể
+        // Hỗ trợ cấu hình chiết khấu độc lập cho từng biến thể
         // (Cho phép null: Nếu null -> tự động lấy Discount của sản phẩm gốc)
-        // ========================================================
         public double? Discount { get; set; } 
 
         public int Stock { get; set; } // Tồn kho riêng

@@ -43,7 +43,7 @@ namespace BE.Services
             {
                 if (!string.IsNullOrEmpty(kv.Value))
                 {
-                    // ĐÃ ĐỔI SANG Uri.EscapeDataString CHUẨN VNPAY
+                    // Áp dụng thuật toán Uri.EscapeDataString để mã hóa tham số theo tiêu chuẩn API VNPay
                     data.Append(Uri.EscapeDataString(kv.Key) + "=" + Uri.EscapeDataString(kv.Value) + "&");
                 }
             }

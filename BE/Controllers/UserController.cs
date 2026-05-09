@@ -31,7 +31,7 @@ namespace BE.Controllers
             if (await _context.Users.AnyAsync(u => u.Email == request.Email))
                 return BadRequest(new { message = "Email này đã được sử dụng cho một tài khoản khác." });
 
-            // CHẶN TRÙNG SĐT 
+            // Đảm bảo ràng buộc duy nhất cho trường Số điện thoại
             if (await _context.Users.AnyAsync(u => u.Phone == request.Phone))
                 return BadRequest(new { message = "Số điện thoại này đã được sử dụng cho một tài khoản khác." });
 
@@ -131,7 +131,7 @@ namespace BE.Controllers
             int.TryParse(currentUserIdStr, out int currentUserId);
             var currentUserRole = User.FindFirstValue(ClaimTypes.Role)?.ToLower();
 
-            // ĐÃ FIX: Cho phép nhân viên tự sửa tài khoản của chính mình (thêm điều kiện currentUserId != id)
+            // Xử lý phân quyền: Cho phép người dùng chỉnh sửa thông tin cá nhân của chính họ
             if (currentUserRole == "nhanvien" && user.Role.ToLower() != "nguoimua" && currentUserId != id)
             {
                 return StatusCode(403, new { message = "Lỗi bảo mật: Nhân viên không có quyền chỉnh sửa tài khoản nội bộ của người khác!" });
@@ -156,7 +156,7 @@ namespace BE.Controllers
             user.Gender = request.Gender ?? user.Gender;
             user.Age = request.Age ?? user.Age;
 
-            // LOGIC PHÂN QUYỀN MỚI: Khóa chặn 2 chiều
+            // Cập nhật phân quyền: Áp dụng cơ chế bảo mật khóa tài khoản hai chiều
             if (!string.IsNullOrWhiteSpace(request.Role)) 
             {
                 // 1. Chặn thăng cấp Khách hàng
@@ -194,7 +194,7 @@ namespace BE.Controllers
             }
 
             // ====================================================
-            // THÊM ĐOẠN NÀY: CHẶN NHÂN VIÊN KHÓA ADMIN / NHÂN VIÊN
+            // Phân quyền đặc quyền: Ngăn chặn cấp Nhân viên can thiệp trạng thái tài khoản Quản trị viên
             // ====================================================
             var currentUserRole = User.FindFirstValue(ClaimTypes.Role)?.ToLower();
             if (currentUserRole == "nhanvien" && user.Role.ToLower() != "nguoimua")
@@ -212,7 +212,7 @@ namespace BE.Controllers
         [HttpPost("register")]
         public async Task<IActionResult> Register(CreateUserRequest dto)
         {
-            // THÊM MỚI: Tách riêng báo lỗi Username và báo lỗi Email (dành cho khách hàng)
+            // Kiểm tra tính duy nhất của dữ liệu trước khi đăng ký để trả về thông báo lỗi cụ thể cho khách hàng 
             if (await _context.Users.AnyAsync(u => u.Username == dto.Username))
                 return BadRequest(new { message = "Tên đăng nhập đã tồn tại." });
 
@@ -294,7 +294,7 @@ namespace BE.Controllers
             
             if (user == null)
             {
-                // Báo lỗi thẳng tay để Frontend bắt được và hiển thị Toast đỏ
+                // Trả về mã lỗi HTTP 404 kèm thông điệp rõ ràng để phía Client hiển thị thông báo (UI Toast)
                 return NotFound(new { message = "Email này chưa được đăng ký trong hệ thống." });
             }
 

@@ -82,7 +82,7 @@ export default function AnalyticsPage() {
   const totalCarts = useMemo(() => data.reduce((sum, item) => sum + item.addToCartCount, 0), [data])
   const totalPurchases = useMemo(() => data.reduce((sum, item) => sum + item.purchaseCount, 0), [data])
 
-  // FIX TỶ LỆ CHUYỂN ĐỔI TỔNG: Lấy mẫu số là hành động có số lượng lớn nhất để không bao giờ vượt 100%
+  // Hiệu chỉnh Tỷ lệ chuyển đổi tổng: Sử dụng Event Frequency cao nhất làm mẫu số chuẩn
   const maxTotalInteraction = Math.max(totalViews, totalCarts, totalPurchases);
   const overallConversionRate = maxTotalInteraction > 0 ? (totalPurchases / maxTotalInteraction) * 100 : 0
 
@@ -98,14 +98,14 @@ export default function AnalyticsPage() {
 
   //1. Lọc ra Top 8 sản phẩm điểm cao nhất để vẽ biểu đồ cho đẹp
   const chartData = useMemo(() => {
-    // 1. Sắp xếp lại toàn bộ data theo điểm (y hệt cách tìm Best Product)
+    // 1. Sắp xếp tập dữ liệu tổng quát theo Trọng số tương tác (Scoring Logic)
     const sorted = [...data].sort((a, b) => {
       const aScore = a.purchaseCount * 100 + a.addToCartCount * 10 + a.views;
       const bScore = b.purchaseCount * 100 + b.addToCartCount * 10 + b.views;
       return bScore - aScore;
     });
 
-    // 2. Cắt lấy đúng 8 ông top đầu
+    // 2. Trích xuất danh sách Top 8 bản ghi dẫn đầu về lượt tương tác
     const top8 = sorted.slice(0, 8);
 
     // 3. Format lại tên cho ngắn gọn (cắt còn 15 ký tự thay vì 22 như cũ)
@@ -372,7 +372,7 @@ export default function AnalyticsPage() {
             <tbody className="divide-y divide-slate-100">
               {data.length > 0 ? (
                 data.map((item) => {
-                  // FIX TỶ LỆ CHUYỂN ĐỔI TRONG BẢNG: So với tương tác lớn nhất
+                  // Hiệu chỉnh công thức phân tích chuyển đổi nội bộ: Chuẩn hóa theo tương tác cực đại
                   const maxInteraction = Math.max(item.views, item.addToCartCount, item.purchaseCount);
                   const conversionRate = maxInteraction > 0 ? (item.purchaseCount / maxInteraction) * 100 : 0
 

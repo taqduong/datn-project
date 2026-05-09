@@ -99,7 +99,7 @@ namespace BE.Controllers
         }
 
         // =========================================================================
-        // BƯỚC 2: API IMPORT THẬT (LƯU DB VÀ GIỮ NGUYÊN TÊN ẢNH)
+        // Bước 2: Xử lý import dữ liệu vào Database và bảo toàn định dạng tên tệp hình ảnh
         // =========================================================================
         [HttpPost("import")]
         [Consumes("multipart/form-data")] 
@@ -227,7 +227,7 @@ namespace BE.Controllers
             category.Name = request.Name;
             category.Description = request.Description;
 
-            // DỌN RÁC KHI SỬA ẢNH: Nếu đổi ảnh mới thì xóa ảnh cũ trên ổ cứng đi
+            // Giải phóng tài nguyên: Thu hồi tệp hình ảnh vật lý cũ khi có yêu cầu cập nhật
             if (category.ImageUrl != request.ImageUrl)
             {
                 if (!string.IsNullOrEmpty(category.ImageUrl))

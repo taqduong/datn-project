@@ -50,7 +50,7 @@ namespace BE.Controllers
             pay.AddRequestData("vnp_IpAddr", ipAddr);
             pay.AddRequestData("vnp_Locale", "vn");
             
-            // Quan trọng: Lưu OrderId vào TxnRef để tí nữa Callback lấy ra tìm đơn hàng
+            // Lưu trữ OrderId vào tham chiếu TxnRef phục vụ tra cứu giao dịch khi nhận Callback từ VNPay
             pay.AddRequestData("vnp_OrderInfo", "ThanhToanDonHang_" + model.OrderId);
             pay.AddRequestData("vnp_OrderType", "other");
             pay.AddRequestData("vnp_ReturnUrl", urlCallBack ?? "");
@@ -125,12 +125,12 @@ namespace BE.Controllers
             return BadRequest(new { success = false, message = "Chữ ký không hợp lệ" });
         }
 
-        // Hàm kiểm tra đơn hàng cũ và tạo ra một link VNPay mới để thanh toán lại (dành cho trường hợp khách muốn thanh toán lại đơn đã tạo nhưng chưa thanh toán)
+        // Khởi tạo URL thanh toán VNPay mới cho các đơn hàng đang chờ xử lý (Hỗ trợ luồng thanh toán lại)
         [HttpGet("retry-payment/{orderId:int}")]
         [Authorize] // Phải đăng nhập mới được gọi
         public async Task<IActionResult> RetryPayment(int orderId)
         {
-            // 1. Lấy UserId từ Token để đảm bảo an toàn (chống user này thanh toán cho đơn user khác)
+            // 1. Xác thực UserId từ Token để ngăn chặn hành vi thanh toán chéo trái phép
             var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
             if (!int.TryParse(userIdClaim, out var userId)) return Unauthorized("Vui lòng đăng nhập.");
 
@@ -139,9 +139,9 @@ namespace BE.Controllers
 
             if (order == null) return NotFound(new { message = "Không tìm thấy đơn hàng hoặc đơn hàng không thuộc về bạn." });
 
-            // 🛑 CHỈ CHO PHÉP THANH TOÁN LẠI KHI:
+            // // Xác thực các điều kiện bắt buộc để cấp phép thanh toán lại:
             // - Phương thức ban đầu là VNPay
-            // - Trạng thái đơn vẫn là "Pending" (Chờ xử lý) - Theo đúng Shopee
+            // - Trạng thái đơn vẫn là "Pending" (Chờ xử lý)
             if (order.PaymentMethod?.ToLower() != "vnpay") 
                 return BadRequest(new { message = "Đơn hàng này không sử dụng phương thức VNPay." });
 
@@ -163,7 +163,7 @@ namespace BE.Controllers
             pay.AddRequestData("vnp_CreateDate", timeNow.ToString("yyyyMMddHHmmss"));
             pay.AddRequestData("vnp_CurrCode", "VND");
 
-            // Lấy IP, nếu sập IP Localhost thì gắn cứng 127.0.0.1
+            // Trích xuất địa chỉ IP của Client (Cơ chế fallback: Sử dụng Loopback IP 127.0.0.1 cho môi trường Local)
             var ipAddr = Utils.GetIpAddress(HttpContext);
             if (ipAddr == "::1" || string.IsNullOrEmpty(ipAddr)) {
                 ipAddr = "127.0.0.1";

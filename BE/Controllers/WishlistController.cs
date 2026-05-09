@@ -9,7 +9,7 @@ namespace BE.Controllers
 {
     [ApiController]
     [Route("api/wishlist")]
-    [Authorize] // Bắt buộc đăng nhập mới được gọi API này
+    [Authorize] // Yêu cầu xác thực danh tính (Authentication) để truy cập API
     public class WishlistController : ControllerBase
     {
         private readonly ShopDbContext _context;
@@ -19,7 +19,7 @@ namespace BE.Controllers
             _context = context;
         }
 
-        // --- HÀM HỖ TRỢ: Lấy thẳng UserId từ Token bảo mật ---
+        // Tiện ích: Trích xuất UserId trực tiếp từ JWT Token
         private int GetUserId()
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value 
@@ -32,7 +32,7 @@ namespace BE.Controllers
         }
 
         // 1. GET: api/wishlist
-        // Frontend chỉ cần gọi GET /api/wishlist là tự lấy đúng danh sách của người đang đăng nhập
+        // Truy xuất danh sách Yêu thích của người dùng hiện tại dựa trên Context Token
         [HttpGet]
         public async Task<ActionResult> GetMyWishlist()
         {
@@ -42,7 +42,7 @@ namespace BE.Controllers
                 .Include(w => w.Product)
                 .ThenInclude(p => p.ProductVariants)
                 .Where(w => w.UserId == userId)
-                .OrderByDescending(w => w.CreatedAt) // Sắp xếp cái nào mới thả tim thì lên đầu
+                .OrderByDescending(w => w.CreatedAt) // Sắp xếp danh sách ưu tiên theo thời gian thêm mới nhất (Descending)
                 .Select(w => new {
                     w.Id,
                     w.ProductId,
@@ -54,7 +54,7 @@ namespace BE.Controllers
                         w.Product.Discount,
                         w.Product.ImageUrl, // Dùng để hiển thị ảnh trên giao diện
                         w.Product.Stock,
-                        // LẤY ĐẦY ĐỦ THÔNG TIN BIẾN THỂ (BAO GỒM CẢ GIẢM GIÁ RIÊNG)
+                        // Trích xuất chi tiết dữ liệu Biến thể (Bao gồm cấu hình giảm giá độc lập)
                         Variants = w.Product.ProductVariants.Select(v => new {
                             v.Id,
                             v.Price,
@@ -62,19 +62,18 @@ namespace BE.Controllers
                             v.Color,
                             v.VariantName,
                             v.ImageUrl,
-                            // THÊM DÒNG NÀY ĐỂ FRONTEND TÍNH GIÁ ĐÚNG 👇
                             Discount = v.Discount 
                         })
                     }
                 })
                 .ToListAsync();
 
-            // Trả về kèm format success để Frontend dễ xử lý
+            // Chuẩn hóa định dạng Phản hồi (Response format) hỗ trợ tích hợp Client-side
             return Ok(new { success = true, data = wishlist });
         }
 
         // 2. POST: api/wishlist/{productId}
-        // Frontend truyền luôn Id sản phẩm lên URL cho gọn, không cần class Dto nữa
+        // Tiếp nhận ProductId trực tiếp qua tham số URL (Route Parameter)
         [HttpPost("{productId}")]
         public async Task<ActionResult> AddToWishlist(int productId)
         {
@@ -118,7 +117,7 @@ namespace BE.Controllers
             return Ok(new { success = true, message = "Đã xoá khỏi Wishlist." });
         }
 
-        // 4. XÓA SẠCH DANH SÁCH YÊU THÍCH (DELETE: api/wishlist/clear)
+        // 4. Thực thi xóa toàn bộ danh mục Yêu thích của người dùng
         [HttpDelete("clear")]
         public async Task<ActionResult> ClearWishlist()
         {

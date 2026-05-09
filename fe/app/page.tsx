@@ -37,7 +37,7 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [currentSlide, setCurrentSlide] = useState(0);
 
-  // THÊM HÀM NỐI LINK BACKEND
+  // Tích hợp Utility function xử lý đường dẫn tương đối từ Backend
   const resolveImgUrl = (url?: string) => {
     if (!url) return "";
     if (url.startsWith("http://") || url.startsWith("https://")) return url;
@@ -100,7 +100,7 @@ export default function HomePage() {
       currency: "VND",
     }).format(value || 0);
 
-  // Hàm này sẽ kiểm tra xem nếu có biến thể thì lấy giá của biến thể, tính cả giảm giá
+  // Hiển thị định dạng khoảng giá (Range) khi tồn tại chênh lệch giữa các biến thể
   const getBannerPrice = (product: any) => {
     const hasVariants = product.variants && product.variants.length > 0;
     const discountRate = (product.discount || 0) / 100;
@@ -233,7 +233,7 @@ export default function HomePage() {
                     <button
                       key={index}
                       onClick={(e) => {
-                        e.preventDefault(); // Tránh bị nhảy link khi click vào chấm
+                        e.preventDefault(); // Ngăn chặn sự kiện điều hướng mặc định (Prevent Default Navigation)
                         setCurrentSlide(index);
                       }}
                       className={`h-2.5 rounded-full transition-all duration-300 ${
@@ -309,7 +309,7 @@ export default function HomePage() {
               "Trang trí nhà cửa": "🖼️",
             };
 
-              // 2. Lấy icon ra (nếu không có trong từ điển thì dùng tạm cái thùng hàng 📦)
+              // 2. Truy xuất Icon động (Fallback: Sử dụng Icon mặc định nếu không khớp từ khóa)
               const categoryIcon = iconMap[category.name] || "📦";
 
               return (

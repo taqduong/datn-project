@@ -21,7 +21,7 @@ namespace BE.Models
 
         public bool IsRead { get; set; } = false;
 
-        // Mối quan hệ với bảng User (để biết tên khách)
+        // Ràng buộc khóa ngoại (Foreign Key) với thực thể User
         [ForeignKey("UserId")]
         public virtual User User { get; set; } = null!;
     }

@@ -41,7 +41,7 @@ builder.Services.AddControllers()
 // Đăng ký các Service của ứng dụng (Dependency Injection)
 builder.Services.AddScoped<BE.Services.IEmailService, BE.Services.EmailService>();
 
-//  BẬT TỔNG ĐÀI SIGNALR CHO CHAT
+// Cấu hình SignalR Hub cho tính năng hội thoại thời gian thực (Real-time Chat)
 builder.Services.AddSignalR();
 
 // CONFIGURATION: Authentication & JWT Middleware
@@ -83,7 +83,7 @@ builder.Services.AddSwaggerGen(c =>
         Version = "v1" 
     });
 
-    // 1. Định nghĩa cái Ổ khóa (Security Definition)
+    // 1. Cấu hình Security Definition cho Swagger (JWT Bearer Token)
     c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
     {
         Name = "Authorization",
@@ -94,7 +94,7 @@ builder.Services.AddSwaggerGen(c =>
         Description = "Nhập token lấy từ hàm Login vào đây (Chỉ cần dán chuỗi Token, không cần gõ thêm chữ Bearer)."
     });
 
-    // 2. Ép Swagger sử dụng cái Ổ khóa này cho các hàm [Authorize]
+    // 2. Áp dụng Security Requirement cho các endpoint yêu cầu xác thực
     c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
     {
         {

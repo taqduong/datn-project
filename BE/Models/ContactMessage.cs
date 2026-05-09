@@ -24,7 +24,7 @@ namespace BE.Models
         
         public DateTime CreatedAt { get; set; } = DateTime.Now;
         
-        // Cờ đánh dấu Admin đã đọc hay chưa
+        // Thuộc tính đánh dấu Admin đã đọc hay chưa
         public bool IsRead { get; set; } = false; 
     }
 }

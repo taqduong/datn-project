@@ -19,7 +19,6 @@ const resolveImgUrl = (url?: string) => {
   // 2. Nếu link thiếu localhost (dạng /uploads/...)
   const baseUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5270/api").replace("/api", "");
   
-  // Đảm bảo có dấu gạch chéo chuẩn
   const cleanUrl = url.startsWith("/") ? url : `/${url}`;
   return `${baseUrl}${cleanUrl}`;
 };
@@ -70,10 +69,10 @@ export default function AdminOrdersPage() {
     e.stopPropagation();
     const newStatus = e.target.value;
     
-    // Lưu lại trạng thái cũ lỡ như API lỗi để còn rollback
+    // Khởi tạo Snapshot lưu trữ trạng thái trước biến đổi (Phục vụ Rollback)
     const previousOrders = [...orders];
 
-    // BƯỚC 1: Sửa UI ngay tức thì! Người dùng thấy giao diện mượt như bôi mỡ.
+    // Bước 1: Áp dụng Optimistic UI Update - Phản hồi giao diện tức thì để tối ưu hóa trải nghiệm
     setOrders(prevOrders => prevOrders.map(order => 
       order.orderId === orderId ? { ...order, status: newStatus } : order
     ));
@@ -81,10 +80,10 @@ export default function AdminOrdersPage() {
     // BƯỚC 2: Gọi API ngầm phía sau
     try {
       await updateOrderStatus(orderId, newStatus);
-      // KHÔNG CẦN gọi loadOrders() nữa vì UI đã update rồi, tiết kiệm tài nguyên Server cực lớn!
+      // Tối ưu hóa hiệu năng: Lược bỏ thao tác Re-fetch dữ liệu nhằm giảm tải Server
     } catch (error) {
       alert("Cập nhật trạng thái thất bại! Hệ thống sẽ quay về trạng thái cũ.");
-      // BƯỚC 3: Nếu lỗi, quay xe về trạng thái cũ
+      // Bước 3: Khôi phục trạng thái ban đầu của Component (Rollback State) nếu API trả về ngoại lệ
       setOrders(previousOrders);
     }
   };
@@ -100,10 +99,10 @@ export default function AdminOrdersPage() {
   const addressParts = [order.address, order.ward, order.city].filter(p => p && p.trim() !== "");
   const displayAddress = addressParts.length > 0 ? addressParts.join(", ") : "Chưa có địa chỉ";
 
-  // CHỖ MỚI: Gom danh sách sản phẩm thành chuỗi (Ví dụ: - Áo thun (Màu Đỏ) x2)
+  // Gom danh sách sản phẩm thành chuỗi (Ví dụ: - Áo thun (Màu Đỏ) x2)
   const productInfo = order.orderDetails
     .map(item => `- ${item.productName}${item.variantName ? ` (${item.variantName})` : ""} x${item.quantity}`)
-    .join("\n"); // Dùng dấu xuống dòng để trong 1 ô Excel hiện danh sách theo hàng dọc
+    .join("\n"); // Tích hợp ký tự Line Break (\n) đảm bảo định dạng đa dòng trong Cell Excel
 
   return {
     "STT": index + 1,
@@ -111,7 +110,7 @@ export default function AdminOrdersPage() {
     "Ngày đặt": new Date(order.orderDate).toLocaleString("vi-VN"),
     "Tên khách hàng": order.fullName,
     "Số điện thoại": order.phone,
-    "Sản phẩm": productInfo, // Thêm cột Sản phẩm vào đây
+    "Sản phẩm": productInfo, 
     "Địa chỉ": displayAddress,
     "Tổng tiền (VNĐ)": order.totalAmount,
     "Trạng thái": order.status,
@@ -136,7 +135,7 @@ export default function AdminOrdersPage() {
   const handlePrintLabel = (e: React.MouseEvent, order: OrderDto) => {
     e.stopPropagation();
     
-    // Mở một tab ẩn để in
+    // Khởi tạo cửa sổ ẩn (Hidden Window) phục vụ tác vụ in ấn
     const printWindow = window.open('', '_blank', 'width=1000,height=800');
     if (!printWindow) {
       alert("Vui lòng cho phép mở Popup trên trình duyệt để in đơn hàng.");
@@ -299,7 +298,7 @@ export default function AdminOrdersPage() {
           <div className="space-y-4">
             {orders.map((order) => {
               const isExpanded = expandedOrders.has(order.orderId);
-              // Lọc địa chỉ sạch sẽ (Xóa district)
+              // Tiền xử lý văn bản: Chuẩn hóa định dạng địa chỉ
               const addressParts = [order.address, order.ward, order.city]
                 .filter(p => p && p.trim() !== "");
               const displayAddress = addressParts.length > 0 ? addressParts.join(", ") : "Chưa có địa chỉ";
@@ -367,7 +366,6 @@ export default function AdminOrdersPage() {
                           
                           {/* TAG 1: ĐÃ THANH TOÁN (Màu xanh) */}
                           {order.paymentMethod === 'VNPay_Paid' && (
-                            // Thay đổi ở đây: px-3 py-1.5, text-sm, size={16}
                             <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-100 text-emerald-700 border border-emerald-200 text-sm font-bold shadow-sm">
                               <CheckCircle2 size={16} /> Đã thanh toán
                             </span>
@@ -375,7 +373,6 @@ export default function AdminOrdersPage() {
 
                           {/* TAG 2: CHƯA THANH TOÁN (Màu đỏ nhạt) */}
                           {order.paymentMethod?.toLowerCase() === 'vnpay' && order.status.toLowerCase() === 'pending' && (
-                            // Thay đổi ở đây: px-3 py-1.5, text-sm, size={16}
                             <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 text-red-700 border border-red-200 text-sm font-bold shadow-sm">
                               <AlertCircle size={16} /> Chưa thanh toán
                             </span>

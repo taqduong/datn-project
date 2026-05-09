@@ -119,12 +119,12 @@ function CheckoutContent() {
             const selectedIds = selectedCartItemsStr.split(',').map(Number);
             items = items.filter((item: any) => selectedIds.includes(item.cartItemId));
           }
-          // Nếu không truyền ID nào sang (có thể khách lách luật gõ URL), 
-          // để an toàn ta đá họ về giỏ hàng (Tùy chọn) hoặc load hết. Ở đây ta cứ gán vào.
+          // Edge Case: Đề phòng truy cập trái phép bằng cách thao túng URL Parameter, 
+          // cung cấp cơ chế Redirect về trang giỏ hàng để đảm bảo luồng nghiệp vụ chuẩn.
           
           setCartItems(items);
           
-          // NẾU GIỎ HÀNG TRỐNG HOẶC FILTER XONG TRỐNG THÌ ĐÁ VỀ TRANG SẢN PHẨM HOẶC CART
+          // NẾU GIỎ HÀNG TRỐNG HOẶC FILTER XONG TRỐNG THÌ ĐƯA VỀ TRANG SẢN PHẨM HOẶC CART
           if (items.length === 0) {
             // router.push("/cart"); // Bỏ comment dòng này nếu muốn đá về
           }
@@ -198,7 +198,7 @@ function CheckoutContent() {
     }
   };
 
-  // 7. HÀM CHECK MÃ BẰNG API THẬT
+  // 7. Thực thi quá trình xác thực Validation logic của Khuyến mãi (Qua Backend)
   const handleApplyVoucher = async (vCode: string, selectedVoucherFromList: any = null) => {
     if (!vCode) return;
 
@@ -241,14 +241,12 @@ function CheckoutContent() {
         setVouchersList(prevList => {
             const isAlreadyInList = prevList.some(v => v.code === finalVoucher.code);
             if (!isAlreadyInList) {
-                return [finalVoucher, ...prevList]; // Đẩy lên đầu danh sách
+                return [finalVoucher, ...prevList]; // Đẩy Voucher hợp lệ lên ưu tiên cao nhất
             }
             return prevList;
         });
 
-        // xóa khối lệnh if alert đi
         if (finalVoucher.isFreeship) {
-          // Bỏ cái alert chặn người dùng ở đây, chỉ cần set state bật lên là được
           setAppliedFreeshipVoucher(finalVoucher);
         } else {
           setAppliedDiscountVoucher(finalVoucher);
@@ -256,7 +254,7 @@ function CheckoutContent() {
         setVoucherCodeInput("");
       }
     } catch (error: any) {
-      // API C# trả lỗi 400 kèm câu chửi thì FE in nguyên câu chửi đó ra màn hình
+      // Tiếp nhận mã lỗi HTTP 400 từ Máy chủ và trích xuất nội dung để hiển thị trên Giao diện
       alert(error.response?.data?.message || "Mã không hợp lệ hoặc đã hết hạn!");
     }
   };
@@ -272,7 +270,7 @@ function CheckoutContent() {
     try {
       setIsSubmitting(true);
 
-      // Nhét mã Voucher vào Payload để lưu vào Database C#
+      // Đính kèm mã Voucher vào Payload để lưu vào Database C#
       let usedCodes = [];
       if (appliedFreeshipVoucher) usedCodes.push(appliedFreeshipVoucher.code);
       if (appliedDiscountVoucher) usedCodes.push(appliedDiscountVoucher.code);
@@ -291,7 +289,7 @@ function CheckoutContent() {
         shippingFee: shippingFee, 
         appliedVoucherCode: usedCodes.join(", "),
         
-        // DÒNG QUAN TRỌNG NHẤT: Gửi danh sách đã tick cho Backend
+        // Gửi danh sách đã tick cho Backend
         selectedCartItemIds: selectedIds 
       };
       

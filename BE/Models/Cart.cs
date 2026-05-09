@@ -8,7 +8,7 @@ namespace BE.Models;
 
 [Index("ProductId", Name = "IX_Carts_ProductId")]
 [Index("UserId", Name = "IX_Carts_UserId")]
-// CHỐNG TRÙNG LẶP GIỎ HÀNG: 1 USER CHỈ ĐƯỢC CÓ 1 SẢN PHẨM VỚI 1 BIẾN THỂ TRONG GIỎ HÀNG
+// Ràng buộc tính duy nhất: Mỗi người dùng chỉ lưu trữ một bản ghi cho một tổ hợp Sản phẩm - Biến thể
 [Index(nameof(UserId), nameof(ProductId), nameof(VariantId), IsUnique = true, Name = "IX_Carts_User_Product_Variant_Unique")]
 public partial class Cart
 {

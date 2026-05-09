@@ -20,7 +20,7 @@ public class FileController : ControllerBase
     [Consumes("multipart/form-data")] 
     public async Task<IActionResult> UploadAvatar(int userId, [FromForm] AvatarUploadRequest request)
     {
-        // 1. Tìm user trước, nếu không có thì khỏi làm gì cả đỡ rác máy
+        // 1. Xác thực sự tồn tại của người dùng trước khi tiến hành xử lý tệp
         var user = await _context.Users.FindAsync(userId);
         if (user == null) return NotFound(new { message = "Không tìm thấy người dùng." });
 
@@ -38,13 +38,13 @@ public class FileController : ControllerBase
         // ==========================================
         if (!string.IsNullOrEmpty(user.Avatar))
         {
-            // Cắt đường dẫn (dù là URL có localhost hay đường dẫn tương đối) để lấy đúng tên file
+            // Trích xuất tên tệp (Filename) từ URL hoặc đường dẫn tương đối
             var oldFileName = user.Avatar.Split('/').LastOrDefault();
             
             if (!string.IsNullOrEmpty(oldFileName))
             {
                 var oldFilePath = Path.Combine(avatarPath, oldFileName);
-                // Nếu file cũ thực sự tồn tại trên ổ cứng thì băm nó luôn
+                // Xóa tệp vật lý khỏi hệ thống lưu trữ nếu tồn tại
                 if (System.IO.File.Exists(oldFilePath))
                 {
                     System.IO.File.Delete(oldFilePath);

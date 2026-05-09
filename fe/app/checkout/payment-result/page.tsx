@@ -31,7 +31,7 @@ function PaymentResultContent() {
       try {
         const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5270/api";
         
-        // Chộp lấy chuỗi mã hóa dài ngoằng trên URL
+        // Trích xuất chuỗi mã hóa bảo mật (Secure Hash) từ đường dẫn phản hồi
         const queryString = window.location.search; 
 
         // Gọi Backend C# để nó kiểm tra chữ ký và ĐỔI TRẠNG THÁI DB

@@ -24,7 +24,7 @@ namespace BE.Models
         [Unicode(false)]
         public string ActionType { get; set; } = null!;
 
-        // Điểm: 1, 2, 3, 5
+        // Trọng số tương ứng cho từng loại sự kiện tương tác
         public int Score { get; set; }
 
         public DateTime CreatedAt { get; set; } = DateTime.Now;

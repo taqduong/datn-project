@@ -16,10 +16,10 @@ namespace BE.Hubs
         }
 
         // ========================================================
-        // THÊM LOGIC ĐỂ PHÂN LUỒNG KẾT NỐI VÀO CÁC PHÒNG (ROOMS)
+        // Tích hợp logic phân luồng kết nối WebSocket theo cơ chế Rooms
         // ========================================================
         
-        // Khách hàng gọi hàm này ngay khi kết nối SignalR thành công
+        // Khởi tạo Room cho Khách hàng khi quá trình handshake WebSocket hoàn tất
         public async Task JoinUserRoom(int userId)
         {
             await Groups.AddToGroupAsync(Context.ConnectionId, $"User_{userId}");
@@ -46,7 +46,7 @@ namespace BE.Hubs
             _context.ChatMessages.Add(chatMsg);
             await _context.SaveChangesAsync();
 
-            // CẢI TIẾN: Chỉ gửi cho Admin và chính User đó (để đồng bộ nếu User mở nhiều tab)
+            // Tối ưu hóa: Broadcast tin nhắn giới hạn trong Admin Group và User Room (Đồng bộ đa phiên)
             await Clients.Group("Admins").SendAsync("ReceiveMessage", chatMsg);
             await Clients.Group($"User_{userId}").SendAsync("ReceiveMessage", chatMsg);
         }
@@ -64,7 +64,7 @@ namespace BE.Hubs
             _context.ChatMessages.Add(chatMsg);
             await _context.SaveChangesAsync();
 
-            // CẢI TIẾN: Chỉ gửi cho đúng User đó và các Admin khác (để đồng bộ hộp thoại Admin)
+            // Tối ưu hóa: Phân phối tin nhắn phản hồi tới User Room và đồng bộ trạng thái giữa các Admins
             await Clients.Group($"User_{userId}").SendAsync("ReceiveMessage", chatMsg);
             await Clients.Group("Admins").SendAsync("ReceiveMessage", chatMsg);
         }

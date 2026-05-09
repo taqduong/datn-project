@@ -66,7 +66,7 @@ export default function ProductsPage() {
     loadData();
   }, [keyword]);
 
-  // KHI BẤM LỌC, TÌM KIẾM HOẶC ĐỔI SẮP XẾP -> Ép nó quay về Trang 1
+  // Tái lập vị trí về Trang đầu tiên khi phát sinh thay đổi điều kiện truy vấn
   useEffect(() => {
     setCurrentPage(1);
   }, [selectedCategory, selectedPriceRange, sortBy, keyword, pageSize]);

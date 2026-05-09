@@ -42,7 +42,7 @@ namespace BE.Controllers
                 })
                 .ToListAsync();
 
-            // LƯỚI AN TOÀN 1: Chưa có lịch sử -> Gợi ý đồ mới nhất
+            // Cơ chế giải quyết bài toán (Dự phòng 1): Đề xuất sản phẩm mới nhất nếu User chưa có dữ liệu hành vi
             if (!userPreferences.Any())
             {
                 var fallbackProducts = await _context.Products
@@ -53,7 +53,7 @@ namespace BE.Controllers
                 return Ok(fallbackProducts);
             }
 
-            // 2. Móc toàn bộ data (Bỏ Include Category như cao nhân góp ý)
+            // 2. Truy xuất tập dữ liệu sản phẩm (Tối ưu hóa Query: Lược bỏ Include Category)
             var allProducts = await _context.Products
                 .Select(p => new {
                     id = p.Id,
@@ -63,7 +63,7 @@ namespace BE.Controllers
                 })
                 .ToListAsync();
 
-            // 3. Gọi điện cho AI (Timeout 5 giây) - Gửi mảng history_prefs
+            // 3. Giao tiếp qua HTTP với AI Service (Thiết lập Timeout 5s để đảm bảo trải nghiệm người dùng) - Gửi mảng history_prefs
             using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
             var requestData = new { history_prefs = userPreferences, all_products = allProducts };
             var content = new StringContent(JsonSerializer.Serialize(requestData), Encoding.UTF8, "application/json");
@@ -97,7 +97,7 @@ namespace BE.Controllers
                 Console.WriteLine($"[CẢNH BÁO] AI For You lỗi: {ex.Message}");
             }
 
-            // 4. LƯỚI AN TOÀN 2 (Fallback): Lỗi AI thì dùng logic cũ của C#
+            // 4. Cơ chế Fallback (Dự phòng 2): Kích hoạt thuật toán gợi ý C# nội bộ khi AI Service gặp sự cố
             var topCategories = await _context.UserActivities
                 .Where(x => x.UserId == userId)
                 .GroupBy(x => x.CategoryId)

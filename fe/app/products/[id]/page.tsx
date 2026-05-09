@@ -317,19 +317,21 @@ const handleQuantityBlur = () => {
     }
   };
 
-  // Hàm click chọn Màu ở hàng 1
+  // Hàm xử lý sự kiện khi người dùng click chọn Màu ở hàng 1
   const handleSelectColor = (color: string) => {
     setSelectedColor(color);
     if (!product) return;
 
+    // Lấy ra danh sách tất cả các biến thể (variants) thuộc màu vừa chọn
     const variantsOfColor = product.variants?.filter((v: any) => v.color === color) || [];
-    // Kiểm tra xem size hiện tại có thuộc màu mới này không
+    // Kiểm tra xem Phân loại đang chọn ở hàng 2 có tồn tại trong màu mới này không
     const exactMatch = variantsOfColor.find((v: any) => v.variantName === selectedVariant?.variantName);
     
     if (exactMatch && exactMatch.stock > 0) {
-      handleSelectVariant(exactMatch); // Giữ nguyên size, đổi sang variant mới
+      // Nếu màu mới cũng có phân loại này và còn hàng -> Giữ nguyên phân loại, ngầm cập nhật sang variant mới
+      handleSelectVariant(exactMatch); 
     } else {
-      setSelectedVariant(null); // Xóa size cũ đi, bắt chọn lại size
+      setSelectedVariant(null); // Nếu màu mới không có phân loại này (hoặc hết hàng) -> Reset hàng 2, bắt người dùng chọn lại phân loại
       // Nếu màu này có ảnh riêng thì đổi ảnh sang
       if (variantsOfColor[0]?.imageUrl && variantsOfColor[0].imageUrl !== activeImage) {
         setImageLoaded(false);
@@ -386,7 +388,7 @@ const handleQuantityBlur = () => {
       await addToCart(product.id, Number(quantity), selectedVariant?.id);
 
       logUserActivity({ productId: product.id, actionType: "AddToCart" }).catch((err) => console.error("Hoạt động Tracking [AddToCart] thất bại:", err));
-      // THÊM DÒNG NÀY (Cho Admin)
+      // Ghi nhận sự kiện "Thêm vào giỏ hàng" để phục vụ thống kê trên màn hình Admin
       trackProductAddToCart(product.id).catch((err) => console.error(err));
       window.dispatchEvent(new Event("cartUpdated"));
       alert(`Đã thêm ${product.name} ${selectedVariant ? `(${selectedColor ? selectedColor + ' - ' : ''}${selectedVariant.variantName})` : ""} vào giỏ hàng!`);

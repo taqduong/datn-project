@@ -45,14 +45,14 @@ public partial class Order
     public string RefundStatus { get; set; } = "None"; //"None", "Pending" (Chờ hoàn), "Refunded" (Đã hoàn)
 
     // ===== Thông tin giao hàng =====
-    // Mình để Required cho Tên, SĐT, Địa chỉ vì giao hàng thì bắt buộc phải có những cái này
+    // Cấu hình Required (Bắt buộc) cho các trường thông tin giao hàng cốt lõi
     [Required]
     [StringLength(100)]
     public string FullName { get; set; } = null!;
 
     [StringLength(100)]
     [Unicode(false)]
-    public string? Email { get; set; } // Email có thể không cần thiết với một số khách
+    public string? Email { get; set; } // Cấu hình Optional (Tùy chọn) cho trường Email liên hệ
 
     [Required]
     [StringLength(20)]

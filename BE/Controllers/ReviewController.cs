@@ -45,7 +45,7 @@ namespace BE.Controllers
                 })
                 .ToListAsync();
 
-            // Tính toán thêm 1 chút thống kê (Số sao trung bình) để Frontend dễ hiển thị
+            // Tính toán và đính kèm chỉ số thống kê (Điểm đánh giá trung bình) hỗ trợ hiển thị UI
             var totalReviews = reviews.Count;
             var averageRating = totalReviews > 0 ? Math.Round(reviews.Average(r => r.Rating), 1) : 0;
 

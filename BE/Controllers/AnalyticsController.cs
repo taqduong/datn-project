@@ -16,7 +16,7 @@ namespace BE.Controllers
         }
 
         // =======================================================
-        // HÀM LÕI: Tự động cộng dồn số liệu an toàn tuyệt đối
+        // Xử lý logic cốt lõi: Cập nhật và cộng dồn số liệu thống kê (Đảm bảo tính toàn vẹn dữ liệu)
         // =======================================================
         private async Task IncrementAsync(int productId, string field, int delta = 1)
         {
@@ -29,7 +29,7 @@ namespace BE.Controllers
                 _ => throw new ArgumentOutOfRangeException(nameof(field), "Trường thống kê không hợp lệ")
             };
 
-            // Câu lệnh SQL: Nếu chưa có thì tạo mới (Upsert), sau đó cộng dồn và cập nhật thời gian
+            // Thực thi truy vấn Upsert (Update or Insert) để ghi nhận dữ liệu thống kê
             string sql = $@"
                 IF NOT EXISTS (SELECT 1 FROM ProductAnalytics WHERE ProductId = @p0)
                 BEGIN
@@ -73,7 +73,7 @@ namespace BE.Controllers
         // }
 
         // =======================================================
-        // API LẤY BÁO CÁO (CHO ADMIN DASHBOARD)
+        // API truy xuất dữ liệu thống kê phục vụ Admin Dashboard
         // =======================================================
         [HttpGet("summary")]
         public async Task<IActionResult> Summary()

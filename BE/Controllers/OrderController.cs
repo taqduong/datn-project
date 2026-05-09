@@ -43,7 +43,7 @@ namespace BE.Controllers
             decimal totalAmount = 0;
             var orderDetails = new List<OrderDetail>();
 
-            // RẼ NHÁNH 1: NẾU KHÁCH BẤM "MUA NGAY"
+            // Luồng xử lý 1: Khách hàng đặt mua sản phẩm trực tiếp (Ân "Mua ngay" từ trang chi tiết sản phẩm)
             if (request.BuyNowProductId.HasValue && request.BuyNowQuantity.HasValue)
             {
                 var product = await _context.Products.FindAsync(request.BuyNowProductId.Value);
@@ -89,7 +89,7 @@ namespace BE.Controllers
                     UnitPrice = finalPrice
                 });
             }
-            // RẼ NHÁNH 2: NẾU KHÁCH MUA TỪ GIỎ HÀNG
+            // Luồng xử lý 2: Khách hàng đặt đơn từ giỏ hàng
             else
             {
                 // 1. Tạo query trước (Không dùng 'var cartItems' ở đây nữa)
@@ -175,7 +175,7 @@ namespace BE.Controllers
             // =========================================================================
             if (!string.IsNullOrEmpty(request.AppliedVoucherCode))
             {
-                // Khách có thể áp 2 mã cùng lúc (VD: "FREESHIP, BLACKFRIDAY"), nên phải cắt chuỗi ra
+                // Xử lý phân tách chuỗi mã giảm giá (Hỗ trợ áp dụng nhiều mã khuyến mãi đồng thời)
                 var appliedCodes = request.AppliedVoucherCode.Split(',')
                                           .Select(c => c.Trim().ToUpper())
                                           .ToList();
@@ -193,7 +193,7 @@ namespace BE.Controllers
             _context.Orders.Add(newOrder);
             await _context.SaveChangesAsync();
             // =========================================================================
-            // SỬA LỖI GỬI MAIL: CHỈ GỬI MAIL NGAY NẾU LÀ THANH TOÁN COD
+            // Xử lý luồng thông báo: Chỉ gửi Email xác nhận ngay lập tức đối với phương thức thanh toán COD
             // Nếu là VNPay, hệ thống sẽ gửi mail sau khi khách thanh toán thành công (ở PaymentController)
             // =========================================================================
             if (!string.IsNullOrEmpty(newOrder.Email) && request.PaymentMethod.ToLower() == "cod")

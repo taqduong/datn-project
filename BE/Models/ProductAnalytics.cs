@@ -22,7 +22,7 @@ namespace BE.Models
         // Số lượt mua thành công (tính theo số lượng sản phẩm đã bán)
         public int PurchaseCount { get; set; } = 0;
 
-        // Cột này thêm vào để biết lần cuối cùng chỉ số được cập nhật là lúc nào
+        // Thuộc tính lưu vết thời điểm cập nhật số liệu thống kê gần nhất
         public DateTime LastUpdated { get; set; } = DateTime.Now;
 
         // Navigation property liên kết ngược lại bảng Product

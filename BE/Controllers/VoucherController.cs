@@ -75,7 +75,7 @@ namespace BE.Controllers
                     usageLimit = v.UsageLimit,
                     remainingForUser = remainingForUser,
                     
-                    // TRẠNG THÁI MỚI ĐỂ FE XỬ LÝ
+                    // Cập nhật trạng thái phản hồi để Front-end xử lý
                     isSystemOut = isSystemOut, // Hết lượt tổng
                     isUserOut = remainingForUser <= 0 && v.MaxUsagePerUser > 0 // Mình đã dùng hết lượt
                 });
@@ -113,7 +113,7 @@ namespace BE.Controllers
                     return BadRequest(new { message = $"Đơn tối thiểu để dùng mã là {voucher.MinOrderValue:N0}đ!" });
 
                 // =========================================================================
-                // BẢO VỆ 4 LỚP: Bổ sung check thời gian hồi mã
+                // Cơ chế bảo mật chống Spam: Kiểm tra thời gian hồi khi áp dụng mã
                 // =========================================================================
                 if (req.UserId.HasValue && req.UserId.Value > 0 && voucher.MaxUsagePerUser > 0)
                 {
@@ -232,7 +232,7 @@ namespace BE.Controllers
             voucher.IsHidden = updateData.IsHidden;
             
             voucher.MaxUsagePerUser = updateData.MaxUsagePerUser; 
-            voucher.ResetInterval = updateData.ResetInterval; // Đã thêm dòng lưu ResetInterval
+            voucher.ResetInterval = updateData.ResetInterval; // Lưu trữ cấu hình chu kỳ làm mới (Reset Interval)
 
             await _context.SaveChangesAsync();
             return Ok(new { message = "Cập nhật thành công!" });

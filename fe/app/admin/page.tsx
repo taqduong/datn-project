@@ -17,7 +17,7 @@ export default function AdminDashboardPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const router = useRouter();
 
-  // State lưu trữ dữ liệu thống kê
+  // Khởi tạo State quản lý dữ liệu thống kê tổng quan
   const [stats, setStats] = useState({
     products: 0,
     categories: 0,
@@ -40,12 +40,12 @@ export default function AdminDashboardPage() {
       try {
         setLoading(true);
         // Gọi song song nhiều API cùng lúc để tăng tốc độ load
-        // Dùng Promise.allSettled để lỡ 1 cái lỗi thì các cái khác vẫn chạy bình thường
+        // Áp dụng Promise.allSettled đảm bảo tính toàn vẹn khi một phần request thất bại
         const [prodRes, catRes, orderRes, userRes] = await Promise.allSettled([
           api.get("/Products"),
           api.get("/Categories"),
           api.get("/Order/admin"),
-          api.get("/users") // Hoặc /Users tuỳ backend của ông
+          api.get("/users")
         ]);
 
         // Đếm dữ liệu (Xử lý an toàn tránh lỗi undefined)

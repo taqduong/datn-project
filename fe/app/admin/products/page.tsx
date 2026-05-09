@@ -26,7 +26,7 @@ type ProductForm = {
   categoryId: number;
 };
 
-// Hàm xử lý link ảnh (nếu backend trả về link tương đối /uploads/...)
+// Hàm xử lý đường dẫn tài nguyên (Hỗ trợ URL tương đối)
 const resolveImgUrl = (url?: string) => {
   if (!url) return "https://placehold.co/400x400?text=No+Image";
   
@@ -48,7 +48,7 @@ export default function ProductPage() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(true);
-  // TRỢ LÝ TÍNH TỔNG TỒN KHO THỰC TẾ
+  // Tính toán tổng số lượng tồn kho khả dụng
   const getRealStock = (p: any) => {
     if (p.variants && p.variants.length > 0) {
       return p.variants.reduce((sum: number, v: any) => sum + (v.stock || 0), 0);
@@ -104,7 +104,7 @@ export default function ProductPage() {
     updatedVariants[index] = { ...updatedVariants[index], [field]: value } as VariantForm;
     setVariants(updatedVariants);
 
-    // LOGIC MỚI: Nếu đang sửa ô giảm giá riêng lẻ
+    // Nâng cấp luồng xử lý: Đồng bộ khi cập nhật trường chiết khấu độc lập
     if (field === "discount") {
       const firstDiscount = updatedVariants[0].discount;
       const isAllSame = updatedVariants.every(v => v.discount === firstDiscount);
@@ -235,7 +235,7 @@ export default function ProductPage() {
     setAdditionalFiles([]);
     setExistingImages(product.additionalImages || []);
     
-    // Lấy giảm giá của sản phẩm mẹ làm "phao cứu sinh"
+    // Cơ chế Fallback: Kế thừa mức chiết khấu của sản phẩm gốc
     const parentDiscount = product.discount || 0;
 
     const productVariants: VariantForm[] = (product.variants || []).map(v => ({
@@ -245,8 +245,7 @@ export default function ProductPage() {
       price: v.price,
       stock: v.stock,
       imageUrl: v.imageUrl || "",
-      // CHỈ CẦN SỬA ĐÚNG DÒNG NÀY:
-      // Ưu tiên lấy % của con (nếu có), không có thì lấy luôn % của mẹ, không nữa thì 0
+      // Thuật toán ưu tiên: Ưu tiên thiết lập biến thể -> Thiết lập gốc -> Mặc định 0
       discount: v.discount || parentDiscount || 0 
     }));
 
@@ -271,7 +270,7 @@ export default function ProductPage() {
       const newDiscount = clampDiscount(Number(value));
       setForm((prev) => ({ ...prev, discount: newDiscount }));
 
-      // LOGIC MỚI: Nếu có biến thể, ép tất cả con phải nghe lời mẹ
+      // Cơ chế Fallback: Kế thừa mức chiết khấu của sản phẩm gốc
       if (hasVariants) {
         setVariants((prevVariants) =>
           prevVariants.map((v) => ({ ...v, discount: newDiscount }))
@@ -314,7 +313,7 @@ export default function ProductPage() {
       price: hasVariants ? 0 : form.price,
       stock: hasVariants ? 0 : form.stock,
       retainedAdditionalImages: existingImages,
-      // "LỌC SẠCH" BIẾN THỂ TRƯỚC KHI GỬI
+      // Tiền xử lý và chuẩn hóa dữ liệu Biến thể trước khi truyền tải qua Request
       variants: hasVariants ? variants.map(v => ({
         id: v.id,
         variantName: v.variantName,
@@ -322,7 +321,7 @@ export default function ProductPage() {
         price: v.price,
         stock: v.stock,
         imageUrl: v.imageUrl,
-        // Cú chốt: Nếu UI để rỗng thì gửi 0, nếu có số thì ép về kiểu Number
+        // Validation Logic: Cung cấp giá trị mặc định (0) nếu Input bỏ trống
         discount: v.discount === "" ? 0 : Number(v.discount) 
       })) : []
     };
@@ -361,13 +360,13 @@ export default function ProductPage() {
       toast.success("Xóa sản phẩm thành công");
     } catch (error: any) {
       console.error("Lỗi khi xóa sản phẩm:", error);
-      // Hứng chính xác lỗi từ Backend đẩy lên
+      // Trích xuất thông báo ngoại lệ trực tiếp từ HTTP Response của Server
       const errorMessage = error.response?.data?.message || error.response?.data;
       
       if (typeof errorMessage === "string") {
         toast.error(errorMessage);
       } else {
-        // Lỗi dự phòng nếu Backend sập hoặc dính lỗi khóa ngoại (Foreign Key)
+        // Xử lý ngoại lệ tổng quát: Server Crash hoặc Vi phạm ràng buộc Khóa ngoại
         toast.error("Không thể xóa! Sản phẩm này có thể đã nằm trong đơn hàng của khách.");
       }
     }
@@ -391,12 +390,12 @@ export default function ProductPage() {
     setExistingImages(prev => {
       const newArr = [...prev];
       newArr.splice(index, 1); // Xóa khỏi danh sách phụ
-      if (oldCover) newArr.push(oldCover); // Nhét ảnh bìa cũ xuống làm ảnh phụ
+      if (oldCover) newArr.push(oldCover); // Tích hợp ảnh bìa cũ xuống làm ảnh phụ
       return newArr;
     });
   };
 
-  // HÀM UPLOAD ẢNH RIÊNG CHO TỪNG BIẾN THỂ (VÁ LẠI CHO CHUẨN)
+  // HÀM UPLOAD ẢNH RIÊNG CHO TỪNG BIẾN THỂ 
   const handleVariantImageUpload = async (index: number, file: File) => {
     const toastId = toast.loading("Đang tải ảnh biến thể...");
     try {

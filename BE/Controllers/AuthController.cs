@@ -28,7 +28,7 @@ namespace BE.Controllers
         [HttpPost("login")]
         public async Task<ActionResult> Login([FromBody] LoginRequest request)
         {
-            // TÌM USER THEO USERNAME HOẶC EMAIL
+            // Truy vấn thông tin định danh người dùng qua Username hoặc Email
             var user = await _context.Users
                 .FirstOrDefaultAsync(u => u.Username == request.Username || u.Email == request.Username);
 
@@ -36,7 +36,7 @@ namespace BE.Controllers
                 return Unauthorized(new { title = "Sai tên đăng nhập, email hoặc mật khẩu" });
 
             // ==========================================
-            // THÊM ĐOẠN NÀY: CHẶN CỬA TÀI KHOẢN BỊ KHÓA
+            // // Kiểm tra trạng thái hoạt động và từ chối truy cập đối với tài khoản bị khóa
             // ==========================================
             if (!user.IsActive)
             {
@@ -95,7 +95,7 @@ namespace BE.Controllers
             return Ok(new { success = true, message = "Đổi mật khẩu thành công!" });
         }
 
-        // Phương thức tạo token
+        // Khởi tạo và cấp phát chuỗi xác thực JWT (JSON Web Token)
         private string GenerateJwtToken(User user)
         {
             var jwtKey = _config["Jwt:Key"]

@@ -22,7 +22,7 @@ type CartItem = {
     price: number
     discount?: number | null
     priceAfterDiscount: number
-    imageUrl?: string // Ở Backend chúng ta dùng imageUrl (số ít)
+    imageUrl?: string
   }
 }
 
@@ -31,7 +31,7 @@ export default function CartPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // ===== THÊM STATE NÀY ĐỂ LƯU CÁC MÓN ĐƯỢC TICK =====
+  // ===== Khởi tạo State quản lý danh sách mặt hàng đã được lựa chọn =====
   const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set())
 
   const [subtotal, setSubtotal] = useState(0)
@@ -42,18 +42,18 @@ export default function CartPage() {
   const [removingItems, setRemovingItems] = useState<Set<number>>(new Set())
   const router = useRouter()
 
-  // Giá gốc (Ưu tiên giá phân loại, nếu không có thì lấy giá SP mẹ)
+  // Giá cơ bản (Áp dụng nguyên tắc Fallback: Giá phân loại -> Giá gốc sản phẩm)
   const getOriginalPrice = (item: CartItem) => Number((item.variantPrice ?? item.product.price) || 0)
 
   // Giá khách trả
   const getUnitPrice = (item: CartItem) => {
     const price = getOriginalPrice(item)
-    // SỬA DẤU ?? THÀNH || Ở ĐÂY 👇 (Nếu bằng 0 thì tự nhảy sang lấy của product)
+    // Áp dụng Logical OR (||) xử lý Fallback khi giá trị phân loại bằng 0 
     const discount = item.variantDiscount || item.product.discount || 0
     return Math.round(price * (1 - discount / 100))
   }
 
-  // ===== SỬA HÀM TÍNH TỔNG: CHỈ TÍNH NHỮNG MÓN ĐƯỢC TICK =====
+  // ===== Hiệu chỉnh hàm tính tổng: Chỉ tính những món được tick =====
   const calculateSubtotal = (items: CartItem[], selectedIds: Set<number>) => {
     const sum = items
       .filter(item => selectedIds.has(item.cartItemId))

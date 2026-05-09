@@ -27,7 +27,7 @@ namespace BE.Controllers
 
         private int? GetUserIdFromToken()
         {
-            // Lấy NameIdentifier từ Claim (Sửa lại claim type phổ biến cho JWT)
+            // Trích xuất định danh người dùng (UserID) từ NameIdentifier claim
             var userIdClaim = User.Claims.FirstOrDefault(c =>
                 c.Type == "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier" ||
                 c.Type == "sub"
@@ -76,7 +76,7 @@ namespace BE.Controllers
             return Ok(new { message = "Thêm hàng vào giỏ hàng thành công." });
         }
 
-        // ================== Lấy giỏ hàng (CẬP NHẬT TÍNH TOÁN BIẾN THỂ) ==================
+        // Truy xuất giỏ hàng và tính toán lại giá trị dựa trên thuộc tính biến thể
         [HttpGet("get")]
         [Authorize]
         public async Task<IActionResult> GetCart()
@@ -104,7 +104,7 @@ namespace BE.Controllers
                 var baseDiscount = p.Discount;
                 var baseImageUrl = p.ImageUrl;
 
-                // Tính giá trị của Biến thể (nếu có), nếu biến thể ko có giảm giá thì lấy của Mẹ
+                // Xử lý logic giá ưu tiên: Kế thừa chiết khấu từ sản phẩm gốc nếu biến thể không có giá khuyến mãi riêng
                 var vPrice = v != null ? v.Price : (decimal?)null;
                 var vDiscount = v != null ? v.Discount : (double?)null;
                 var vImageUrl = v != null ? v.ImageUrl : null;

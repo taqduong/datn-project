@@ -71,7 +71,7 @@ public partial class ShopDbContext : DbContext
 
 
         // ========================================================
-        // FIX LỖI "MULTIPLE CASCADE PATHS"
+        // Xử lý xung đột Multiple Cascade Paths trong quá trình cấu hình Entity Framework Core
         // ========================================================
         modelBuilder.Entity<Review>()
             .HasOne(r => r.OrderDetail)

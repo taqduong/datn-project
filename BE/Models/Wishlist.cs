@@ -8,7 +8,7 @@ namespace BE.Models;
 [Table("Wishlist")]
 [Index(nameof(UserId), Name = "IX_Wishlist_UserId")]
 [Index(nameof(ProductId), Name = "IX_Wishlist_ProductId")]
-// 1 USER CHỈ ĐƯỢC THÍCH 1 SẢN PHẨM 1 LẦN
+// Ràng buộc toàn vẹn: Mỗi người dùng chỉ được thực hiện thao tác Yêu thích một lần trên mỗi sản phẩm
 [Index(nameof(UserId), nameof(ProductId), IsUnique = true, Name = "IX_Wishlist_User_Product_Unique")]
 public partial class Wishlist
 {

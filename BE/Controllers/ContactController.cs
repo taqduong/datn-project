@@ -98,7 +98,7 @@ namespace BE.Controllers
                 // Gọi Service gửi mail 
                 await _emailService.SendEmailAsync(message.Email, subject, body);
 
-                // Gửi xong thì tự động chuyển trạng thái thành "Đã đọc"
+                // Tự động cập nhật trạng thái "Đã đọc" sau khi truyền tải Email thành công
                 message.IsRead = true;
                 await _context.SaveChangesAsync();
 

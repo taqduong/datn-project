@@ -59,7 +59,7 @@ export default function CategoryPage() {
       const fd = new FormData();
       fd.append("Files", file); 
       
-      // Truyền thêm "categories" để Backend biết đường cất ảnh
+      // Cung cấp tham số "categories" phục vụ cơ chế định tuyến lưu trữ tệp tin trên Backend
       const res = await uploadImage(fd, "categories");
       
       if (res.data.imageUrls && res.data.imageUrls.length > 0) {
