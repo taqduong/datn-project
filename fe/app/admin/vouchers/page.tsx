@@ -50,7 +50,9 @@ export default function AdminVouchersPage() {
         maxUsagePerUser: voucher.maxUsagePerUser > 0 ? voucher.maxUsagePerUser : 1, 
         resetInterval: voucher.resetInterval || "None", 
         isHidden: voucher.isHidden || false,
-        // Gọi hàm trị múi giờ ở đây:
+        // Chuyển đổi tỷ lệ phần trăm thập phân sang định dạng số nguyên phục vụ hiển thị UI (VD: 0.45 -> 45)
+        discountPercent: voucher.discountPercent ? Math.round(voucher.discountPercent * 100) : 0,
+        // 1. Tích hợp Utility điều chỉnh Timezone (Đồng bộ UTC+7)
         startDate: voucher.startDate ? getLocalDatetimeLocal(voucher.startDate) : getLocalDatetimeLocal(),
         expiryDate: voucher.expiryDate ? getLocalDatetimeLocal(voucher.expiryDate) : getLocalDatetimeLocal()
       });
@@ -58,7 +60,7 @@ export default function AdminVouchersPage() {
       setIsEditing(false);
       setCurrentVoucher({
         code: "", title: "", description: "", isFreeship: false, minOrderValue: 0,
-        usageLimit: 100, maxUsagePerUser: 1, resetInterval: "None", isActive: true, isHidden: false, discountValue: 0, discountPercent: 0, maxDiscountAmount: 0,
+        usageLimit: 100, maxUsagePerUser: 1, resetInterval: " ", isActive: true, isHidden: false, discountValue: 0, discountPercent: 0, maxDiscountAmount: 0,
         startDate: getLocalDatetimeLocal(),
         expiryDate: getLocalDatetimeLocal(new Date().setMonth(new Date().getMonth() + 1))
       });
@@ -67,12 +69,13 @@ export default function AdminVouchersPage() {
   };
 
   const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
+   e.preventDefault();
     try {
       const payload: Partial<VoucherDto> = { 
         ...currentVoucher, 
         discountValue: currentVoucher.discountValue ? Number(currentVoucher.discountValue) : undefined,
-        discountPercent: currentVoucher.discountPercent ? Number(currentVoucher.discountPercent) : undefined,
+        // Chuẩn hóa dữ liệu đầu vào: Chuyển đổi số nguyên về tỷ lệ thập phân trước khi đóng gói Payload
+        discountPercent: currentVoucher.discountPercent ? Number(currentVoucher.discountPercent) / 100 : undefined,
         maxDiscountAmount: currentVoucher.maxDiscountAmount ? Number(currentVoucher.maxDiscountAmount) : undefined,
       };
 
@@ -288,7 +291,7 @@ export default function AdminVouchersPage() {
                     </div>
                     <div>
                       <label className="block text-sm font-bold text-slate-700 mb-1">Hoặc Giảm theo %</label>
-                      <input type="number" step="0.01" value={currentVoucher.discountPercent || ""} onChange={e => setCurrentVoucher({...currentVoucher, discountPercent: Number(e.target.value), discountValue: 0})} className="w-full border border-slate-300 px-4 py-2.5 rounded-xl" placeholder="VD: 0.15 (Giảm 15%)" />
+                      <input type="number" value={currentVoucher.discountPercent || ""} onChange={e => setCurrentVoucher({...currentVoucher, discountPercent: Number(e.target.value), discountValue: 0})} className="w-full border border-slate-300 px-4 py-2.5 rounded-xl" placeholder="VD: 15 (Tương đương 15%)" />
                     </div>
                   </div>
                 )}
