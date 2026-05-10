@@ -269,7 +269,6 @@ export default function AdminVouchersPage() {
               </div>
 
               <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-4">
-                {/* THÊM flex gap-6 ĐỂ 2 CHECKBOX NẰM CẠNH NHAU */}
                 <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
                   <label className="flex items-center gap-3 cursor-pointer">
                     <input type="checkbox" checked={currentVoucher.isFreeship} onChange={e => setCurrentVoucher({...currentVoucher, isFreeship: e.target.checked, discountValue: 0, discountPercent: 0})} className="w-5 h-5 rounded border-slate-300 accent-blue-600" />

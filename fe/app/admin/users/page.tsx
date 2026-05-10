@@ -252,7 +252,7 @@ export default function UserPage() {
                   <input name="username" value={form.username} onChange={handleChange} disabled={isEditing} className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm focus:border-blue-500 outline-none disabled:bg-slate-100" required />
                 </div>
                 
-                {/* ẨN Ô MẬT KHẨU NẾU LÀ NGƯỜI MUA TRONG KHI THÊM MỚI */}
+                {/* Quản lý Form State: Loại bỏ trường Mật khẩu đối với Role "Khách hàng" */}
                 {!isEditing && (
                    form.role !== 'nguoimua' ? (
                     <div>

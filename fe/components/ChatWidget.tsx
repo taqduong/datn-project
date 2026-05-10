@@ -39,7 +39,7 @@ export default function ChatWidget() {
     // Kiểm tra ngay lúc đầu
     checkUserStatus();
 
-    // Lắng nghe sự kiện "userUpdated" từ api.ts bắn ra khi login/logout
+    // Theo dõi sự kiện toàn cục để cập nhật trạng thái xác thực tức thời.
     window.addEventListener("userUpdated", checkUserStatus);
     
     // Dọn dẹp khi component hủy
@@ -68,7 +68,7 @@ export default function ChatWidget() {
     };
     loadHistory();
 
-    // 2. Lắp ống nước SignalR mới
+    // 2. Thiết lập kết nối thời gian thực (Real-time) qua giao thức SignalR.
     const newConnection = new HubConnectionBuilder()
       .withUrl(HUB_URL, {
         accessTokenFactory: () => localStorage.getItem("token") || ""
@@ -78,7 +78,7 @@ export default function ChatWidget() {
 
     setConnection(newConnection);
 
-    // Dọn dẹp ống nước khi user thay đổi (đăng xuất hoặc đổi acc)
+    // Giải phóng kết nối SignalR khi thay đổi định danh người dùng
     return () => {
       newConnection.stop();
     };
@@ -117,7 +117,7 @@ export default function ChatWidget() {
     startConnection();
 
     return () => {
-      isMounted = false; // Khi unmount, bật cờ này để ngắt log đỏ
+      isMounted = false; // Khi unmount, bật cái này để ngắt log đỏ
     };
   }, [connection]);
 
@@ -133,7 +133,7 @@ export default function ChatWidget() {
     }
   };
 
-  // NẾU CHƯA ĐĂNG NHẬP HOẶC LÀ ADMIN/NHÂN VIÊN -> ẨN LUÔN BONG BÓNG
+  // Điều kiện hiển thị: Vô hiệu hóa Widget cho các đối tượng không thuộc phạm vi hỗ trợ
   if (!currentUser || currentUser.role === "admin" || currentUser.role === "nhanvien") return null;
 
   return (

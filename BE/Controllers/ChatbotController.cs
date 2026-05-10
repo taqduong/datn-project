@@ -115,7 +115,7 @@ namespace BE.Controllers
                                 if (ids != null) aiRecommendedIds = ids;
                             }
                         }
-                        catch { /* Bỏ qua lỗi AI, rớt xuống query logic cũ */ }
+                        catch { /* Xử lý ngoại lệ: Fallback về logic truy vấn cơ bản khi AI service gặp sự cố */ }
                     }
                 }
 

@@ -219,7 +219,7 @@ export default function OrdersPage() {
                           </div>
                         )}
 
-                        {/* TAG 3: CHƯA THANH TOÁN (Màu cam nhấp nháy - Dành cho đơn VNPay xịt) */}
+                        {/* TAG 3: CHƯA THANH TOÁN (Màu cam nhấp nháy - Dành cho đơn VNPay lỗi) */}
                         {order.paymentMethod?.toLowerCase() === 'vnpay' && order.status.toLowerCase() === 'pending' && (
                           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border font-semibold text-sm bg-red-50 text-red-700 border-red-200 shadow-sm">
                             <AlertCircle className="w-4 h-4" /> Chưa thanh toán
@@ -307,7 +307,6 @@ export default function OrdersPage() {
                             alt={item.productName}
                             className="w-16 h-16 object-cover rounded-xl border border-slate-200 bg-white"
                           />
-                          {/* ĐÃ ĐẨY CÁI DIV NÀY RA NGOÀI THẺ IMG CHO ĐÚNG CÚ PHÁP HTML */}
                           <div className="flex-1">
                             <h4 className="font-bold text-slate-800 text-sm md:text-base line-clamp-1">{item.productName}</h4>
                             {(item.variantName || item.variantColor) && (

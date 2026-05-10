@@ -6,13 +6,13 @@ export default function NotFound() {
     <div className="min-h-[80vh] flex flex-col items-center justify-center bg-slate-50 px-4">
       <div className="text-center animate-in fade-in zoom-in duration-500">
         
-        {/* Khung 404 bự chà bá */}
+        {/* Layout chính: Giao diện trang lỗi 404 (Not Found) */}
         <div className="flex justify-center mb-6">
           <div className="relative">
             <h1 className="text-[150px] font-black text-slate-200 leading-none select-none">
               404
             </h1>
-            {/* Icon bản đồ nhún nhảy ở giữa */}
+            {/* Khu vực hiển thị Animation và Icon trạng thái trung tâm */}
             <Map className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 text-blue-600 animate-bounce" />
           </div>
         </div>

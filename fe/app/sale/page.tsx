@@ -38,7 +38,7 @@ export default function SalePage() {
     loadData();
   }, []);
 
-  // Ép về trang 1 khi khách đổi số lượng hiển thị hoặc GÕ TÌM KIẾM
+  // Reset phân trang về trang đầu tiên khi thay đổi tham số hiển thị hoặc từ khóa tìm kiếm.
   useEffect(() => {
     setCurrentPage(1);
   }, [pageSize, searchQuery]);

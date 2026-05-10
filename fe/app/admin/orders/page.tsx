@@ -174,7 +174,7 @@ export default function AdminOrdersPage() {
         <title>Mã Vận Đơn - #${order.orderId}</title>
         <style>
           body { font-family: 'Helvetica Neue', Arial, sans-serif; padding: 20px; color: #000; }
-          /* Tăng kích thước lên A5 để nhìn rõ hơn trên A4 */
+          {/* Căn chỉnh Layout in ấn: Tối ưu hóa kích thước hiển thị trên khổ giấy A4/A5 */}
           .label-box { width: 14.5cm; min-height: 20cm; border: 3px dashed #000; padding: 25px; margin: 0 auto; box-sizing: border-box; display: flex; flex-direction: column; }
           .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #000; padding-bottom: 15px; margin-bottom: 15px; }
           .logo { font-size: 32px; font-weight: 900; letter-spacing: -1px; display: flex; align-items: center; gap: 8px; }
@@ -265,8 +265,6 @@ export default function AdminOrdersPage() {
   return (
     <div className="min-h-screen bg-slate-50 py-10">
       <div className="max-w-5xl mx-auto px-4">
-        
-        {/* THAY THẾ KHU VỰC HEADER NÀY */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
           <div className="flex items-center gap-4">
             <div className="bg-blue-600 p-3 rounded-xl text-white shadow-lg shadow-blue-200">
@@ -334,7 +332,7 @@ export default function AdminOrdersPage() {
                           >
                             <option value="Pending">Chờ xác nhận</option>
                             
-                            {/* 🔒 CẤM CHỌN NẾU LÀ ĐƠN VNPAY CHƯA THANH TOÁN (Trạng thái đang là Pending) */}
+                            {/* CẤM CHỌN NẾU LÀ ĐƠN VNPAY CHƯA THANH TOÁN (Trạng thái đang là Pending) */}
                             <option 
                               value="Processing"
                               disabled={order.paymentMethod?.toLowerCase() === 'vnpay' && order.status.toLowerCase() === 'pending'}
@@ -422,7 +420,7 @@ export default function AdminOrdersPage() {
                         )}
                         {/* ========================================== */}
 
-                        {/* THÊM MỚI: NÚT IN PHIẾU GIAO HÀNG (ẨN ĐI NẾU LÀ ĐƠN VNPAY BỊ LỖI/CHƯA THANH TOÁN) */}
+                        {/* Chức năng: Kết xuất Phiếu giao hàng (Chặn in nếu đơn VNPay chưa hoàn tất) */}
                         {!(order.paymentMethod?.toLowerCase() === 'vnpay' && order.status.toLowerCase() === 'pending') && (
                           <button 
                             onClick={(e) => handlePrintLabel(e, order)} 

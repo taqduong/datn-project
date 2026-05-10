@@ -37,7 +37,7 @@ export default function RegisterPage() {
       return
     }
 
-    // 0. KIỂM TRA ĐỘ TUỔI HỢP LỆ (Chặn nhập tay số âm hoặc quá cao)
+    // 0. Validate dữ liệu tuổi (Ngăn chặn giá trị âm hoặc vượt quá giới hạn)
     const ageNum = Number(formData.age);
     if (ageNum < 1 || ageNum > 120) {
       setError('Độ tuổi không hợp lệ (Phải từ 1 đến 120)')
@@ -53,7 +53,7 @@ export default function RegisterPage() {
       return
     }
 
-    // 2. KIỂM TRA MẬT KHẨU (Khó như sếp yêu cầu)
+    // 2. KIỂM TRA MẬT KHẨU 
     const passRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*]).{8,}$/;
     if (!passRegex.test(formData.password)) {
       setError('Mật khẩu phải từ 8 ký tự, gồm chữ hoa, chữ thường, số và ký tự đặc biệt (!@#$%^&*)')

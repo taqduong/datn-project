@@ -34,7 +34,7 @@ export default function WishlistPage() {
   const [showVariantModal, setShowVariantModal] = useState(false);
   const [selectedModalProduct, setSelectedModalProduct] = useState<Product | null>(null);
   const [selectedVariant, setSelectedVariant] = useState<any | null>(null);
-  const [selectedColor, setSelectedColor] = useState<string | null>(null); // <--- THÊM DÒNG NÀY
+  const [selectedColor, setSelectedColor] = useState<string | null>(null); 
   const [quantity, setQuantity] = useState<number | string>(1);
   const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value.replace(/\D/g, ''); 
@@ -163,7 +163,7 @@ export default function WishlistPage() {
     }
   };
 
-  // LOGIC TÍNH TOÁN CHO MODAL TƯƠNG TỰ NHƯ PRODUCT CARD
+  // Kế thừa logic xử lý dữ liệu và tính toán tương tự Component ProductCard
   const modalHasVariants = selectedModalProduct?.variants && selectedModalProduct.variants.length > 0;
   const modalDiscountRate = (selectedModalProduct?.discount || 0) / 100;
   const modalHasDiscount = !!selectedModalProduct?.discount && selectedModalProduct.discount > 0;
@@ -269,7 +269,7 @@ export default function WishlistPage() {
               const imageUrl = getImageUrl(p.imageUrls || p.imageUrl);
               
               // ==========================================
-              // 1. LOGIC TÍNH GIÁ MỚI (ĐÃ FIX TRÙNG BIẾN)
+              // Logic xác định giá trị sản phẩm theo thuộc tính
               // ==========================================
               const hasVariants = p.variants && p.variants.length > 0;
               const generalDiscount = p.discount || 0;
@@ -461,12 +461,12 @@ export default function WishlistPage() {
                 <div className="space-y-6">
                   {/* PHẦN 1: MÀU SẮC */}
                   {(() => {
-                    // Lọc sạch sẽ null, undefined, chuỗi rỗng
+                    // Tiền xử lý dữ liệu: Loại bỏ các giá trị không hợp lệ
                     const uniqueColors = Array.from(
                       new Set(selectedModalProduct.variants?.map((v: any) => v.color).filter(Boolean))
                     ) as string[];
 
-                    // NẾU KHÔNG CÓ MÀU NÀO HỢP LỆ THÌ ẨN LUÔN KHU VỰC NÀY
+                    // Điều kiện hiển thị: Vô hiệu hóa phân đoạn nếu dữ liệu thuộc tính trống.
                     if (uniqueColors.length === 0) return null;
 
                     return (
@@ -511,7 +511,7 @@ export default function WishlistPage() {
                     <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Kích thước / Phân loại</h3>
                     <div className="flex flex-wrap gap-3">
                       {selectedModalProduct.variants
-                        ?.filter(v => v.color === selectedColor) // Chỉ hiện size của màu đang chọn
+                        ?.filter(v => v.color === selectedColor) // Chỉ hiện phân loại của màu đang chọn
                         .map((v) => {
                           const isOutOfStock = v.stock <= 0;
                           return (

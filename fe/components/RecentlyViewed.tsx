@@ -31,8 +31,8 @@ export default function RecentlyViewed() {
       .finally(() => setLoading(false));
   }, []);
 
-  // LOGIC MỚI: TỰ ĐỘNG TRƯỢT (AUTOPLAY)
-  // LOGIC MỚI: TỰ ĐỘNG TRƯỢT THEO ĐỘ RỘNG THỰC TẾ
+  // TỰ ĐỘNG TRƯỢT (AUTOPLAY)
+  // TỰ ĐỘNG TRƯỢT THEO ĐỘ RỘNG THỰC TẾ
   useEffect(() => {
     if (products.length === 0 || isHovered) return;
 

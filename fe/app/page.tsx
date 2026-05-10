@@ -126,7 +126,7 @@ export default function HomePage() {
 
   return (
     <div className="bg-slate-50 text-slate-800 min-h-screen font-sans">
-      {/* Hero Section - Đã lột xác sang giao diện Sáng, Hiện đại */}
+      {/* Hero Section */}
       <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
         <div className="relative overflow-hidden rounded-[2.5rem] bg-linear-to-br from-blue-50 via-white to-indigo-50 px-6 py-12 sm:px-12 lg:py-20 shadow-sm border border-blue-100">
           
@@ -202,7 +202,7 @@ export default function HomePage() {
                         alt={product.name}
                         className="h-full w-full object-cover"
                       />
-                      {/* Lớp gradient dưới chân ảnh để chữ dễ đọc */}
+                      {/* Overlay Gradient: Nâng cao độ tương phản cho Typography trên nền ảnh */}
                       <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent"></div>
                       
                       {/* Text hiển thị */}
@@ -319,7 +319,7 @@ export default function HomePage() {
                   className="group rounded-3xl border border-slate-100 bg-white p-6 shadow-sm transition duration-300 hover:-translate-y-1.5 hover:border-blue-200 hover:shadow-xl hover:shadow-blue-100"
                 >
                   <div className="mb-5 flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl bg-slate-50 text-3xl transition duration-300 group-hover:scale-110 group-hover:shadow-md">
-                  {/* NẾU CÓ LINK ẢNH THÌ HIỆN ẢNH, KHÔNG CÓ THÌ DÙNG ICON CŨ */}
+                  {/* Fallback UI: Ưu tiên render hình ảnh, sử dụng Icon mặc định nếu dữ liệu null */}
                   {category.imageUrl ? (
                     <img 
                       src={resolveImgUrl(category.imageUrl)} 

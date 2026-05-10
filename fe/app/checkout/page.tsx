@@ -556,7 +556,7 @@ function CheckoutContent() {
                             Mã: <span className="font-bold text-slate-800">{v.code}</span>
                           </p>
                           
-                          {/* HIỆN LÝ DO KHÔNG DÙNG ĐƯỢC (Nếu có) */}
+                          {/* Xử lý ngoại lệ UI: Hiển thị thông điệp cảnh báo điều kiện áp dụng Voucher */}
                           {errorMessage ? (
                             <p className="text-[10px] font-bold text-orange-600 mt-2 italic">⚠️ {errorMessage}</p>
                           ) : (

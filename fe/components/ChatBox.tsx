@@ -216,7 +216,7 @@ export default function ChatBox() {
     };
   }, []);
 
-  // KIỂM TRA QUYỀN - ẨN CHATBOT VỚI ADMIN VÀ NHÂN VIÊN
+  // Vô hiệu hóa tính năng với Admin/Nhân viên   
   useEffect(() => {
     const checkRole = () => {
       try {
@@ -241,7 +241,7 @@ export default function ChatBox() {
     };
 
     checkRole();
-    // Lắng nghe sự kiện để ẩn/hiện ngay lập tức khi đăng nhập/đăng xuất
+    // Đồng bộ hóa trạng thái hiển thị UI theo chu kỳ phiên đăng nhập
     window.addEventListener("storage", checkRole);
     window.addEventListener("userUpdated", checkRole); 
 
@@ -257,7 +257,7 @@ export default function ChatBox() {
     const el = textareaRef.current;
     if (!el) return;
 
-    // Reset lại chiều cao mặc định trước khi tính toán
+    // Khởi tạo lại thông số kích thước Component trước khi tính toán động
     el.style.height = "44px"; // 44px là chiều cao tương đương min-h-11.5
     
     // Nếu có chữ thì mới tính toán kéo dãn
@@ -387,7 +387,7 @@ export default function ChatBox() {
           text: m.text,
         }));
 
-      //  1. LẤY ID NGƯỜI DÙNG TỪ LOCALSTORAGE
+      // Truy xuất định danh người dùng từ bộ nhớ đệm (Local Storage)
       let currentUserId = undefined;
       if (typeof window !== "undefined") {
         const userStr = localStorage.getItem("user");
@@ -401,7 +401,7 @@ export default function ChatBox() {
         }
       }
 
-      //  2. TRUYỀN ID XUỐNG API (THÊM currentUserId VÀO CUỐI)
+      //  Đính kèm định danh người dùng vào Payload yêu cầu API hội thoại.
       const response = (await fetchChatbotAnswer(newText, chatHistory, currentUserId)) as ChatbotApiResponse;
       const normalized = normalizeApiResponse(response);
 

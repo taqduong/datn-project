@@ -27,20 +27,20 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response, // Trả về bình thường nếu API gọi thành công (200 OK)
   (error) => {
-    // Nếu Backend trả về lỗi 401 (Unauthorized - Token hết hạn hoặc chưa login)
+    // Xử lý ngoại lệ HTTP 401 Unauthorized: Token hết hạn hoặc chưa xác thực
     if (error.response && error.response.status === 401) {
       if (typeof window !== "undefined") {
-        // 1. Âm thầm xóa Token đã "chết" khỏi localStorage
+        // 1. Loại bỏ Token không hợp lệ khỏi bộ nhớ cục bộ (LocalStorage)
         localStorage.removeItem("token");
         localStorage.removeItem("user");
         
         // 2. Phát tín hiệu cho các Component (như Navbar) biết để cập nhật lại giao diện (ẩn avatar đi)
         window.dispatchEvent(new Event("userUpdated"));
       }
-      // DÒNG NÀY ĐỂ BỊT MIỆNG BẢNG ĐỎ KHI HẾT HẠN TOKEN
+      // Ngăn chặn hiển thị thông báo lỗi mặc định khi Token hết hạn
       return Promise.resolve({ data: [] });
     }
-    // Giữ nguyên dòng này cho các lỗi khác (500, 404, 400...)
+    // Chuyển tiếp các mã lỗi HTTP khác (500, 404, 400) để xử lý tại tầng Component
     return Promise.reject(error);
   }
 );
@@ -79,7 +79,7 @@ export interface ProductVariant {
   stock: number;
   imageUrl?: string;
   discount?: number; // % giảm giá riêng của biến thể (nếu có)
-  priceAfterDiscount: number; // Giá sau giảm cuối cùng (C# tính hộ rồi)
+  priceAfterDiscount: number; // Giá trị sau cùng sau khi áp dụng khuyến mãi (Được xử lý toán học từ Backend)
 }
 
 export interface CreateCategoryPayload {
@@ -445,7 +445,7 @@ export const authAPI = {
       window.dispatchEvent(new Event("userUpdated"));
     }
     
-    // 3. Có thể gọi thêm API logout ở Backend nếu cần xóa session/blacklist token
+    // 3. (Tùy chọn) Gọi API Logout để thu hồi Session hoặc đưa Token vào Blacklist phía Backend
     return api.post("/auth/logout");
   },
 };
@@ -498,16 +498,16 @@ export const ordersAPI = {
 
 // ================= Wishlist API =================
 export const wishlistAPI = {
-  // 1. Lấy danh sách (Backend tự biết là của ai nhờ Token)
+  // 1. Truy xuất danh sách (Định danh người dùng tự động thông qua Bearer Token)
   getAll: () => api.get('/wishlist'),
   
-  // 2. Thêm vào yêu thích (Bắn thẳng productId lên URL)
+  // 2. Thêm sản phẩm vào danh mục yêu thích (Truyền productId qua URL Parameter)
   add: (productId: number) => api.post(`/wishlist/${productId}`),
   
-  // 3. Xóa khỏi yêu thích
+  // 3. Loại bỏ sản phẩm khỏi danh mục yêu thích
   remove: (productId: number) => api.delete(`/wishlist/${productId}`),
 
-  // 4. Xóa sạch sành sanh giỏ yêu thích
+  // 4. Làm sạch toàn bộ danh mục yêu thích của người dùng
   clear: () => api.delete('/wishlist/clear'),
 }
 
@@ -692,12 +692,12 @@ export const fetchChatbotAnswer = async (message: string, history: any[] = [], u
   } catch (error: any) {
     console.error("Lỗi gọi Chatbot API (Tổng quan):", error);
     
-    // ĐOẠN NÀY LÀ QUAN TRỌNG NHẤT ĐỂ BẮT BỆNH C#
+    // Trích xuất và ghi log chi tiết payload lỗi từ Backend C# để hỗ trợ gỡ lỗi (Debugging)
     if (error.response && error.response.data) {
       console.error("LỖI CHI TIẾT TỪ C# TRẢ VỀ:", error.response.data);
     }
 
-    // Quăng lỗi ra để catch() bên component ChatBox hiển thị câu "đang gặp sự cố kết nối..."
+    // Chuyển tiếp ngoại lệ (Throw Error) để tầng UI Component (ChatBox) bắt và hiển thị cảnh báo
     throw error; 
   }
 };

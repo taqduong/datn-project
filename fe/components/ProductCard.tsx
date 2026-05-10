@@ -172,7 +172,7 @@ const handleQuantityBlur = () => {
 
       trackProductAddToCart(product.id).catch(err => console.error("Lỗi tracking cart:", err));
 
-      // THÊM DÒNG NÀY: Báo cho AI biết khách vừa thêm giỏ hàng (Điểm: 3)
+      // Báo cho AI biết khách vừa thêm giỏ hàng (Điểm: 3)
       logUserActivity({ productId: product.id, actionType: "AddToCart" }).catch(err => console.error(err));
       window.dispatchEvent(new Event('cartUpdated')); 
       

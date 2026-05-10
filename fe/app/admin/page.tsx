@@ -112,7 +112,7 @@ export default function AdminDashboardPage() {
         </div>
       ) : (
         <>
-          {/* Card Doanh Thu (To nhất, nổi bật nhất) */}
+          {/* Thẻ thống kê trọng tâm: Tổng quan doanh thu hệ thống (Total Revenue) */}
           <div className="bg-linear-to-r from-blue-600 to-indigo-600 rounded-3xl p-6 sm:p-8 text-white shadow-xl shadow-blue-200 relative overflow-hidden">
             <div className="absolute right-0 top-0 opacity-10 transform translate-x-4 -translate-y-8">
               <TrendingUp size={150} />

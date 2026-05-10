@@ -246,7 +246,7 @@ export default function OrderDetailPage() {
                   </div>
                 )}
 
-                {/* Vòng lặp sản phẩm cũ của sếp nằm trong này để bị con dấu đè lên */}
+                {/* Render List: Khởi tạo danh sách sản phẩm (Áp dụng hiệu ứng Z-index cho Watermark) */}
                 <div className={order.refundStatus?.toLowerCase() === 'refunded' ? 'opacity-40 grayscale-[30%]' : ''}>
                   {order.orderDetails.map((item, idx) => (
                     <div key={idx} className="p-6 flex gap-5 hover:bg-slate-50 transition-colors">

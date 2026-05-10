@@ -49,7 +49,7 @@ export default function ForYouProducts() {
         <p className="mt-2 text-slate-600">Gợi ý thông minh dựa trên sở thích và hành vi của bạn</p>
       </div>
       
-      {/* Ráp ProductCard vào chạy mượt mà */}
+      {/* Render List: Kết xuất danh sách thẻ sản phẩm (ProductCard) dựa trên kiến trúc Responsive Grid */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4">
         {products.map(p => (
           <ProductCard key={p.id} product={p} />

@@ -39,7 +39,7 @@ textarea::placeholder {
     cursor: pointer;
   }
 
-  /*  Nút bị disabled thì hiện hình cấm */
+  /* Cập nhật con trỏ chuột (Cursor: Not-allowed) cho trạng thái vô hiệu hóa */
   button:disabled {
     cursor: not-allowed;
   }

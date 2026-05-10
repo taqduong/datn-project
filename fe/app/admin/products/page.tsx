@@ -868,7 +868,6 @@ export default function ProductPage() {
                       {variants.map((variant, index) => (
                         <tr key={index} className="border-b hover:bg-gray-50">
                           <td className="p-2 text-center">
-                            {/* ... (Giữ nguyên logic upload ảnh biến thể của sếp) ... */}
                             <div className="relative mx-auto flex h-14 w-14 items-center justify-center overflow-hidden rounded border border-gray-200 bg-gray-50 group">
                               {variant.imageUrl ? (
                                 <>
@@ -903,7 +902,7 @@ export default function ProductPage() {
                             </p>
                           </td>
 
-                          {/* O Ô NHẬP GIẢM GIÁ RIÊNG CHO BIẾN THỂ */}
+                          {/* Ô NHẬP GIẢM GIÁ RIÊNG CHO BIẾN THỂ */}
                           <td className="p-2">
                             <input 
                               type="number" 

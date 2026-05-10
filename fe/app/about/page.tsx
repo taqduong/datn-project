@@ -36,7 +36,6 @@ export default function AboutPage() {
             </div>
           </div>
           <div className="relative h-[400px] rounded-2xl overflow-hidden bg-slate-100">
-            {/* Thay ảnh này bằng ảnh thật của sếp nếu có */}
             <img 
               src="/homemart.png"
               alt="HomeMart Office" 

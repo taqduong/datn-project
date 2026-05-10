@@ -10,7 +10,7 @@ export default function AdminAuthWrapper({ children }: { children: React.ReactNo
   useEffect(() => {
     const userStr = localStorage.getItem("user");
     
-    // Chưa đăng nhập -> Đá về Login
+    // Kiểm tra trạng thái xác thực: Điều hướng về trang Login
     if (!userStr) {
       router.replace("/login");
       return;
@@ -18,21 +18,20 @@ export default function AdminAuthWrapper({ children }: { children: React.ReactNo
 
     const user = JSON.parse(userStr);
     
-    // Khách hàng mò vào -> Đá về Trang chủ
+    // Điều hướng về Trang chủ nếu không có quyền Quản trị
     if (user?.role !== "nhanvien" && user?.role !== "admin") {
       router.replace("/");
       return; 
     }
 
-    // Đúng người đúng tội -> Mở cổng
+    // Xác thực thành công: Cấp quyền truy cập vào khu vực Quản trị
     setIsAuthorized(true);
   }, [router]);
 
-  // TẤM KHIÊN: Trả về null (màn hình tàng hình) nếu chưa check xong
+  // Ngăn chặn Render giao diện trong quá trình kiểm tra quyền truy cập
   if (!isAuthorized) {
     return null; 
   }
 
-  // Check xong thì mới nhả giao diện Admin ra
   return <>{children}</>;
 }

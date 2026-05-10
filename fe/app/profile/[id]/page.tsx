@@ -92,28 +92,28 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
   
   const isPasswordStrong = passwordChecks.every((item) => item.valid);
 
- // Load thông tin user (ĐÃ VÁ LỖ HỔNG BẢO MẬT)
+ // Load thông tin user (Đã xử lý bảo mật quyền truy cập)
   useEffect(() => {
     const fetchUser = async () => {
       try {
         setLoading(true); // Bật loading trước khi check
         
-        // 1. KIỂM TRA ĐĂNG NHẬP: Lấy token và user từ LocalStorage
+        // 1. Kiểm tra xác thực: Lấy thông tin token từ LocalStorage
         const token = localStorage.getItem('token');
         const storedUser = localStorage.getItem('user');
 
-        // 2. Nếu không có token -> CHƯA ĐĂNG NHẬP -> Ép văng ra màn hình "Chưa đăng nhập" ngay lập tức
+       // 2. Điều hướng về trang đăng nhập nếu người dùng chưa xác thực
         if (!token || !storedUser) {
           setUserData(null);
           setLoading(false);
-          return; // Dừng luôn, không gọi API gì sất
+          return; // Dừng lại
         }
 
         // 3. Nếu đã đăng nhập, lấy thông tin user đang login
         let loggedInUser = JSON.parse(storedUser);
 
         // 4. BẢO MẬT: So sánh ID trên URL và ID của người đang login
-        // Nếu cố tình gõ /profile/2 trong khi đang login là user 1 -> Bắt ép dùng id của user 1
+        // Ghi đè ID để ngăn chặn hành vi truy cập trái phép thông tin người khác
         const targetUserId = loggedInUser.id || loggedInUser.Id;
         
         if (id && targetUserId.toString() !== id.toString()) {
@@ -131,7 +131,7 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
           console.warn('⚠️ Lấy user từ API thất bại, dùng data cũ từ localStorage.');
         }
 
-        // 6. Format lại dữ liệu và in ra màn hình (Giữ nguyên phần fix Avatar hoa/thường)
+        // 6. Format lại dữ liệu và in ra màn hình
         const formattedUser: UserData = {
           id: loggedInUser.id || loggedInUser.Id,
           username: loggedInUser.username || loggedInUser.Username || '',
@@ -181,11 +181,11 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
   const handleSave = async () => {
     if (!editData || !userData?.id) return;
 
-    // THÊM ĐOẠN CHẶN TUỔI ÂM NÀY VÀO
+    // ĐOẠN CHẶN TUỔI ÂM NÀY 
     if (editData.age !== undefined && editData.age !== null) {
       if (editData.age < 1 || editData.age > 120) {
         alert("❌ Tuổi phải là số dương từ 1 đến 120!");
-        return; // Dừng luôn, không gửi lên Backend
+        return; // Dừng lại
       }
     }
 
@@ -202,7 +202,7 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
 
       let newAvatarUrl = userData.avatar; // Tạm giữ link cũ
 
-      // SỬA LỖI CHÍNH Ở ĐÂY: Nếu có chọn ảnh mới thì gọi API upload
+      // Gọi API upload để cập nhật ảnh đại diện khi phát hiện file mới
       if (avatar) {
         const formData = new FormData();
         // ĐÚNG TÊN "avatarFile" MÀ BACKEND ĐANG CHỜ
@@ -264,13 +264,13 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
       alert("❌ " + errorMsg);
     }
   };
-// SỬA LẠI HÀM NÀY: Tự động lưu ảnh ngay khi vừa chọn xong!
+// Xử lý lưu tự động ảnh đại diện ngay sau khi người dùng chọn file
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files ? e.target.files[0] : null;
     if (!file || !userData?.id) return;
 
     try {
-      // 1. Hiển thị ảnh xem trước ngay lập tức cho mượt mắt
+      // 1. Hiển thị ảnh xem trước ngay lập tức 
       setAvatarPreview(URL.createObjectURL(file)); 
 
       // 2. GỌI API ĐẨY ẢNH LÊN LUÔN (Không cần chờ bấm nút Lưu)
@@ -318,7 +318,7 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
       alert("Mật khẩu mới và xác nhận mật khẩu không khớp!");
       return;
     }
-    // Kiểm tra độ mạnh mật khẩu (chuẩn mới: 8 ký tự, hoa, thường, số, ký tự đặc biệt)
+    // Validate độ mạnh mật khẩu (Tối thiểu 8 ký tự, gồm chữ hoa, thường và số)
     // Dùng biến tổng hợp từ useMemo
     if (!isPasswordStrong) {
       alert("Mật khẩu mới chưa đáp ứng đầy đủ các tiêu chuẩn bảo mật!");
@@ -331,14 +331,14 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
       
       alert("Đổi mật khẩu thành công! Vui lòng đăng nhập lại với mật khẩu mới.");
       
-      // 1. Xóa vé VIP cũ
+      // 1. Xóa Token và dữ liệu User để hủy phiên đăng nhập
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       
-      // 2. Kêu gọi Navbar load lại giao diện (mất avatar góc phải)
+      // 2. Kích hoạt sự kiện để Navbar cập nhật lại UI
       window.dispatchEvent(new Event("userUpdated"));
       
-      // 3. Đá văng khách ra trang đăng nhập
+      // 3. Điều hướng người dùng trở lại trang đăng nhập
       router.push('/login');
 
     } catch (error: any) {

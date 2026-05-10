@@ -23,7 +23,7 @@ export default function Footer() {
               Cửa hàng thương mại điện tử bán đồ gia dụng hàng đầu Việt Nam, cung cấp sản phẩm chất lượng với giá tốt nhất cho mọi gia đình.
             </p>
 
-            {/* Social Icons - Làm nhỏ lại và tinh tế hơn */}
+            {/* Social Icons */}
             <div className="flex gap-4">
               {[
                 { Icon: Facebook, color: "hover:text-blue-500", href: "#" },

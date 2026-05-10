@@ -239,7 +239,7 @@ export default function Sidebar() {
         </nav>
       </div>
 
-      {/* MỚI THÊM: Khu vực Đăng xuất & Thông tin người dùng ở dưới cùng */}
+      {/* Khu vực Đăng xuất & Thông tin người dùng ở dưới cùng */}
       <div className="border-t border-slate-100 p-4">
         {!collapsed ? (
           <div className="flex flex-col gap-3">
