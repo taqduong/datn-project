@@ -287,11 +287,35 @@ export default function AdminVouchersPage() {
                   <div className="grid grid-cols-2 gap-5 pt-2 border-t border-slate-200">
                     <div>
                       <label className="block text-sm font-bold text-slate-700 mb-1">Giảm theo số tiền (VNĐ)</label>
-                      <input type="number" value={currentVoucher.discountValue || ""} onChange={e => setCurrentVoucher({...currentVoucher, discountValue: Number(e.target.value), discountPercent: 0})} className="w-full border border-slate-300 px-4 py-2.5 rounded-xl" placeholder="VD: 50000" />
+                      <input 
+                        type="number" 
+                        min="1"
+                        value={currentVoucher.discountValue || ""} 
+                        onChange={e => {
+                          let val = Number(e.target.value);
+                          if (val < 0) val = 0; // Chặn số âm
+                          setCurrentVoucher({...currentVoucher, discountValue: val, discountPercent: 0});
+                        }} 
+                        className="w-full border border-slate-300 px-4 py-2.5 rounded-xl" 
+                        placeholder="VD: 50000" 
+                      />
                     </div>
                     <div>
                       <label className="block text-sm font-bold text-slate-700 mb-1">Hoặc Giảm theo %</label>
-                      <input type="number" value={currentVoucher.discountPercent || ""} onChange={e => setCurrentVoucher({...currentVoucher, discountPercent: Number(e.target.value), discountValue: 0})} className="w-full border border-slate-300 px-4 py-2.5 rounded-xl" placeholder="VD: 15 (Tương đương 15%)" />
+                      <input 
+                        type="number" 
+                        min="1" 
+                        max="100"
+                        value={currentVoucher.discountPercent || ""} 
+                        onChange={e => {
+                          let val = Number(e.target.value);
+                          if (val > 100) val = 100; // Max 100%
+                          if (val < 0) val = 0;     // Min 0%
+                          setCurrentVoucher({...currentVoucher, discountPercent: val, discountValue: 0});
+                        }} 
+                        className="w-full border border-slate-300 px-4 py-2.5 rounded-xl" 
+                        placeholder="VD: 15 (Tương đương 15%)" 
+                      />
                     </div>
                   </div>
                 )}
@@ -300,12 +324,33 @@ export default function AdminVouchersPage() {
               <div className="grid grid-cols-2 gap-5">
                 <div>
                   <label className="block text-sm font-bold text-slate-700 mb-1">Đơn tối thiểu (VNĐ)</label>
-                  <input type="number" required value={currentVoucher.minOrderValue} onChange={e => setCurrentVoucher({...currentVoucher, minOrderValue: Number(e.target.value)})} className="w-full border border-slate-300 px-4 py-2.5 rounded-xl" />
+                  <input 
+                    type="number" 
+                    min="1"
+                    required 
+                    value={currentVoucher.minOrderValue} 
+                    onChange={e => {
+                      let val = Number(e.target.value);
+                      if (val < 0) val = 0; // Đơn tối thiểu không được âm
+                      setCurrentVoucher({...currentVoucher, minOrderValue: val});
+                    }} 
+                    className="w-full border border-slate-300 px-4 py-2.5 rounded-xl" 
+                  />
                 </div>
                 {!currentVoucher.isFreeship && currentVoucher.discountPercent! > 0 && (
                   <div>
                     <label className="block text-sm font-bold text-slate-700 mb-1">Giảm tối đa (VNĐ)</label>
-                    <input type="number" value={currentVoucher.maxDiscountAmount || ""} onChange={e => setCurrentVoucher({...currentVoucher, maxDiscountAmount: Number(e.target.value)})} className="w-full border border-slate-300 px-4 py-2.5 rounded-xl" />
+                    <input 
+                      type="number" 
+                      min="1"
+                      value={currentVoucher.maxDiscountAmount || ""} 
+                      onChange={e => {
+                        let val = Number(e.target.value);
+                        if (val < 0) val = 0; // Giảm tối đa không được âm
+                        setCurrentVoucher({...currentVoucher, maxDiscountAmount: val});
+                      }} 
+                      className="w-full border border-slate-300 px-4 py-2.5 rounded-xl" 
+                    />
                   </div>
                 )}
               </div>
