@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using BE.Data;
 using BE.Models;
+using Microsoft.AspNetCore.Authorization;
 
 namespace BE.Controllers
 {
@@ -186,7 +187,7 @@ namespace BE.Controllers
         // ================== GÓC CHO ADMIN (QUẢN LÝ VOUCHER) ==================
 
         [HttpGet("admin")]
-        // [Authorize(Roles = "admin")] 
+        [Authorize(Roles = "admin,nhanvien")]
         public async Task<IActionResult> GetAllForAdmin()
         {
             var vouchers = await _context.Vouchers.OrderByDescending(v => v.Id).ToListAsync();
@@ -194,7 +195,7 @@ namespace BE.Controllers
         }
 
         [HttpPost]
-        // [Authorize(Roles = "admin")]
+        [Authorize(Roles = "admin,nhanvien")]
         public async Task<IActionResult> CreateVoucher([FromBody] Voucher voucher)
         {
             if (await _context.Vouchers.AnyAsync(v => v.Code.ToUpper() == voucher.Code.ToUpper()))
@@ -207,7 +208,7 @@ namespace BE.Controllers
         }
 
         [HttpPut("{id:int}")]
-        // [Authorize(Roles = "admin")]
+        [Authorize(Roles = "admin,nhanvien")]
         public async Task<IActionResult> UpdateVoucher(int id, [FromBody] Voucher updateData)
         {
             var voucher = await _context.Vouchers.FindAsync(id);
@@ -239,7 +240,7 @@ namespace BE.Controllers
         }
 
         [HttpDelete("{id:int}")]
-        // [Authorize(Roles = "admin")]
+        [Authorize(Roles = "admin,nhanvien")]
         public async Task<IActionResult> DeleteVoucher(int id)
         {
             var voucher = await _context.Vouchers.FindAsync(id);

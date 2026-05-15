@@ -52,7 +52,7 @@ namespace BE.Controllers
                     if (int.TryParse(claimId, out int parsedId)) secureUserId = parsedId;
                 }
                 
-                if (secureUserId == null && request.userId.HasValue) secureUserId = request.userId;
+                // if (secureUserId == null && request.userId.HasValue) secureUserId = request.userId;
 
                 if (secureUserId == null && IsPurchaseIntent(request.question))
                 {

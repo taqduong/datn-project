@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using BE.Data;
+using Microsoft.AspNetCore.Authorization;
 
 namespace BE.Controllers
 {
@@ -76,6 +77,7 @@ namespace BE.Controllers
         // API truy xuất dữ liệu thống kê phục vụ Admin Dashboard
         // =======================================================
         [HttpGet("summary")]
+        [Authorize(Roles = "admin,nhanvien")]
         public async Task<IActionResult> Summary()
         {
             var data = await _context.ProductAnalytics

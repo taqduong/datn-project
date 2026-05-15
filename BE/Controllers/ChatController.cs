@@ -44,7 +44,7 @@ namespace BE.Controllers
 
         // ================== ADMIN: Lấy danh sách Khách Hàng đã nhắn tin ==================
         [HttpGet("admin/users")]
-        // [Authorize(Roles = "admin")]
+        [Authorize(Roles = "admin,nhanvien")]
         public async Task<IActionResult> GetChatUsers()
         {
             // Lấy danh sách các UserId có nhắn tin (nhóm lại) kèm theo thông tin User
@@ -66,7 +66,7 @@ namespace BE.Controllers
 
         // ================== ADMIN: Lấy lịch sử chat với 1 Khách Hàng cụ thể ==================
         [HttpGet("admin/history/{userId:int}")]
-        // [Authorize(Roles = "admin")]
+        [Authorize(Roles = "admin,nhanvien")]
         public async Task<IActionResult> GetHistoryWithUser(int userId)
         {
             var messages = await _context.ChatMessages
@@ -85,6 +85,7 @@ namespace BE.Controllers
         
         // ================== TÍNH NĂNG MỞ RỘNG: ĐÁNH DẤU ĐÃ ĐỌC ==================
         [HttpPut("admin/read/{userId:int}")]
+        [Authorize(Roles = "admin,nhanvien")]
         public async Task<IActionResult> MarkAsRead(int userId)
         {
             var unreadMessages = await _context.ChatMessages

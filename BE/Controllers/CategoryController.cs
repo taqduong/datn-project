@@ -4,6 +4,7 @@ using BE.Models;
 using BE.Data;
 using OfficeOpenXml;
 using System.IO.Compression;
+using Microsoft.AspNetCore.Authorization;
 
 namespace BE.Controllers
 {
@@ -37,6 +38,7 @@ namespace BE.Controllers
         // BƯỚC 1: API ĐỌC NHÁP EXCEL (PREVIEW LỖI)
         // =========================================================================
         [HttpPost("preview-import")]
+        [Authorize(Roles = "admin,nhanvien")]
         [Consumes("multipart/form-data")]
         public async Task<IActionResult> PreviewImport([FromForm] CategoryImportRequest request)
         {
@@ -102,6 +104,7 @@ namespace BE.Controllers
         // Bước 2: Xử lý import dữ liệu vào Database và bảo toàn định dạng tên tệp hình ảnh
         // =========================================================================
         [HttpPost("import")]
+        [Authorize(Roles = "admin,nhanvien")]
         [Consumes("multipart/form-data")] 
         public async Task<IActionResult> ImportCategories([FromForm] CategoryImportRequest request)
         {
@@ -205,6 +208,7 @@ namespace BE.Controllers
         }
 
         [HttpPost("create-manual")]
+        [Authorize(Roles = "admin,nhanvien")]
         public async Task<ActionResult<Category>> CreateCategory([FromBody] CategoryRequest request)
         {
             var category = new Category { 
@@ -219,6 +223,7 @@ namespace BE.Controllers
         }
 
         [HttpPut("{id}")]
+        [Authorize(Roles = "admin,nhanvien")]
         public async Task<IActionResult> UpdateCategory(int id, [FromBody] CategoryRequest request)
         {
             var category = await _context.Categories.FindAsync(id);
@@ -244,6 +249,7 @@ namespace BE.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Roles = "admin,nhanvien")]
         public async Task<IActionResult> DeleteCategory(int id)
         {
             var category = await _context.Categories.Include(c => c.Products).FirstOrDefaultAsync(c => c.Id == id);

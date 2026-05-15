@@ -216,7 +216,7 @@ namespace BE.Controllers
 
         // ================== ADMIN: Lấy tất cả đơn hàng ==================
         [HttpGet("admin")]
-        // [Authorize(Roles = "admin")]
+        [Authorize(Roles = "admin,nhanvien")]
         public async Task<IActionResult> GetAllOrders()
         {
             var orders = await _context.Orders
@@ -452,7 +452,7 @@ namespace BE.Controllers
 
         // ================== ADMIN: XÁC NHẬN ĐÃ HOÀN TIỀN ==================
         [HttpPut("{id:int}/confirm-refund")]
-        // [Authorize(Roles = "admin")]
+        [Authorize(Roles = "admin,nhanvien")]
         public async Task<IActionResult> ConfirmRefund(int id)
         {
             var order = await _context.Orders.FindAsync(id);
@@ -471,6 +471,7 @@ namespace BE.Controllers
 
         // ================== ADMIN: DUYỆT/HỦY/CẬP NHẬT TRẠNG THÁI ĐƠN HÀNG ==================
         [HttpPut("{id:int}/status")]
+        [Authorize(Roles = "admin,nhanvien")]
         public async Task<IActionResult> UpdateOrderStatus(int id, [FromBody] UpdateStatusDto request)
         {
             var order = await _context.Orders
@@ -545,7 +546,7 @@ namespace BE.Controllers
 
         // ================== ADMIN: Xoá đơn hàng ==================
         [HttpDelete("{id:int}")]
-        // [Authorize(Roles = "admin")]
+        [Authorize(Roles = "admin,nhanvien")]
         public async Task<IActionResult> DeleteOrder(int id)
         {
             var order = await _context.Orders

@@ -5,6 +5,7 @@ using BE.Models;
 using BE.Data;
 using OfficeOpenXml;
 using System.IO.Compression;
+using Microsoft.AspNetCore.Authorization;
 
 namespace BE.Controllers
 {
@@ -109,6 +110,7 @@ namespace BE.Controllers
 
         // POST: api/products
         [HttpPost]
+        [Authorize(Roles = "admin,nhanvien")]
         public async Task<IActionResult> Create([FromBody] ProductCreateDto dto)
         {
             if (!ModelState.IsValid)
@@ -193,6 +195,7 @@ namespace BE.Controllers
 
         // PUT: api/products/id
         [HttpPut("{id}")]
+        [Authorize(Roles = "admin,nhanvien")]
         public async Task<IActionResult> Update(int id, [FromBody] ProductUpdateDto dto)
         {
             if (!ModelState.IsValid)
@@ -387,6 +390,7 @@ namespace BE.Controllers
 
         // DELETE: api/products/id
         [HttpDelete("{id}")]
+        [Authorize(Roles = "admin,nhanvien")]
         public async Task<IActionResult> Delete(int id)
         {
             // =========================================================
@@ -470,6 +474,7 @@ namespace BE.Controllers
         // API MỚI: UPLOAD NHIỀU ẢNH PHỤ
         // =========================================================================
         [HttpPost("{id}/upload-images")]
+        [Authorize(Roles = "admin,nhanvien")]
         public async Task<IActionResult> UploadImages(int id, [FromForm] List<IFormFile> files)
         {
             if (files == null || files.Count == 0)
@@ -630,6 +635,7 @@ namespace BE.Controllers
         // BƯỚC 1: API ĐỌC NHÁP EXCEL 
         // =========================================================================
         [HttpPost("preview-import")]
+        [Authorize(Roles = "admin,nhanvien")]
         public async Task<IActionResult> PreviewImport(IFormFile excelFile)
         {
             if (excelFile == null || excelFile.Length == 0) return BadRequest(new { message = "Vui lòng chọn file Excel." });
@@ -727,6 +733,7 @@ namespace BE.Controllers
         //  BƯỚC 2: API IMPORT THẬT (LƯU DB & XẢ NÉN ZIP)
         // =========================================================================
         [HttpPost("import")]
+        [Authorize(Roles = "admin,nhanvien")]
         public async Task<IActionResult> ImportProducts(IFormFile excelFile, IFormFile? zipFile)
         {
             if (excelFile == null || excelFile.Length == 0) return BadRequest(new { message = "Vui lòng chọn file Excel." });

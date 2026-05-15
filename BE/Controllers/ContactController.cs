@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using BE.Services; 
 using System;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 
 namespace BE.Controllers
 {
@@ -39,6 +40,7 @@ namespace BE.Controllers
 
         // GET: api/contact
         [HttpGet]
+        [Authorize(Roles = "admin,nhanvien")]
         public async Task<IActionResult> GetAllContacts()
         {
             var messages = await _context.ContactMessages
@@ -48,6 +50,7 @@ namespace BE.Controllers
         }
     
         [HttpPut("{id:int}/read")]
+        [Authorize(Roles = "admin,nhanvien")]
         public async Task<IActionResult> MarkAsRead(int id)
         {
             var message = await _context.ContactMessages.FindAsync(id);
@@ -60,6 +63,7 @@ namespace BE.Controllers
         }
 
         [HttpPost("{id:int}/reply")]
+        [Authorize(Roles = "admin,nhanvien")]
         public async Task<IActionResult> ReplyContact(int id, [FromBody] ReplyDto request)
         {
             var message = await _context.ContactMessages.FindAsync(id);

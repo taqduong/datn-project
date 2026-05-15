@@ -23,6 +23,7 @@ namespace BE.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "admin,nhanvien")]
         public async Task<ActionResult<User>> CreateUser([FromBody] CreateUserRequest request)
         {
             if (await _context.Users.AnyAsync(u => u.Username == request.Username))
@@ -107,12 +108,14 @@ namespace BE.Controllers
         }
 
         [HttpGet]
+        [Authorize(Roles = "admin,nhanvien")]
         public async Task<ActionResult<IEnumerable<User>>> GetUsers()
         {
             return await _context.Users.ToListAsync();
         }
 
         [HttpGet("{id}")]
+        [Authorize]
         public async Task<ActionResult<User>> GetUser(int id)
         {
             var user = await _context.Users.FindAsync(id);
@@ -121,6 +124,7 @@ namespace BE.Controllers
         }
 
         [HttpPut("{id}")]
+        [Authorize]
         public async Task<IActionResult> UpdateUser(int id, [FromBody] UpdateUserRequest request)
         {
             var user = await _context.Users.FindAsync(id);
@@ -182,6 +186,7 @@ namespace BE.Controllers
 
         // API Khóa / Mở khóa tài khoản
         [HttpPut("{id}/toggle-status")]
+        [Authorize(Roles = "admin,nhanvien")]
         public async Task<IActionResult> ToggleUserStatus(int id)
         {
             var user = await _context.Users.FindAsync(id);
@@ -242,6 +247,7 @@ namespace BE.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Roles = "admin")]
         public async Task<ActionResult> DeleteUser(int id)
         {
             var user = await _context.Users.FindAsync(id);
@@ -254,6 +260,7 @@ namespace BE.Controllers
 
         // ================== Cập nhật Avatar ==================
         [HttpPut("{id}/avatar")]
+        [Authorize]
         [Consumes("multipart/form-data")] // Ép kiểu để Swagger nhận diện file
         public async Task<IActionResult> UpdateAvatar(int id, [FromForm] UserAvatarUploadRequest request)
         {

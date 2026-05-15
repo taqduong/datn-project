@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using BE.Data;
+using Microsoft.AspNetCore.Authorization;
 
 namespace BE.Controllers;
 
@@ -18,6 +19,7 @@ public class FileController : ControllerBase
 
     [HttpPost("upload-avatar/{userId}")]
     [Consumes("multipart/form-data")] 
+    [Authorize]
     public async Task<IActionResult> UploadAvatar(int userId, [FromForm] AvatarUploadRequest request)
     {
         // 1. Xác thực sự tồn tại của người dùng trước khi tiến hành xử lý tệp
@@ -77,6 +79,7 @@ public class FileController : ControllerBase
     }
 
     [HttpPost("upload/{folder}")]
+    [Authorize(Roles = "admin,nhanvien")]
     [Consumes("multipart/form-data")]
     public async Task<IActionResult> UploadImages(string folder, [FromForm] MultipleFilesUploadRequest request)
     {
