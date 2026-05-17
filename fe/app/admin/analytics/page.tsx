@@ -162,7 +162,7 @@ export default function AnalyticsPage() {
           </div>
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:min-w-[420px]">
-            <MiniStat label="Sản phẩm" value={data.length} />
+            <MiniStat label="SP có tương tác" value={data.length} />
             <MiniStat label="Xem chi tiết" value={totalViews} />
             <MiniStat label="Thêm giỏ" value={totalCarts} />
             <MiniStat label="Đã bán" value={totalPurchases} />
@@ -314,6 +314,8 @@ export default function AnalyticsPage() {
                       boxShadow: '0 10px 30px rgba(15, 23, 42, 0.08)',
                       backgroundColor: '#ffffff',
                     }}
+                    labelStyle={{ color: '#0f172a', fontWeight: 'bold', marginBottom: '8px' }}
+                    // ===================================================
                     formatter={(value, name) => [formatNumber(Number(value ?? 0)), String(name)]}
                     labelFormatter={(_, payload) => payload?.[0]?.payload?.productName || ''}
                   />
@@ -481,9 +483,13 @@ function StatCard({
 
 function MiniStat({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-2xl border border-white/60 bg-white/80 px-4 py-3 shadow-sm backdrop-blur">
-      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">{label}</p>
-      <p className="mt-1 text-xl font-extrabold text-slate-900">{formatNumber(value)}</p>
+    <div className="rounded-2xl border border-white/60 bg-white/80 px-3 py-3 shadow-sm backdrop-blur flex flex-col justify-center min-h-[80px]">
+      <p className="text-[10px] font-bold uppercase tracking-tight text-slate-500 leading-tight">
+        {label}
+      </p>
+      <p className="mt-1 text-lg font-black text-slate-900">
+        {value.toLocaleString('vi-VN')}
+      </p>
     </div>
   )
 }
